@@ -1,1 +1,0 @@
-java -Djava.library.path="lib/" -cp "classes;lib/opencv-4100.jar" background.HelloCV

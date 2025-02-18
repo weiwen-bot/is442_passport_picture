@@ -1,1 +1,0 @@
-# is442_passport_picture

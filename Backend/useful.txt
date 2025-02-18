@@ -1,3 +1,0 @@
-https://stackoverflow.com/questions/30872353/optimizing-performance-of-grabcut-in-opencv-java\
-
-https://stackoverflow.com/questions/56807908/how-to-remove-white-background-with-some-shadow-in-grabcut
