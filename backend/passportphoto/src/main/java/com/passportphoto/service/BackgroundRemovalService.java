@@ -48,9 +48,6 @@ public class BackgroundRemovalService {
 			// FileInputStream file = new
 			// FileInputStream(imgDTO.getFileNameWithCompletePath());
 			byte[] bytes = file.getBytes();
-			System.out.println(imgDTO.getHeight());
-			System.out.println(imgDTO.getxOne());
-			System.out.println(imgDTO.getyOne());
 
 			// Point p1 = new Point(xOne,yOne);
 			// Point p2 = new Point(xTwo,yTwo);

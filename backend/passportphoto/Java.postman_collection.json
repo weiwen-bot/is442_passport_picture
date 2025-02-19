@@ -1,0 +1,69 @@
+{
+	"info": {
+		"_postman_id": "096afe1e-d7c0-43fd-95af-b5be008e6600",
+		"name": "Java",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "23209689"
+	},
+	"item": [
+		{
+			"name": "new",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [],
+				"url": ""
+			},
+			"response": []
+		},
+		{
+			"name": "http://localhost:8080/bg/transform",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "file",
+							"type": "file",
+							"src": "/C:/Users/tanwe/OneDrive/Desktop/processed.png"
+						},
+						{
+							"key": "fileNameWithCompletePath",
+							"value": "weiwentest.jpg",
+							"type": "text"
+						},
+						{
+							"key": "xOne",
+							"value": "100",
+							"type": "text"
+						},
+						{
+							"key": "yOne",
+							"value": "200",
+							"type": "text"
+						},
+						{
+							"key": "width",
+							"value": "900",
+							"type": "text"
+						},
+						{
+							"key": "height",
+							"value": "1200",
+							"type": "text"
+						}
+					]
+				},
+				"url": "http://localhost:8080/bg/transform"
+			},
+			"response": []
+		}
+	]
+}
