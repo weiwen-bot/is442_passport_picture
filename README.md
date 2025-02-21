@@ -31,7 +31,7 @@ List Functions
 
     `~/backend/passportphoto$ run.bat`
 
-    For Mac users, execute the `source run.sh` 
+    For Mac users, execute the `chmod +x mvnw` then `source run.sh` 
 
 1. Install dependencies in the `frontend` directory.
 
