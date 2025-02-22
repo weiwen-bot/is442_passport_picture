@@ -1,0 +1,91 @@
+package com.passportphoto.controller;
+
+import org.opencv.core.*;
+import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.imgproc.Imgproc;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import io.github.cdimascio.dotenv.Dotenv;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Base64;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/image")
+@CrossOrigin(origins = "http://localhost:5173") // Allow frontend origin
+public class ImageController {
+
+    private static final String UPLOAD_DIR = "uploads/";
+
+    static {
+        Dotenv dotenv = Dotenv.load();
+        String opencvDllPath = dotenv.get("OPENCVDLLPATH");
+        if (opencvDllPath != null) {
+            try {
+                System.load(opencvDllPath);
+                System.out.println("OpenCV library loaded successfully.");
+            } catch (UnsatisfiedLinkError e) {
+                throw new RuntimeException("Failed to load OpenCV library", e);
+            }
+        } else {
+            throw new RuntimeException("OPENCVDLLPATH not found in .env file.");
+        }
+    }
+
+    // 1. Upload Image Endpoint
+    @PostMapping("/upload")
+    public String uploadImage(@RequestParam("image") MultipartFile file) {
+        try {
+            byte[] imageBytes = file.getBytes();
+            String base64Image = Base64.getEncoder().encodeToString(imageBytes);
+
+            return "{\"status\":\"success\", \"message\":\"Image uploaded successfully\", \"image\":\"data:image/jpeg;base64," + base64Image + "\"}";
+        } catch (IOException e) {
+            return "{\"status\":\"error\", \"message\":\"Image processing failed\"}";
+        }
+    }
+
+    // 2. Crop Image Endpoint
+    @PostMapping("/crop")
+    public String cropImage(
+            @RequestParam("filename") String filename,
+            @RequestParam("cropX") int cropX,
+            @RequestParam("cropY") int cropY,
+            @RequestParam("cropWidth") int cropWidth,
+            @RequestParam("cropHeight") int cropHeight
+    ) {
+        String filePath = UPLOAD_DIR + filename;
+        Mat image = Imgcodecs.imread(filePath);
+
+        if (image.empty()) {
+            return "{\"status\":\"error\", \"message\":\"Image not found\"}";
+        }
+
+        // Check if the crop area is within the image bounds
+        if (cropX + cropWidth > image.cols() || cropY + cropHeight > image.rows()) {
+            return "{\"status\":\"error\", \"message\":\"Crop area exceeds image boundaries\"}";
+        }
+
+        Rect cropRect = new Rect(cropX, cropY, cropWidth, cropHeight);
+        Mat croppedImage = new Mat(image, cropRect);
+
+        String croppedFilename = "cropped_" + filename;
+        String croppedFilePath = UPLOAD_DIR + croppedFilename;
+
+        // Resize the cropped image before saving it
+        int targetWidth = 800;  // Define the target width (adjustable)
+        int targetHeight = 600; // Define the target height (adjustable)
+        Mat resizedImage = new Mat();
+        Imgproc.resize(croppedImage, resizedImage, new Size(targetWidth, targetHeight));
+
+        Imgcodecs.imwrite(croppedFilePath, resizedImage);
+
+        return "{\"status\":\"success\", \"message\":\"Image cropped and resized successfully\", \"image\":\"" + croppedFilename + "\"}";
+    }
+
+}
