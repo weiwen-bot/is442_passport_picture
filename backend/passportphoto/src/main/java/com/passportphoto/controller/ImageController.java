@@ -50,7 +50,15 @@ public class ImageController {
         }
     }
 
-    // 2. Crop Image Endpoint
+    // Add a method to resize the image before cropping
+    private Mat resizeImage(Mat image, int width, int height) {
+        Mat resizedImage = new Mat();
+        Imgproc.resize(image, resizedImage, new Size(width, height));
+        return resizedImage;
+    }
+
+     // 2. Crop Image Endpoint
+    // Modify the cropImage method to take into account the resized dimensions
     @PostMapping("/crop")
     public String cropImage(
             @RequestParam("filename") String filename,
@@ -71,19 +79,18 @@ public class ImageController {
             return "{\"status\":\"error\", \"message\":\"Crop area exceeds image boundaries\"}";
         }
 
+        // Resize image if required (e.g., based on country dimensions from frontend)
+        int targetWidth = cropWidth;
+        int targetHeight = cropHeight;
+        image = resizeImage(image, targetWidth, targetHeight);
+
         Rect cropRect = new Rect(cropX, cropY, cropWidth, cropHeight);
         Mat croppedImage = new Mat(image, cropRect);
 
         String croppedFilename = "cropped_" + filename;
         String croppedFilePath = UPLOAD_DIR + croppedFilename;
 
-        // Resize the cropped image before saving it
-        int targetWidth = 800;  // Define the target width (adjustable)
-        int targetHeight = 600; // Define the target height (adjustable)
-        Mat resizedImage = new Mat();
-        Imgproc.resize(croppedImage, resizedImage, new Size(targetWidth, targetHeight));
-
-        Imgcodecs.imwrite(croppedFilePath, resizedImage);
+        Imgcodecs.imwrite(croppedFilePath, croppedImage);
 
         return "{\"status\":\"success\", \"message\":\"Image cropped and resized successfully\", \"image\":\"" + croppedFilename + "\"}";
     }

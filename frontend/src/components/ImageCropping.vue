@@ -1,7 +1,7 @@
 <template>
   <div v-if="imageUrl">
     <h2>Crop Image</h2>
-    <div class="crop-container" :style="cropperStyles">
+    <div class="crop-container">
       <!-- VueCropper initialized with the correct image URL -->
       <vue-cropper
         v-if="imageUrl"
@@ -12,18 +12,29 @@
         :drag-mode="'crop'"
         guides
         :background="true"
-        :auto-crop="false"
+        :auto-crop="true"
         :responsive="true"
         :auto-crop-area="0.8"
         :crop-box-resizable="true"
         :crop-box-draggable="true"
+        @cropstart="onCropStart"
         @cropmove="onCropMove"
+        @cropend="onCropEnd"
       />
     </div>
 
     <!-- Inputs for custom width and height -->
     <!-- Show width and height input only after image is uploaded -->
     <div v-if="imageUrl">
+
+      <!--Select Country-->
+      <label>Country:</label>
+      <select v-model="selectedCountry" @change="updateCropBox">
+        <option v-for="country in countries" :key="country.name" :value="country">
+          {{ country.name }}
+        </option>
+      </select>
+
       <label>Custom Width (mm):</label>
       <input type="number" v-model.number="customWidth" @input="updateCropBox" />
 
@@ -62,19 +73,19 @@ export default {
       processedImage: "", // Define processedImage to store the cropped image URL
       maxDisplayWidth: 800, // Maximum width for the display image
       maxDisplayHeight: 600, // Maximum height for the display image
+      selectedCountry: { name: "Default", width: 35, height: 45 },
+      countries: [
+        { name: "Default", width: 35, height: 45 },
+        { name: "USA", width: 40, height: 50 },
+        { name: "Europe", width: 35, height: 45 },
+      ],
+      isResizing: false, // To track if resizing
+      cropBoxData: null, // Store crop box data (initial dimensions)
     };
   },
   computed: {
     aspectRatio() {
       return this.customWidth / this.customHeight;
-    },
-    cropperStyles() {
-      return {
-        width: this.cropperWidth + "px", // Use dynamically set cropper width
-        height: this.cropperHeight + "px", // Use dynamically set cropper height
-        maxWidth: "100%",   // Ensure it remains responsive
-        maxHeight: "100%",  // Prevent overflow issues
-      };
     },
   },
   created() {
@@ -99,37 +110,64 @@ export default {
       this.updateCropBox();
     };
   },
+  mounted() {
+    // Ensure cropper is initialized with custom width/height
+    this.$nextTick(() => {
+      this.updateCropBox(); // Manually set crop box size after image is loaded
+    });
+  },
   methods: {
     updateCropBox() {
-      if (this.$refs.cropper) {
-        // Get the aspect ratio of the image
-        const aspectRatio = this.cropperWidth / this.cropperHeight;
+      // Update the custom width/height based on selected country
+      this.customWidth = this.selectedCountry.width;
+      this.customHeight = this.selectedCountry.height;
 
-        // Set the crop box to the full width and height of the image, with aspect ratio handling
-        this.$refs.cropper.setAspectRatio(aspectRatio);  // Enforce the aspect ratio
+      // Ensure crop box is updated when country selection changes
+      const cropper = this.$refs.cropper;
+      if (cropper) {
+        const defaultWidthInPx = this.customWidth * this.pxPerMm;
+        const defaultHeightInPx = this.customHeight * this.pxPerMm;
 
-        // Now set the crop box data to cover the entire image (you can adjust the size if necessary)
-        this.$refs.cropper.setCropBoxData({
-          left: 0,
-          top: 0,
-          width: this.cropperWidth,
-          height: this.cropperHeight,
+        cropper.setAspectRatio(this.aspectRatio);
+
+        // Manually set crop box data (position and dimensions)
+        cropper.setCropBoxData({
+          left: (cropper.cropper.width - defaultWidthInPx) / 2,
+          top: (cropper.cropper.height - defaultHeightInPx) / 2,
+          width: defaultWidthInPx,
+          height: defaultHeightInPx,
         });
       }
     },
+    onCropStart() {
+      this.isResizing = true; // Flag for resizing start
+    },
     onCropMove() {
-      const cropper = this.$refs.cropper;
-      
-      if (cropper) {
-        const cropBoxData = cropper.getCropBoxData();
-        console.log(cropBoxData);
-        
-        this.customWidth = (cropBoxData.width / this.pxPerMm).toFixed(2);
-        this.customHeight = (cropBoxData.height / this.pxPerMm).toFixed(2);
-
+      if (this.isResizing) {
+        const cropper = this.$refs.cropper;
+        if (cropper) {
+          const cropBoxData = cropper.getCropBoxData();
+          // Only update dimensions during resizing, not moving
+          if (this.cropBoxData && (
+            cropBoxData.width !== this.cropBoxData.width ||
+            cropBoxData.height !== this.cropBoxData.height
+          )) {
+            this.customWidth = (cropBoxData.width / this.pxPerMm).toFixed(2);
+            this.customHeight = (cropBoxData.height / this.pxPerMm).toFixed(2);
+          }
+          this.cropBoxData = cropBoxData; // Save the latest crop box data
+        }
       }
     },
-
+    onCropEnd() {
+      this.isResizing = false; // Reset resizing flag
+      const cropper = this.$refs.cropper;
+      if (cropper) {
+        const cropBoxData = cropper.getCropBoxData();
+        this.customWidth = (cropBoxData.width / this.pxPerMm).toFixed(2);
+        this.customHeight = (cropBoxData.height / this.pxPerMm).toFixed(2);
+      }
+    },
     cropImage() {
       const cropper = this.$refs.cropper;
       if (!cropper) return;
