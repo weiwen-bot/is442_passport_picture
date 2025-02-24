@@ -1,57 +1,49 @@
 <template>
   <div v-if="imageUrl">
     <h2>Image Editor</h2>
-    <!-- Sidebar Component -->
-    <Sidebar @actionSelected="handleAction" />
 
-    <!-- Main content area (image and inputs) -->
-    <div class="main-content">
-
-      <!-- Cropper for Cropping -->
-        <h3>Processed Image</h3>
-        <vue-cropper
-          v-if="imageUrl"
-          ref="cropper"
-          :src="imageUrl"
-          :aspect-ratio="aspectRatio"
-          :view-mode="2"
-          :drag-mode="'crop'"
-          guides
-          :background="true"
-          :auto-crop="true"
-          :responsive="true"
-          :auto-crop-area="0.8"
-          :crop-box-resizable="true"
-          :crop-box-draggable="true"
-          @cropstart="onCropStart"
-          @cropmove="onCropMove"
-          @cropend="onCropEnd"
-        />
+    <!-- Cropper for Cropping -->
+    <h3>Processed Image</h3>
+    <vue-cropper
+      v-if="imageUrl"
+      ref="cropper"
+      :src="imageUrl"
+      :aspect-ratio="aspectRatio"
+      :view-mode="2"
+      :drag-mode="'crop'"
+      guides
+      :background="true"
+      :auto-crop="true"
+      :responsive="true"
+      :auto-crop-area="0.8"
+      :crop-box-resizable="true"
+      :crop-box-draggable="true"
+      @cropstart="onCropStart"
+      @cropmove="onCropMove"
+      @cropend="onCropEnd"
+    />
   
 
-      <!-- Custom Input Fields for Crop (appear when crop is clicked) -->
-      <div v-if="currentAction === 'crop'">
-          <!--Select Country-->
-        <label>Country:</label>
-        <select v-model="selectedCountry" @change="updateCropBox">
-          <option v-for="country in countries" :key="country.name" :value="country">
-            {{ country.name }}
-          </option>
-        </select>
-        <label>Width (px):</label>
-        <input type="number" v-model="customWidth" placeholder="Enter width" />
-        <label>Height (px):</label>
-        <input type="number" v-model="customHeight" placeholder="Enter height" />
-      </div>
+    <!-- Custom Input Fields for Crop (appear when crop is clicked) -->
+    <!--Select Country-->
+    <label>Country:</label>
+    <select v-model="selectedCountry" @change="updateCropBox">
+      <option v-for="country in countries" :key="country.name" :value="country">
+        {{ country.name }}
+      </option>
+    </select>
+    <label>Width (px):</label>
+    <input type="number" v-model="customWidth" placeholder="Enter width" />
+    <label>Height (px):</label>
+    <input type="number" v-model="customHeight" placeholder="Enter height" />
 
-      <button @click="cropImage">Crop</button>
-      <!-- <button @click="processImage">Apply</button> -->
+    <button @click="cropImage">Crop</button>
+    <!-- <button @click="processImage">Apply</button> -->
 
-      <!-- Display the cropped image -->
-      <div v-if="processedImage" class="processed-image-container">
-        <h3>Processed Image</h3>
-        <img :src="processedImage" alt="Processed Image" class="processed-image" />
-      </div>
+    <!-- Display the cropped image -->
+    <div v-if="processedImage" class="processed-image-container">
+      <h3>Processed Image</h3>
+      <img :src="processedImage" alt="Processed Image" class="processed-image" />
     </div>
   </div>
 </template>
@@ -59,10 +51,9 @@
 <script>
 import VueCropper from "vue-cropperjs";
 import "cropperjs/dist/cropper.css";
-import Sidebar from "./Sidebar.vue"; // Import Sidebar Component
 
 export default {
-  components: { VueCropper, Sidebar },
+  components: { VueCropper},
   data() {
     return {
       imageUrl: "", // Will hold the Base64 image URL
