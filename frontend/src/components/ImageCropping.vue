@@ -1,49 +1,59 @@
 <template>
-  <div v-if="imageUrl">
-    <h2>Image Editor</h2>
+  <div v-if="imageUrl" class="image-editor-container">
+    <h2 class="title">Crop Image</h2>
 
-    <!-- Cropper for Cropping -->
-    <h3>Processed Image</h3>
-    <vue-cropper
-      v-if="imageUrl"
-      ref="cropper"
-      :src="imageUrl"
-      :aspect-ratio="aspectRatio"
-      :view-mode="2"
-      :drag-mode="'crop'"
-      guides
-      :background="true"
-      :auto-crop="true"
-      :responsive="true"
-      :auto-crop-area="0.8"
-      :crop-box-resizable="true"
-      :crop-box-draggable="true"
-      @cropstart="onCropStart"
-      @cropmove="onCropMove"
-      @cropend="onCropEnd"
-    />
-  
+    <div v-if="!isCropped" class="editor-content">
+      <!-- Cropper for Cropping (Hidden after cropping) -->
+      <div class="cropper-container">
+        <!-- <h3 class="subtitle">Crop Image</h3> -->
+        <div class="cropper-wrapper">
+          <vue-cropper
+            ref="cropper"
+            :src="imageUrl"
+            :aspect-ratio="aspectRatio"
+            :view-mode="2"
+            :drag-mode="'crop'"
+            guides
+            :background="true"
+            :auto-crop="true"
+            :responsive="true"
+            :auto-crop-area="0.8"
+            :crop-box-resizable="true"
+            :crop-box-draggable="true"
+            @cropstart="onCropStart"
+            @cropmove="onCropMove"
+            @cropend="onCropEnd"
+            @crop="updateInputFields"
+          />
+        </div>
+      </div>
 
-    <!-- Custom Input Fields for Crop (appear when crop is clicked) -->
-    <!--Select Country-->
-    <label>Country:</label>
-    <select v-model="selectedCountry" @change="updateCropBox">
-      <option v-for="country in countries" :key="country.name" :value="country">
-        {{ country.name }}
-      </option>
-    </select>
-    <label>Width (px):</label>
-    <input type="number" v-model="customWidth" placeholder="Enter width" />
-    <label>Height (px):</label>
-    <input type="number" v-model="customHeight" placeholder="Enter height" />
+      <!-- Custom Input Fields for Crop -->
+      <div class="input-container">
+        <label>Country:</label>
+        <select v-model="selectedCountry" @change="updateCropBox">
+          <option v-for="country in countries" :key="country.name" :value="country">
+            {{ country.name }}
+          </option>
+        </select>
 
-    <button @click="cropImage">Crop</button>
-    <!-- <button @click="processImage">Apply</button> -->
+        <label>Width (px):</label>
+        <input type="number" v-model="customWidth" @input="updateCropBoxManually" placeholder="Enter width" />
+        <label>Height (px):</label>
+        <input type="number" v-model="customHeight" @input="updateCropBoxManually" placeholder="Enter height" />
 
-    <!-- Display the cropped image -->
-    <div v-if="processedImage" class="processed-image-container">
-      <h3>Processed Image</h3>
+        <button class="btn-primary" @click="cropImage">Crop</button>
+      </div>
+    </div>
+
+    <!-- Display the cropped image after cropping -->
+    <div v-if="isCropped" class="processed-image-container">
+      <h3 class="subtitle">Processed Image</h3>
       <img :src="processedImage" alt="Processed Image" class="processed-image" />
+      <div class="button-group">
+        <button class="btn-secondary" @click="discardCrop">Discard</button>
+        <button class="btn-primary" @click="downloadImage">Download</button>
+      </div>
     </div>
   </div>
 </template>
@@ -53,32 +63,21 @@ import VueCropper from "vue-cropperjs";
 import "cropperjs/dist/cropper.css";
 
 export default {
-  components: { VueCropper},
+  components: { VueCropper },
   data() {
     return {
       imageUrl: "", // Will hold the Base64 image URL
       customWidth: 35, // Custom width in mm
       customHeight: 45, // Custom height in mm
-      aspectRatio: 1, // Aspect ratio for cropping
       pxPerMm: 10, // Conversion factor from mm to pixels
-      imageSrc: "", // Holds the cropped image URL
-      cropperWidth: 0, // Dynamic width for the cropper container
-      cropperHeight: 0, // Dynamic height for the cropper container
-      processedWidth: 0, // Width of the processed image
-      processedHeight: 0, // Height of the processed image
-      processedImage: "", // Define processedImage to store the cropped image URL
-      maxDisplayWidth: 800, // Maximum width for the display image
-      maxDisplayHeight: 600, // Maximum height for the display image
+      processedImage: "", // Cropped image URL
+      isCropped: false, // Track if cropping is completed
       selectedCountry: { name: "Default", width: 35, height: 45 },
       countries: [
         { name: "Default", width: 35, height: 45 },
         { name: "USA", width: 40, height: 50 },
         { name: "Europe", width: 35, height: 45 },
       ],
-      isResizing: false, // To track if resizing
-      cropBoxData: null, // Store crop box data (initial dimensions)
-      action: "", // To store the selected action (crop, resize, etc.)
-      actionTitle: "", // Dynamic title for the action
     };
   },
   computed: {
@@ -87,137 +86,171 @@ export default {
     },
   },
   created() {
-    // Retrieve the image passed from ImageUpload.vue via query params
     this.imageUrl = this.$route.query.image || "";
-    console.log("Image URL for cropping:", this.imageUrl); // Debugging log
-
-    // Once the image is loaded, update the cropper dimensions
-    const img = new Image();
-    img.src = this.imageUrl;
-    img.onload = () => {
-      this.cropperWidth = img.width; // Set the width of the cropper container in pixels
-      this.cropperHeight = img.height; // Set the height of the cropper container in pixels
-
-      // Convert the image dimensions from pixels to millimeters (optional)
-      this.customWidth = img.width / this.pxPerMm;  // Convert pixel width to millimeters
-      this.customHeight = img.height / this.pxPerMm; // Convert pixel height to millimeters
-
-      console.log(`Image Dimensions in mm: ${this.customWidth} mm x ${this.customHeight} mm`);
-
-      // After setting the custom dimensions, update the cropper box
-      this.updateCropBox();
-    };
-  },
-  mounted() {
-    // Ensure cropper is initialized with custom width/height
-    this.$nextTick(() => {
-      this.updateCropBox(); // Manually set crop box size after image is loaded
-    });
   },
   methods: {
-    handleAction(action) {
-      // Set the current action and reset image display
-      this.currentAction = action;
-      this.processedImage = this.imageUrl; // Reset image before applying changes
-    },
     updateCropBox() {
-      // Update the custom width/height based on selected country
       this.customWidth = this.selectedCountry.width;
       this.customHeight = this.selectedCountry.height;
-
-      // Ensure crop box is updated when country selection changes
+      this.updateCropperBox();
+    },
+    updateCropBoxManually() {
+      this.updateCropperBox();
+    },
+    updateCropperBox() {
       const cropper = this.$refs.cropper;
       if (cropper) {
         const defaultWidthInPx = this.customWidth * this.pxPerMm;
         const defaultHeightInPx = this.customHeight * this.pxPerMm;
 
         cropper.setAspectRatio(this.aspectRatio);
-
-        // Manually set crop box data (position and dimensions)
         cropper.setCropBoxData({
-          left: (cropper.cropper.width - defaultWidthInPx) / 2,
-          top: (cropper.cropper.height - defaultHeightInPx) / 2,
           width: defaultWidthInPx,
           height: defaultHeightInPx,
         });
       }
     },
-    onCropStart() {
-      this.isResizing = true; // Flag for resizing start
-    },
-    onCropMove() {
-      if (this.isResizing) {
-        const cropper = this.$refs.cropper;
-        if (cropper) {
-          const cropBoxData = cropper.getCropBoxData();
-          // Only update dimensions during resizing, not moving
-          if (this.cropBoxData && (
-            cropBoxData.width !== this.cropBoxData.width ||
-            cropBoxData.height !== this.cropBoxData.height
-          )) {
-            this.customWidth = (cropBoxData.width / this.pxPerMm).toFixed(2);
-            this.customHeight = (cropBoxData.height / this.pxPerMm).toFixed(2);
-          }
-          this.cropBoxData = cropBoxData; // Save the latest crop box data
-        }
-      }
-    },
-    onCropEnd() {
-      this.isResizing = false; // Reset resizing flag
+    updateInputFields(event) {
       const cropper = this.$refs.cropper;
       if (cropper) {
         const cropBoxData = cropper.getCropBoxData();
-        this.customWidth = (cropBoxData.width / this.pxPerMm).toFixed(2);
-        this.customHeight = (cropBoxData.height / this.pxPerMm).toFixed(2);
+        this.customWidth = Math.round(cropBoxData.width / this.pxPerMm);
+        this.customHeight = Math.round(cropBoxData.height / this.pxPerMm);
       }
     },
     cropImage() {
       const cropper = this.$refs.cropper;
       if (!cropper) return;
 
-      // Get cropped canvas with the current crop box size
       const croppedCanvas = cropper.getCroppedCanvas({
-        width: this.customWidth * this.pxPerMm, // Maintain the current crop box width
-        height: this.customHeight * this.pxPerMm, // Maintain the current crop box height
+        width: this.customWidth * this.pxPerMm,
+        height: this.customHeight * this.pxPerMm,
         imageSmoothingQuality: "high",
       });
 
-      // Convert canvas to a blob and upload the cropped image
       croppedCanvas.toBlob((blob) => {
         if (blob) {
-          const croppedImageUrl = URL.createObjectURL(blob); // Create URL from Blob
-          this.processedImage = croppedImageUrl; // Store the cropped image URL
-
-          // Resize the processed image to fit within the max display size
-          const ratio = Math.min(
-            this.maxDisplayWidth / croppedCanvas.width,
-            this.maxDisplayHeight / croppedCanvas.height
-          );
-          this.processedWidth = croppedCanvas.width * ratio; // Scale the width
-          this.processedHeight = croppedCanvas.height * ratio; // Scale the height
-
-          console.log("Cropped Image Blob:", croppedImageUrl); // Debugging log
+          this.processedImage = URL.createObjectURL(blob);
+          this.isCropped = true; // Hide the cropper and input fields after cropping
         }
       }, "image/png");
     },
+    discardCrop() {
+      // Reset cropping state and show cropper again
+      this.isCropped = false;
+      this.processedImage = "";
+    },
+    downloadImage(){
+
+    }
   },
 };
 </script>
 
 <style>
+.editor-content {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  width: 100%;
+  justify-content: center;
+}
 
-/* Main content area (image and inputs) */
-.main-content {
-  margin-left: 220px; /* Add margin to push content to the right of the sidebar */
-  padding: 20px;
+.cropper-container {
+  flex: 3;
+  text-align: center;
+  max-width: 600px;
+}
+
+.input-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 250px;
+}
+
+.image-editor-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+  width: 100%;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.subtitle {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.cropper-container {
+  text-align: center;
+}
+
+.cropper-wrapper {
+  max-width: 100%;
+  max-height: 600px;
+  overflow: hidden;
+}
+
+.input-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 15px 0;
+}
+
+.btn-primary, .btn-secondary {
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.btn-primary {
+  background-color: #007bff;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #0056b3;
+}
+
+.btn-secondary {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background-color: #a71d2a;
 }
 
 .processed-image-container {
-  margin-bottom: 20px;
+  text-align: center;
+  margin-top: 15px;
 }
 
-.processed-image-container img {
-  max-width: 100%;
+.processed-image {
+  max-width: 90%;
   height: auto;
+ 
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+}
+.button-group {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 10px;
 }
 </style>
