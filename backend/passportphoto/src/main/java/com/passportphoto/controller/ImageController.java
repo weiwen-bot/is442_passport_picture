@@ -37,19 +37,6 @@ public class ImageController {
         }
     }
 
-    // 1. Upload Image Endpoint
-    @PostMapping("/upload")
-    public String uploadImage(@RequestParam("image") MultipartFile file) {
-        try {
-            byte[] imageBytes = file.getBytes();
-            String base64Image = Base64.getEncoder().encodeToString(imageBytes);
-
-            return "{\"status\":\"success\", \"message\":\"Image uploaded successfully\", \"image\":\"data:image/jpeg;base64," + base64Image + "\"}";
-        } catch (IOException e) {
-            return "{\"status\":\"error\", \"message\":\"Image processing failed\"}";
-        }
-    }
-
     // Add a method to resize the image before cropping
     private Mat resizeImage(Mat image, int width, int height) {
         Mat resizedImage = new Mat();

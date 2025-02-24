@@ -1,54 +1,57 @@
 <template>
   <div v-if="imageUrl">
-    <h2>Crop Image</h2>
-    <div class="crop-container">
-      <!-- VueCropper initialized with the correct image URL -->
-      <vue-cropper
-        v-if="imageUrl"
-        ref="cropper"
-        :src="imageUrl"
-        :aspect-ratio="aspectRatio"
-        :view-mode="2"
-        :drag-mode="'crop'"
-        guides
-        :background="true"
-        :auto-crop="true"
-        :responsive="true"
-        :auto-crop-area="0.8"
-        :crop-box-resizable="true"
-        :crop-box-draggable="true"
-        @cropstart="onCropStart"
-        @cropmove="onCropMove"
-        @cropend="onCropEnd"
-      />
-    </div>
+    <h2>Image Editor</h2>
+    <!-- Sidebar Component -->
+    <Sidebar @actionSelected="handleAction" />
 
-    <!-- Inputs for custom width and height -->
-    <!-- Show width and height input only after image is uploaded -->
-    <div v-if="imageUrl">
+    <!-- Main content area (image and inputs) -->
+    <div class="main-content">
 
-      <!--Select Country-->
-      <label>Country:</label>
-      <select v-model="selectedCountry" @change="updateCropBox">
-        <option v-for="country in countries" :key="country.name" :value="country">
-          {{ country.name }}
-        </option>
-      </select>
+      <!-- Cropper for Cropping -->
+        <h3>Processed Image</h3>
+        <vue-cropper
+          v-if="imageUrl"
+          ref="cropper"
+          :src="imageUrl"
+          :aspect-ratio="aspectRatio"
+          :view-mode="2"
+          :drag-mode="'crop'"
+          guides
+          :background="true"
+          :auto-crop="true"
+          :responsive="true"
+          :auto-crop-area="0.8"
+          :crop-box-resizable="true"
+          :crop-box-draggable="true"
+          @cropstart="onCropStart"
+          @cropmove="onCropMove"
+          @cropend="onCropEnd"
+        />
+  
 
-      <label>Custom Width (mm):</label>
-      <input type="number" v-model.number="customWidth" @input="updateCropBox" />
+      <!-- Custom Input Fields for Crop (appear when crop is clicked) -->
+      <div v-if="currentAction === 'crop'">
+          <!--Select Country-->
+        <label>Country:</label>
+        <select v-model="selectedCountry" @change="updateCropBox">
+          <option v-for="country in countries" :key="country.name" :value="country">
+            {{ country.name }}
+          </option>
+        </select>
+        <label>Width (px):</label>
+        <input type="number" v-model="customWidth" placeholder="Enter width" />
+        <label>Height (px):</label>
+        <input type="number" v-model="customHeight" placeholder="Enter height" />
+      </div>
 
-      <label>Custom Height (mm):</label>
-      <input type="number" v-model.number="customHeight" @input="updateCropBox" />
-    </div>
+      <button @click="cropImage">Crop</button>
+      <!-- <button @click="processImage">Apply</button> -->
 
-    <!-- Button to crop the image -->
-    <button @click="cropImage">Crop</button>
-
-    <!-- Display the cropped image -->
-    <div v-if="processedImage" class="processed-image-container">
-      <h3>Processed Image</h3>
-      <img :src="processedImage" alt="Processed Image" class="processed-image" />
+      <!-- Display the cropped image -->
+      <div v-if="processedImage" class="processed-image-container">
+        <h3>Processed Image</h3>
+        <img :src="processedImage" alt="Processed Image" class="processed-image" />
+      </div>
     </div>
   </div>
 </template>
@@ -56,14 +59,16 @@
 <script>
 import VueCropper from "vue-cropperjs";
 import "cropperjs/dist/cropper.css";
+import Sidebar from "./Sidebar.vue"; // Import Sidebar Component
 
 export default {
-  components: { VueCropper },
+  components: { VueCropper, Sidebar },
   data() {
     return {
       imageUrl: "", // Will hold the Base64 image URL
       customWidth: 35, // Custom width in mm
       customHeight: 45, // Custom height in mm
+      aspectRatio: 1, // Aspect ratio for cropping
       pxPerMm: 10, // Conversion factor from mm to pixels
       imageSrc: "", // Holds the cropped image URL
       cropperWidth: 0, // Dynamic width for the cropper container
@@ -81,6 +86,8 @@ export default {
       ],
       isResizing: false, // To track if resizing
       cropBoxData: null, // Store crop box data (initial dimensions)
+      action: "", // To store the selected action (crop, resize, etc.)
+      actionTitle: "", // Dynamic title for the action
     };
   },
   computed: {
@@ -117,6 +124,11 @@ export default {
     });
   },
   methods: {
+    handleAction(action) {
+      // Set the current action and reset image display
+      this.currentAction = action;
+      this.processedImage = this.imageUrl; // Reset image before applying changes
+    },
     updateCropBox() {
       // Update the custom width/height based on selected country
       this.customWidth = this.selectedCountry.width;
@@ -202,24 +214,19 @@ export default {
 </script>
 
 <style>
-  .crop-container {
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin: auto;
-  }
 
-  .processed-image-container {
-    width: 100%;
-    text-align: center;
-    margin-top: 20px;
-  }
+/* Main content area (image and inputs) */
+.main-content {
+  margin-left: 220px; /* Add margin to push content to the right of the sidebar */
+  padding: 20px;
+}
 
-  .processed-image {
-    width: auto;
-    height: auto;
-    object-fit: contain;
-  }
+.processed-image-container {
+  margin-bottom: 20px;
+}
+
+.processed-image-container img {
+  max-width: 100%;
+  height: auto;
+}
 </style>
