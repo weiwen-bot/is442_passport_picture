@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
 import ImageUpload from '../components/ImageUpload.vue';
+import ImageEdit from '../components/SideBar.vue';
 
 const routes = [
   {
@@ -12,6 +13,11 @@ const routes = [
     path: '/image-upload',
     name: 'ImageUpload',
     component: ImageUpload
+  },
+  {
+    path: '/image-edit',
+    name: 'ImageEdit',
+    component: ImageEdit
   },
   
 ]

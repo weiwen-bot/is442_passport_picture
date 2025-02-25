@@ -91,9 +91,15 @@ export default {
 
     // Handle the "Continue" button click
     handleProceed() {
-      alert('Proceeding to the next step...');
+      // alert('Proceeding to the next step...');
       // Add the logic you want when the user clicks "Continue"
       // For example, navigating to the next page or form
+      if (this.imageData) {
+        // Navigate to the image cropping page, passing the image URL as a query parameter
+        this.$router.push({ name: 'ImageEdit', query: { image: this.imageData } });
+      } else {
+        alert('Please upload an image first.');
+      }
     },
   },
 };
