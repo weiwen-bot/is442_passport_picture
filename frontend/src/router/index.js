@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
+import DownloadPictures from '../views/DownloadPictures.vue'
 
 
 const routes = [
@@ -8,6 +9,12 @@ const routes = [
     name: 'Home',
     component: Home
   },
+  {
+    path: "/download-pictures",
+    name: "DownloadPictures",
+    component: DownloadPictures,
+  },
+  
 ]
 
 const router = createRouter({
