@@ -28,7 +28,7 @@ public class backgroundRemovalController {
     @PostMapping("/transform")
     public ResponseEntity<byte[]> transformImg(@RequestParam("file") MultipartFile file, @ModelAttribute ImgDTO imgDTO) {
         try {
-            byte[] result = backgroundRemoval.extractFace(imgDTO, file); // Transform logic
+            byte[] result = backgroundRemoval.extractFacewater(imgDTO, file); // Transform logic
              HttpHeaders headers = new HttpHeaders();
             headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=processed.png");
             headers.add(HttpHeaders.CONTENT_TYPE, "image/png");
