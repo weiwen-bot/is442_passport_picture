@@ -53,7 +53,7 @@ export default {
   },
   methods: {
     // Handle file selection from the device (local upload)
-    handleLocalFileChange(event) {
+    async handleLocalFileChange(event) {
       const file = event.target.files[0];
       
       if (!file) return; // No file selected
@@ -64,6 +64,27 @@ export default {
           localStorage.setItem('imageData', this.imageData); // Save to localStorage
         };
         reader.readAsDataURL(file); // Read the image file as a Data URL
+
+        const formData = new FormData();
+        formData.append("image", file); // Corrected from `this.selectedImage`
+
+        // Backend Upload
+        try {
+          const response = await fetch("http://localhost:8080/image/upload", {
+            method: "POST",
+            body: formData,
+            headers: { Accept: "application/json" },
+          });
+  
+          if (!response.ok) throw new Error("Upload failed");
+  
+          const result = await response.json();
+          console.log("Upload Success:", result);
+  
+        } catch (error) {
+          console.error("Error uploading image:", error);
+        }
+
       } else {
         alert('Please select a valid image file');
       }
