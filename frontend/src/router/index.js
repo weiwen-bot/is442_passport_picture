@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
 import ImageUpload from '../components/ImageUpload.vue';
-import ImageEdit from '../components/SideBar.vue';
+import ImageEdit from '../components/ImageEdit.vue';
 
 const routes = [
   {
