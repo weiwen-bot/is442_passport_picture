@@ -18,8 +18,12 @@ import java.util.Base64;
 
 public class ImageResizingController {
     static {
-        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-        System.out.println("OpenCV loaded successfully.");
+        try {
+            System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+            System.out.println("OpenCV loaded successfully.");
+        } catch (UnsatisfiedLinkError e) {
+            System.err.println("Failed to load OpenCV: " + e.getMessage());
+        }
     }
 
     @PostMapping("/resize")
