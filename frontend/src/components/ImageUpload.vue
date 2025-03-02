@@ -53,7 +53,6 @@ export default {
       SCOPES: 'https://www.googleapis.com/auth/drive.metadata.readonly',
       CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID,
       API_KEY: import.meta.env.VITE_GOOGLE_API_KEY,
-      // APP_ID: '<YOUR_APP_ID>',
       accessToken: null,
       pickerInited: false,
       gisInited: false,
@@ -76,7 +75,6 @@ export default {
         const reader = new FileReader();
         reader.onload = (e) => {
           this.imageData = e.target.result; // Store image data URL
-          // localStorage.setItem('imageData', this.imageData); // Save to localStorage
         };
         reader.readAsDataURL(file); // Read the image file as a Data URL
 
@@ -223,6 +221,7 @@ export default {
           this.imageData = base64String; 
         };
         reader.readAsDataURL(blob);  
+        localStorage.setItem('imageData', this.imageData); // Save to localStorage
       })
       .catch(error => {
         console.error("Error fetching the file:", error);
@@ -245,6 +244,7 @@ export default {
     handleProceed() {
       if (this.imageData) {
         // Navigate to the image cropping page, passing the image URL as a query parameter
+        localStorage.setItem('imageData', this.imageData); // Save to localStorage
         this.$router.push({ name: 'ImageEdit', query: { image: this.imageData } });
       } else {
         alert('Please upload an image first.');
