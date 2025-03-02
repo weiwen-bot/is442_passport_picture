@@ -64,44 +64,48 @@ export default {
     await this.loadScript('https://accounts.google.com/gsi/client', this.gisLoaded);
   },
   methods: {
-  
+    
+    // handle backend upload
+    async uploadToBackend(file) {
+      const formData = new FormData();
+      formData.append("image", file);
+
+      try {
+        const response = await fetch("http://localhost:8080/image/upload", {
+          method: "POST",
+          body: formData,
+          headers: { Accept: "application/json" },
+        });
+
+        if (!response.ok) throw new Error("Upload failed");
+
+        const result = await response.json();
+        console.log("Upload Success:", result);
+        return result; // Return response if needed
+      } catch (error) {
+        console.error("Error uploading image:", error);
+      }
+    },
 
     // Handle file selection from the device (local upload)
     async handleLocalFileChange(event) {
       const file = event.target.files[0];
-      
-      if (!file) return; // No file selected
-      if (file && file.type.startsWith('image')) {
+
+      if (!file) return;
+      if (file && file.type.startsWith("image")) {
         const reader = new FileReader();
         reader.onload = (e) => {
-          this.imageData = e.target.result; // Store image data URL
+          this.imageData = e.target.result;
         };
-        reader.readAsDataURL(file); // Read the image file as a Data URL
+        reader.readAsDataURL(file);
 
-        const formData = new FormData();
-        formData.append("image", file); // Corrected from `this.selectedImage`
-
-        // Backend Upload
-        try {
-          const response = await fetch("http://localhost:8080/image/upload", {
-            method: "POST",
-            body: formData,
-            headers: { Accept: "application/json" },
-          });
-  
-          if (!response.ok) throw new Error("Upload failed");
-  
-          const result = await response.json();
-          console.log("Upload Success:", result);
-  
-        } catch (error) {
-          console.error("Error uploading image:", error);
-        }
-
+        // Upload to backend
+        await this.uploadToBackend(file);
       } else {
-        alert('Please select a valid image file');
+        alert("Please select a valid image file");
       }
     },
+
 
     // Toggle the visibility of cloud options
     toggleCloudOptions() {
@@ -195,7 +199,8 @@ export default {
       picker.setVisible(true);
     },
 
-    // process selected image
+    
+    // process selected file
     async pickerCallback(data) {
       if (data.action === google.picker.Action.PICKED) {
         const document = data[google.picker.Response.DOCUMENTS][0];
@@ -205,27 +210,28 @@ export default {
       }
     },
 
-    // convert selected image to base64
+    // convert to base64 for preview | upload to backend
     getFile(accessToken, fileId) {
       fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
         method: "GET",
         headers: {
-          "Authorization": `Bearer ${accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
         },
       })
-      .then(response => response.blob())
-      .then(blob => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64String = reader.result;
-          this.imageData = base64String; 
-        };
-        reader.readAsDataURL(blob);  
-        localStorage.setItem('imageData', this.imageData); // Save to localStorage
-      })
-      .catch(error => {
-        console.error("Error fetching the file:", error);
-      });
+        .then((response) => response.blob())
+        .then(async (blob) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            this.imageData = reader.result;
+          };
+          reader.readAsDataURL(blob);
+
+          // Upload to backend
+          await this.uploadToBackend(blob);
+        })
+        .catch((error) => {
+          console.error("Error fetching the file:", error);
+        });
     },
 
     // ----------------------------------------------------------------------------------------------------
