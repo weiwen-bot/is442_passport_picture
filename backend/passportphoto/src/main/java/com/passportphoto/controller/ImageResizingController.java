@@ -45,17 +45,20 @@ public class ImageResizingController {
             // Resize while maintaining aspect ratio
             Size newSize = calculateAspectRatioSize(imageMat.size(), targetWidth, targetHeight);
             Mat resizedMat = new Mat();
-            Imgproc.resize(imageMat, resizedMat, newSize);
+            Imgproc.resize(imageMat, resizedMat, newSize, 0, 0, Imgproc.INTER_AREA);
 
-            // Add padding to match exact dimensions
-            Mat finalImage = new Mat(targetHeight, targetWidth, CvType.CV_8UC3, new Scalar(255, 255, 255)); // White background
+            // Create a white background image of exact passport size
+            Mat finalImage = new Mat(targetHeight, targetWidth, CvType.CV_8UC3, new Scalar(255, 255, 255));
+
+            // Calculate center position for padding
             int xOffset = (targetWidth - (int) newSize.width) / 2;
             int yOffset = (targetHeight - (int) newSize.height) / 2;
-            Mat roi = finalImage.submat(yOffset, yOffset + resizedMat.rows(), xOffset, xOffset + resizedMat.cols());
-            resizedMat.copyTo(roi);
+            Rect roi = new Rect(xOffset, yOffset, (int) newSize.width, (int) newSize.height);
+            Mat destinationROI = finalImage.submat(roi);
+            resizedMat.copyTo(destinationROI);
 
             // Convert back to BufferedImage
-            BufferedImage resizedImage = matToBufferedImage(resizedMat);
+            BufferedImage resizedImage = matToBufferedImage(finalImage);
 
             // Convert to Base64 for frontend
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -72,15 +75,19 @@ public class ImageResizingController {
 
     // Method to maintain aspect ratio
     private Size calculateAspectRatioSize(Size originalSize, int targetWidth, int targetHeight) {
-        double aspectRatio = originalSize.width / originalSize.height;
+        double originalAspect = originalSize.width / originalSize.height;
+        double targetAspect = (double) targetWidth / targetHeight;
+
         int newWidth, newHeight;
     
-        if (targetWidth / (double) targetHeight > aspectRatio) {
-            newHeight = targetHeight;
-            newWidth = (int) (targetHeight * aspectRatio);
-        } else {
+        if (originalAspect > targetAspect) {
+            // Image is wider than target aspect ratio, fit width
             newWidth = targetWidth;
-            newHeight = (int) (targetWidth / aspectRatio);
+            newHeight = (int) (targetWidth / originalAspect);
+        } else {
+            // Image is taller than target aspect ratio, fit height
+            newHeight = targetHeight;
+            newWidth = (int) (targetHeight * originalAspect);
         }
     
         return new Size(newWidth, newHeight);
