@@ -26,20 +26,35 @@
     <!-- Inputs for custom width and height -->
     <!-- Show width and height input only after image is uploaded -->
     <div v-if="imageUrl">
-
       <!--Select Country-->
       <label>Country:</label>
-      <select v-model="selectedCountry" @change="updateCropBox">
-        <option v-for="country in countries" :key="country.name" :value="country">
-          {{ country.name }}
+      <select
+        v-model="selectedCountry"
+        @change="updateCropBox"
+        class="form-select"
+      >
+        <option
+          v-for="country in countries"
+          :key="country.name"
+          :value="country"
+        >
+          {{ country.name }} - {{ country.width }}mm x {{ country.height }}mm
         </option>
       </select>
 
       <label>Custom Width (mm):</label>
-      <input type="number" v-model.number="customWidth" @input="updateCropBox" />
+      <input
+        type="number"
+        v-model.number="customWidth"
+        @input="updateCropBox"
+      />
 
       <label>Custom Height (mm):</label>
-      <input type="number" v-model.number="customHeight" @input="updateCropBox" />
+      <input
+        type="number"
+        v-model.number="customHeight"
+        @input="updateCropBox"
+      />
     </div>
 
     <!-- Button to crop the image -->
@@ -48,7 +63,11 @@
     <!-- Display the cropped image -->
     <div v-if="processedImage" class="processed-image-container">
       <h3>Processed Image</h3>
-      <img :src="processedImage" alt="Processed Image" class="processed-image" />
+      <img
+        :src="processedImage"
+        alt="Processed Image"
+        class="processed-image"
+      />
     </div>
   </div>
 </template>
@@ -76,8 +95,13 @@ export default {
       selectedCountry: { name: "Default", width: 35, height: 45 },
       countries: [
         { name: "Default", width: 35, height: 45 },
-        { name: "USA", width: 40, height: 50 },
-        { name: "Europe", width: 35, height: 45 },
+        { name: "USA", width: 51, height: 51 },
+        { name: "SGP", width: 35, height: 45 },
+        { name: "JPN", width: 35, height: 45 },
+        { name: "CHN", width: 33, height: 48 },
+        { name: "KOR", width: 35, height: 45 },
+        { name: "FRA", width: 35, height: 45 },
+        { name: "MAS", width: 35, height: 50 },
       ],
       isResizing: false, // To track if resizing
       cropBoxData: null, // Store crop box data (initial dimensions)
@@ -101,10 +125,12 @@ export default {
       this.cropperHeight = img.height; // Set the height of the cropper container in pixels
 
       // Convert the image dimensions from pixels to millimeters (optional)
-      this.customWidth = img.width / this.pxPerMm;  // Convert pixel width to millimeters
+      this.customWidth = img.width / this.pxPerMm; // Convert pixel width to millimeters
       this.customHeight = img.height / this.pxPerMm; // Convert pixel height to millimeters
 
-      console.log(`Image Dimensions in mm: ${this.customWidth} mm x ${this.customHeight} mm`);
+      console.log(
+        `Image Dimensions in mm: ${this.customWidth} mm x ${this.customHeight} mm`
+      );
 
       // After setting the custom dimensions, update the cropper box
       this.updateCropBox();
@@ -148,10 +174,11 @@ export default {
         if (cropper) {
           const cropBoxData = cropper.getCropBoxData();
           // Only update dimensions during resizing, not moving
-          if (this.cropBoxData && (
-            cropBoxData.width !== this.cropBoxData.width ||
-            cropBoxData.height !== this.cropBoxData.height
-          )) {
+          if (
+            this.cropBoxData &&
+            (cropBoxData.width !== this.cropBoxData.width ||
+              cropBoxData.height !== this.cropBoxData.height)
+          ) {
             this.customWidth = (cropBoxData.width / this.pxPerMm).toFixed(2);
             this.customHeight = (cropBoxData.height / this.pxPerMm).toFixed(2);
           }
@@ -202,24 +229,24 @@ export default {
 </script>
 
 <style>
-  .crop-container {
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin: auto;
-  }
+.crop-container {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: auto;
+}
 
-  .processed-image-container {
-    width: 100%;
-    text-align: center;
-    margin-top: 20px;
-  }
+.processed-image-container {
+  width: 100%;
+  text-align: center;
+  margin-top: 20px;
+}
 
-  .processed-image {
-    width: auto;
-    height: auto;
-    object-fit: contain;
-  }
+.processed-image {
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
 </style>
