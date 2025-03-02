@@ -42,10 +42,17 @@ public class ImageResizingController {
             int targetWidth = dimensions[0];
             int targetHeight = dimensions[1];
 
-            // Resize using OpenCV
+            // Resize while maintaining aspect ratio
+            Size newSize = calculateAspectRatioSize(imageMat.size(), targetWidth, targetHeight);
             Mat resizedMat = new Mat();
-            Size size = new Size(targetWidth, targetHeight);
-            Imgproc.resize(imageMat, resizedMat, size);
+            Imgproc.resize(imageMat, resizedMat, newSize);
+
+            // Add padding to match exact dimensions
+            Mat finalImage = new Mat(targetHeight, targetWidth, CvType.CV_8UC3, new Scalar(255, 255, 255)); // White background
+            int xOffset = (targetWidth - (int) newSize.width) / 2;
+            int yOffset = (targetHeight - (int) newSize.height) / 2;
+            Mat roi = finalImage.submat(yOffset, yOffset + resizedMat.rows(), xOffset, xOffset + resizedMat.cols());
+            resizedMat.copyTo(roi);
 
             // Convert back to BufferedImage
             BufferedImage resizedImage = matToBufferedImage(resizedMat);
@@ -62,6 +69,23 @@ public class ImageResizingController {
             return ResponseEntity.status(500).body("{\"status\":\"error\", \"message\":\"Image resize failed\"}");
         }
     }
+
+    // Method to maintain aspect ratio
+    private Size calculateAspectRatioSize(Size originalSize, int targetWidth, int targetHeight) {
+        double aspectRatio = originalSize.width / originalSize.height;
+        int newWidth, newHeight;
+    
+        if (targetWidth / (double) targetHeight > aspectRatio) {
+            newHeight = targetHeight;
+            newWidth = (int) (targetHeight * aspectRatio);
+        } else {
+            newWidth = targetWidth;
+            newHeight = (int) (targetWidth / aspectRatio);
+        }
+    
+        return new Size(newWidth, newHeight);
+    }
+    
 
     // Method to convert BufferedImage to OpenCV Mat
     private Mat bufferedImageToMat(BufferedImage image) {
