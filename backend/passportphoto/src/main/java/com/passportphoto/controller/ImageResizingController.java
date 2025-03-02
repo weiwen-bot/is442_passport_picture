@@ -96,28 +96,44 @@ public class ImageResizingController {
 
     // Method to convert BufferedImage to OpenCV Mat
     private Mat bufferedImageToMat(BufferedImage image) {
-        // Ensure image is always TYPE_3BYTE_BGR (RGB, 3 channels)
-        if (image.getType() != BufferedImage.TYPE_3BYTE_BGR) {
-            BufferedImage rgbImage = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_3BYTE_BGR);
-            Graphics2D g2d = rgbImage.createGraphics();
-            g2d.drawImage(image, 0, 0, null);
-            g2d.dispose();
-            image = rgbImage;  // Now image is forced to RGB
-        }
-
-        // Convert BufferedImage to Mat
-        byte[] pixels = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
+        // Create a new Mat of the right size
         Mat mat = new Mat(image.getHeight(), image.getWidth(), CvType.CV_8UC3);
-        mat.put(0, 0, pixels);
+    
+        // Get RGB data from the image by directly sampling pixels
+        for (int y = 0; y < image.getHeight(); y++) {
+            for (int x = 0; x < image.getWidth(); x++) {
+                int rgb = image.getRGB(x, y);
+                byte[] bgr = new byte[3];
+            
+                // Extract RGB components and store in BGR order for OpenCV
+                bgr[0] = (byte) ((rgb) & 0xFF);        // Blue
+                bgr[1] = (byte) ((rgb >> 8) & 0xFF);   // Green
+                bgr[2] = (byte) ((rgb >> 16) & 0xFF);  // Red
+            
+                mat.put(y, x, bgr);
+            }
+        }
+    
         return mat;
     }
 
     // Method to convert OpenCV Mat back to BufferedImage
     private BufferedImage matToBufferedImage(Mat mat) {
-        byte[] data = new byte[mat.rows() * mat.cols() * (int) (mat.elemSize())];
-        mat.get(0, 0, data);
+        // Create a BufferedImage
         BufferedImage image = new BufferedImage(mat.cols(), mat.rows(), BufferedImage.TYPE_3BYTE_BGR);
-        image.getRaster().setDataElements(0, 0, mat.cols(), mat.rows(), data);
+    
+        // Get each pixel from the Mat and set it in the BufferedImage
+        byte[] bgr = new byte[3];
+        for (int y = 0; y < mat.rows(); y++) {
+            for (int x = 0; x < mat.cols(); x++) {
+                mat.get(y, x, bgr);
+            
+                // Convert from BGR to RGB for Java
+                int rgb = (bgr[2] & 0xFF) << 16 | (bgr[1] & 0xFF) << 8 | (bgr[0] & 0xFF);
+                image.setRGB(x, y, rgb);
+            }
+        }
+    
         return image;
     }
 
