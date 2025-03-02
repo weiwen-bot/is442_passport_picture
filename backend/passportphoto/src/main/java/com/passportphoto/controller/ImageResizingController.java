@@ -124,18 +124,27 @@ public class ImageResizingController {
     // Method to get passport photo dimensions based on the selected country
     // pixels = size in mm / 25.4 * DPI
     private int[] getPassportPhotoDimensions(String country) {
+        if (country == null || country.trim().isEmpty()) {
+            System.out.println("Country input is null or empty, defaulting to 413x531");
+            return new int[]{413, 531}; // Default size
+        }
+
+        country = country.trim().toLowerCase();
+        System.out.println("Received country: [" + country + "]");
+
         switch (country.toLowerCase()) {
-            case "JPN":
+            case "jpn":
                 return new int[]{413, 531}; // 35mm x 45mm at 300 dpi
-            case "USA":
+            case "usa":
                 return new int[]{602, 602}; // 51mm x 51mm at 300 dpi
-            case "SGP":
+            case "sgp":
                 return new int[]{413, 531}; // 35mm x 45mm at 300 dpi
-            case "CHN":
+            case "chn":
                 return new int[]{390, 567}; // 33mm x 48mmm at 300 dpi
-            case "MAS":
+            case "mas":
                 return new int[]{413, 591}; // 35mm x 50 mm at 300 dpi
             default:
+                System.out.println("Country not found, defaulting to 413x531");
                 return new int[]{413, 531}; // Default to JPN/SGP size
         }
     }
