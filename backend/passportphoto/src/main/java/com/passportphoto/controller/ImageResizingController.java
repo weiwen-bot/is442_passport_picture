@@ -65,17 +65,16 @@ public class ImageResizingController {
 
     // Method to convert BufferedImage to OpenCV Mat
     private Mat bufferedImageToMat(BufferedImage image) {
-        int type = image.getType();
-    
-        if (type == BufferedImage.TYPE_BYTE_GRAY) {
-            // Convert grayscale image to RGB (3 channels)
+        // Ensure image is always TYPE_3BYTE_BGR (RGB, 3 channels)
+        if (image.getType() != BufferedImage.TYPE_3BYTE_BGR) {
             BufferedImage rgbImage = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_3BYTE_BGR);
             Graphics2D g2d = rgbImage.createGraphics();
             g2d.drawImage(image, 0, 0, null);
             g2d.dispose();
-            image = rgbImage;
+            image = rgbImage;  // Now image is forced to RGB
         }
-    
+
+        // Convert BufferedImage to Mat
         byte[] pixels = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
         Mat mat = new Mat(image.getHeight(), image.getWidth(), CvType.CV_8UC3);
         mat.put(0, 0, pixels);
