@@ -20,11 +20,11 @@
             <img src="https://upload.wikimedia.org/wikipedia/commons/4/4c/Google_Drive_icon.svg" alt="Google Drive" class="cloud-icon" />
             Google Drive
           </button>
-          <button @click="handleDropboxUpload" class="cloud-btn">
+          <button v-if="false" @click="handleDropboxUpload" class="cloud-btn">
             <img src="https://upload.wikimedia.org/wikipedia/commons/3/3b/Dropbox_logo_2015.svg" alt="Dropbox" class="cloud-icon" />
             Dropbox
           </button>
-          <button @click="handleOneDriveUpload" class="cloud-btn">
+          <button v-if="false" @click="handleOneDriveUpload" class="cloud-btn">
             <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/OneDrive_logo_2013.svg" alt="OneDrive" class="cloud-icon" />
             OneDrive
           </button>
@@ -76,7 +76,7 @@ export default {
         const reader = new FileReader();
         reader.onload = (e) => {
           this.imageData = e.target.result; // Store image data URL
-          localStorage.setItem('imageData', this.imageData); // Save to localStorage
+          // localStorage.setItem('imageData', this.imageData); // Save to localStorage
         };
         reader.readAsDataURL(file); // Read the image file as a Data URL
 
@@ -209,15 +209,11 @@ export default {
 
     // convert selected image to base64
     getFile(accessToken, fileId) {
-      // fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
-      //   method: "GET",
-      //   headers: {
-      //     "Authorization": `Bearer ${accessToken}`,
-      //   },
-      // })
-      gapi.client.drive.files.get({
-        fileId: fileId,
-        alt: 'media',
+      fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+        },
       })
       .then(response => response.blob())
       .then(blob => {
@@ -247,9 +243,6 @@ export default {
     // Handle the "Continue" button click
     // TODO: handle passing image to next page
     handleProceed() {
-      // alert('Proceeding to the next step...');
-      // Add the logic you want when the user clicks "Continue"
-      // For example, navigating to the next page or form
       if (this.imageData) {
         // Navigate to the image cropping page, passing the image URL as a query parameter
         this.$router.push({ name: 'ImageEdit', query: { image: this.imageData } });
@@ -294,6 +287,7 @@ h1 {
   align-items: center;
   width: 100%;
   margin-bottom: 20px;
+  gap: 20px;
 }
 
 .button-wrapper {
