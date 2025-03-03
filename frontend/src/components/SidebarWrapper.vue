@@ -30,7 +30,7 @@ export default {
       menu: [
         { header: "Main Navigation", hiddenOnCollapse: true },
         { title: "Crop", icon: "fa-solid fa-crop", action: "crop" },
-        { title: "Background Remover", icon: "fa-solid fa-eraser", action: "backgroundremover" },
+        { title: "Background Remover", icon: "fa-solid fa-eraser", action: "background-remover" },
       ],
     };
   },

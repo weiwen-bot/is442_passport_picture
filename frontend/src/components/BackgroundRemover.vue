@@ -1,13 +1,12 @@
 <template>
   <div class="flex flex-col items-center space-y-4 p-4">
-    <h2 class="text-xl font-bold">Upload Image for Background Removal</h2>
-    <input type="file" @change="handleFileUpload" accept="image/png, image/jpeg" class="border p-2" />
+    <h2 class="text-xl font-bold">Remove Background</h2>
 
     <div v-if="imageUrl" class="relative w-full max-w-md">
-      <img ref="imageRef" :src="imageUrl" class="w-full" />
+      <img ref="imageRef" :src="imageUrl" class="w-full" @load="initCropper" />
     </div>
 
-    <button @click="processImage" :disabled="!imageFile" 
+    <button @click="processImage" :disabled="!imageUrl" 
             class="bg-blue-500 text-white px-4 py-2 rounded disabled:bg-gray-400">
       Remove Background
     </button>
@@ -20,29 +19,41 @@ import "cropperjs/dist/cropper.css";
 import axios from "axios";
 
 export default {
+  props: {
+    imageData: String, // ✅ Accepts image from ImageEdit.vue
+  },
   data() {
     return {
-      imageFile: null,
-      imageUrl: null,
       cropper: null,
+      imageFile: null, // ✅ Maintain imageFile for processing
     };
   },
-  methods: {
-    handleFileUpload(event) {
-      const file = event.target.files[0];
-      if (file) {
-        this.imageFile = file;
-        this.imageUrl = URL.createObjectURL(file);
-        this.$nextTick(this.initCropper);
-      }
+  computed: {
+    imageUrl() {
+      return this.imageData;
     },
+  },
+  watch: {
+    imageData: {
+      immediate: true, // ✅ Ensures watcher runs on mount
+      handler(newImage) {
+        if (newImage) {
+          console.log("New image detected:", newImage);
+          this.imageFile = this.dataURLtoFile(newImage, "uploaded-image.jpg");
+          this.$nextTick(this.initCropper); // ✅ Ensure Cropper initializes
+        }
+      },
+    },
+  },
+
+  methods: {
     initCropper() {
       if (this.cropper) {
         this.cropper.destroy();
       }
       const image = this.$refs.imageRef;
       this.cropper = new Cropper(image, {
-        aspectRatio: NaN, // Allows free resizing of width and height
+        aspectRatio: NaN,
         viewMode: 1,
         autoCropArea: 0.8,
         movable: true,
@@ -52,8 +63,29 @@ export default {
       });
     },
     async processImage() {
-      if (!this.imageFile || !this.cropper) return;
+      console.log("Processing image...");
+
+      if (!this.imageFile) {
+        console.error("❌ No image file detected!");
+        alert("No image file detected!");
+        return;
+      }
+
+      if (!this.cropper) {
+        console.error("❌ Cropper is not initialized!");
+        alert("Cropper is not initialized!");
+        return;
+      }
+
       const cropData = this.cropper.getData();
+      console.log("Crop data:", cropData);
+
+      if (!cropData.width || !cropData.height) {
+        console.error("❌ Invalid crop dimensions!");
+        alert("Invalid crop dimensions!");
+        return;
+      }
+
       const formData = new FormData();
       formData.append("file", this.imageFile);
       formData.append("x", Math.round(cropData.x));
@@ -61,21 +93,19 @@ export default {
       formData.append("width", Math.round(cropData.width));
       formData.append("height", Math.round(cropData.height));
 
-      //alert x y width height
-      alert(Math.round(cropData.x) + " " + Math.round(cropData.y) + " " + Math.round(cropData.width) + " " + Math.round(cropData.height));
+      alert(`x: ${Math.round(cropData.x)}, y: ${Math.round(cropData.y)}, width: ${Math.round(cropData.width)}, height: ${Math.round(cropData.height)}`);
+    },
+    dataURLtoFile(dataUrl, filename) {
+      let arr = dataUrl.split(","),
+        mime = arr[0].match(/:(.*?);/)[1],
+        bstr = atob(arr[1]),
+        n = bstr.length,
+        u8arr = new Uint8Array(n);
 
-
-
-      // try {
-      //   const response = await axios.post("http://localhost:8080/api/remove-background", formData, {
-      //     headers: { "Content-Type": "multipart/form-data" },
-      //   });
-      //   console.log("Processed Image:", response.data);
-      //   alert("Background removed successfully!");
-      // } catch (error) {
-      //   console.error("Error processing image:", error);
-      //   alert("Failed to process image.");
-      // }
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      return new File([u8arr], filename, { type: mime });
     },
   },
 };

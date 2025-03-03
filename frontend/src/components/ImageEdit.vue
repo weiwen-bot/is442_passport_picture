@@ -12,7 +12,14 @@
         @discard-crop="handleDiscardCrop" 
       />
 
-      <!-- Background Remover Component-->
+      <!-- Show BackgroundRemover Component when "Background Remover" is selected -->
+      <BackgroundRemover 
+        v-if="currentAction === 'background-remover' && imageData" 
+        :key="imageData"
+        v-model:imageData="imageData"
+        @remove-background="handleRemoveBackground"
+        @discard-background="handleDiscardBackground"
+      />
 
     
       <div class="bg-black fixed bottom-0 left-0 w-full p-2 z-10">
@@ -37,11 +44,14 @@
 <script>
 import ImageCropping from "./ImageCropping.vue";
 import SidebarWrapper from "./SidebarWrapper.vue";
+import BackgroundRemover from "./BackgroundRemover.vue";
+
 
 export default {
   components: {
     ImageCropping,
     SidebarWrapper,
+    BackgroundRemover,
   },
   data() {
     return {
