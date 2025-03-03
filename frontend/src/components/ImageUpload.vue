@@ -81,6 +81,14 @@ export default {
 
         const result = await response.json();
         console.log("Upload Success:", result);
+        
+        // Update imageData with processed image from backend
+        if (result.image) {
+          this.imageData = result.image; // Set the processed image
+        } else {
+          console.error("No image received from backend");
+        }
+
         return result; // Return response if needed
       } catch (error) {
         console.error("Error uploading image:", error);
@@ -94,9 +102,9 @@ export default {
       if (!file) return;
       if (file && file.type.startsWith("image")) {
         const reader = new FileReader();
-        reader.onload = (e) => {
-          this.imageData = e.target.result;
-        };
+        // reader.onload = (e) => {
+        //   this.imageData = e.target.result;
+        // };
         reader.readAsDataURL(file);
 
         // Upload to backend
