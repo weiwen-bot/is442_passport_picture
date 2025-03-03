@@ -2,7 +2,7 @@
     <!-- Sidebar -->
     <SidebarWrapper @update-action="handleAction" :sidebar-width="sidebarWidth" />
 
-    <div :style="{ marginLeft: sidebarWidth }" class="main-content p-1 transition-all duration-300">
+    <div class="p-1 grid grid-cols-5 gap-2 ml-[180px] mr-0">
       <!-- Show ImageCropping Component when "Crop" is selected -->
       <ImageCropping 
         v-if="currentAction === 'crop' && imageData" 
@@ -12,21 +12,28 @@
         @discard-crop="handleDiscardCrop" 
       />
 
-      <!-- Background Remover Component-->
+      <!-- Show BackgroundRemover Component when "Background Remover" is selected -->
+      <BackgroundRemover 
+        v-if="currentAction === 'background-remover' && imageData" 
+        :key="imageData"
+        v-model:imageData="imageData"
+        @remove-background="handleRemoveBackground"
+        @discard-background="handleDiscardBackground"
+      />
 
     
       <div class="bg-black fixed bottom-0 left-0 w-full p-2 z-10">
         <div class="flex justify-end">
           <!--Discard Button -->
           <button :disabled="!isCropped"
-            class="text-white p-2 rounded mr-3"
+            class="text-white bg-gray-800 p-2 rounded mr-3"
             @click="handleDiscardCrop">
             Discard
           </button>
 
           <!--Download Button -->
           <button
-            class="text-white p-2 rounded">
+            class="text-white bg-gray-800 p-2 rounded">
             Download
           </button>
         </div>
@@ -37,18 +44,21 @@
 <script>
 import ImageCropping from "./ImageCropping.vue";
 import SidebarWrapper from "./SidebarWrapper.vue";
+import BackgroundRemover from "./BackgroundRemover.vue";
+
 
 export default {
   components: {
     ImageCropping,
     SidebarWrapper,
+    BackgroundRemover,
   },
   data() {
     return {
       imageData: null, // Image data that will be passed to child and updated after crop
       originalImage: null, // Store the original image
       currentAction: 'crop', // Start with crop selected
-      sidebarWidth: '260px', // Default width for expanded sidebar
+      sidebarWidth: '240px', // Default width for expanded sidebar
       isCropped: false, // Track cropped state in the parent
     };
   },
@@ -95,21 +105,8 @@ export default {
 };
 </script>
 
-<style scoped>
-.image-edit-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-
-.main-content {
-  text-align: center;
-}
-
-/* Optional: Transition for smooth resizing */
-.transition-all {
-  transition: all 0.3s ease;
+<style>
+.bg-gray-800 {
+    background-color: #2d3748 !important;
 }
 </style>

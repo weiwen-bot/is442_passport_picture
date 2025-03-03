@@ -1,87 +1,84 @@
 <template>
-  <div class="flex items-center justify-center space-x-4">
-    <!-- Left side: Country Selection and Custom Width/Height Inputs -->
-    <div
-      class="left-side bg-white border rounded-lg shadow-lg p-4 flex flex-col justify-start space-y-2 text-black"
+  <!-- Left side: Country Selection and Custom Width/Height Inputs -->
+  <div
+    class="col-span-1 flex flex-col bg-white border rounded-lg shadow-lg p-2 space-y-2 text-black"
+  >
+    <h2 class="font-bold">Crop Your Image</h2>
+    <label for="country" class="font-semibold">Country:</label>
+    <select
+      id="country"
+      v-model="selectedCountry"
+      @change="updateCropBox"
+      class="p-2 border border-gray-300 rounded-md"
     >
-      <h2 class="font-bold">Crop Your Image</h2>
-      <label for="country" class="font-semibold">Country:</label>
-      <select
-        id="country"
-        v-model="selectedCountry"
-        @change="updateCropBox"
-        class="p-2 border border-gray-300 rounded-md"
+      <option v-for="country in countries" :key="country.name" :value="country">
+        {{ country.name }}
+      </option>
+    </select>
+
+    <label for="aspect" class="font-semibold">Aspect Ratio:</label>
+    <select
+      id="aspect"
+      v-model="selectedAspectRatio"
+      @change="updateAspectRatio"
+      class="p-2 border border-gray-300 rounded-md"
+    >
+      <option value="" disabled selected>Please select</option>
+      <option
+        v-for="ratio in aspectRatios"
+        :key="ratio.value"
+        :value="ratio.value"
       >
-        <option
-          v-for="country in countries"
-          :key="country.name"
-          :value="country"
-        >
-          {{ country.name }}
-        </option>
-      </select>
+        {{ ratio.label }}
+      </option>
+    </select>
 
-      <label for="width" class="font-semibold">Width (mm):</label>
-      <input
-        id="width"
-        type="number"
-        v-model="customWidth"
-        @input="updateCropBoxManually"
-        placeholder="Enter width"
-        step="0.01"
-        class="p-2 border border-gray-300 rounded-md"
-      />
+    <label for="width" class="font-semibold">Width (mm):</label>
+    <input
+      id="width"
+      type="number"
+      v-model="customWidth"
+      @input="updateCropBoxManually"
+      placeholder="Enter width"
+      step="0.01"
+      class="p-2 border border-gray-300 rounded-md"
+    />
 
-      <label for="height" class="font-semibold">Height (mm):</label>
-      <input
-        id="height"
-        type="number"
-        v-model="customHeight"
-        @input="updateCropBoxManually"
-        placeholder="Enter height"
-        step="0.01"
-        class="p-2 border border-gray-300 rounded-md"
-      />
+    <label for="height" class="font-semibold">Height (mm):</label>
+    <input
+      id="height"
+      type="number"
+      v-model="customHeight"
+      @input="updateCropBoxManually"
+      placeholder="Enter height"
+      step="0.01"
+      class="p-2 border border-gray-300 rounded-md"
+    />
 
-      <button class="text-white p-2 rounded mt-4" @click="cropImage">
-        Crop
-      </button>
-    </div>
+    <button class="text-white bg-gray-800 p-2 rounded mt-4" @click="cropImage">
+      Crop
+    </button>
+  </div>
 
-    <!-- Right side: Image Display -->
-    <div class="right-side bg-white border rounded-lg shadow-lg p-4">
-      <div class="image-container flex justify-center items-center">
-        <vue-cropper
-          v-if="imageData"
-          ref="cropper"
-          :src="imageData"
-          :aspect-ratio="aspectRatio"
-          :view-mode="2"
-          :drag-mode="'crop'"
-          guides
-          :background="true"
-          :auto-crop="true"
-          :responsive="true"
-          :auto-crop-area="0.8"
-          :crop-box-resizable="true"
-          :crop-box-draggable="true"
-          @crop="updateInputFields"
-        />
-      </div>
-    </div>
-
-    <!-- Button to crop the image -->
-    <button @click="cropImage">Crop</button>
-
-    <!-- Display the cropped image -->
-    <div v-if="processedImage" class="processed-image-container">
-      <h3>Processed Image</h3>
-      <img
-        :src="processedImage"
-        alt="Processed Image"
-        class="processed-image"
-      />
-    </div>
+  <!-- Right side: Image Display -->
+  <div class="col-span-4 shadow-lg">
+    <vue-cropper
+      v-if="imageData"
+      ref="cropper"
+      class="h-full w-auto max-w-full object-contain"
+      :src="imageData"
+      :aspect-ratio="aspectRatio"
+      :view-mode="2"
+      :drag-mode="'crop'"
+      guides
+      :background="true"
+      :auto-crop="true"
+      :responsive="true"
+      :auto-crop-area="0.8"
+      :crop-box-resizable="true"
+      :crop-box-draggable="true"
+      @crop="updateInputFields"
+    />
   </div>
 </template>
 
@@ -104,11 +101,19 @@ export default {
       pxPerMm: 10, // Conversion factor from mm to pixels (adjust this value based on your image resolution)
       processedImage: "", // Cropped image URL
       isCropped: false, // Track if cropping is completed
+      selectedAspectRatio: "",
       selectedCountry: { name: "Singapore", width: 35, height: 45 },
       countries: [
         { name: "Singapore", width: 35, height: 45 },
         { name: "USA", width: 40, height: 50 },
         { name: "Europe", width: 35, height: 45 },
+      ],
+
+      aspectRatios: [
+        { label: "1:1", value: 1 },
+        { label: "4:5", value: 4 / 5 },
+        { label: "3:4", value: 3 / 4 },
+        { label: "16:9", value: 16 / 9 },
       ],
       isResizing: false, // Track if the crop box is being resized
     };
@@ -255,29 +260,18 @@ export default {
         this.customHeight = Math.round(cropBoxData.height / this.pxPerMm);
       }
     },
+    updateAspectRatio() {
+      const cropper = this.$refs.cropper;
+      if (cropper) {
+        cropper.setAspectRatio(this.selectedAspectRatio);
+      }
+    },
   },
 };
 </script>
 
 <style>
-.crop-container {
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin: auto;
-}
-
-.processed-image-container {
-  width: 100%;
-  text-align: center;
-  margin-top: 20px;
-}
-
-.processed-image {
-  width: auto;
-  height: auto;
-  object-fit: contain;
+.bg-gray-800 {
+  background-color: #2d3748 !important;
 }
 </style>

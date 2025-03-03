@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
 import ImageUpload from '../components/ImageUpload.vue';
 import ImageEdit from '../components/ImageEdit.vue';
+import BackgroundRemover from '../components/BackgroundRemover.vue';
 
 const routes = [
   {
@@ -19,6 +20,12 @@ const routes = [
     name: 'ImageEdit',
     component: ImageEdit
   },
+  //add Background remover route
+  {
+    path : '/background-remover',
+    name : 'BackgroundRemover',
+    component: BackgroundRemover
+  }
   
 ]
 

@@ -13,18 +13,18 @@
       </div>
 
       <!-- Choose from Cloud -->
-      <div v-if="false" class="button-wrapper">
+      <div class="button-wrapper">
         <button @click="toggleCloudOptions" class="upload-btn">Choose from Cloud</button>
         <div v-if="showCloudOptions" class="cloud-options">
           <button @click="handleGoogleDriveUpload" class="cloud-btn">
             <img src="https://upload.wikimedia.org/wikipedia/commons/4/4c/Google_Drive_icon.svg" alt="Google Drive" class="cloud-icon" />
             Google Drive
           </button>
-          <button @click="handleDropboxUpload" class="cloud-btn">
+          <button v-if="false" @click="handleDropboxUpload" class="cloud-btn">
             <img src="https://upload.wikimedia.org/wikipedia/commons/3/3b/Dropbox_logo_2015.svg" alt="Dropbox" class="cloud-icon" />
             Dropbox
           </button>
-          <button @click="handleOneDriveUpload" class="cloud-btn">
+          <button v-if="false" @click="handleOneDriveUpload" class="cloud-btn">
             <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/OneDrive_logo_2013.svg" alt="OneDrive" class="cloud-icon" />
             OneDrive
           </button>
@@ -49,57 +49,200 @@ export default {
     return {
       imageData: null,       // Stores the image data URL
       showCloudOptions: false, // Flag to toggle cloud upload options
+
+      SCOPES: 'https://www.googleapis.com/auth/drive.metadata.readonly',
+      CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+      API_KEY: import.meta.env.VITE_GOOGLE_API_KEY,
+      accessToken: null,
+      pickerInited: false,
+      gisInited: false,
+      tokenClient: null,
     };
   },
+  async mounted() {
+    await this.loadScript('https://apis.google.com/js/api.js', this.gapiLoaded);
+    await this.loadScript('https://accounts.google.com/gsi/client', this.gisLoaded);
+  },
   methods: {
+    
+    // handle backend upload
+    async uploadToBackend(file) {
+      const formData = new FormData();
+      formData.append("image", file);
+
+      try {
+        const response = await fetch("http://localhost:8080/image/upload", {
+          method: "POST",
+          body: formData,
+          headers: { Accept: "application/json" },
+        });
+
+        if (!response.ok) throw new Error("Upload failed");
+
+        const result = await response.json();
+        console.log("Upload Success:", result);
+        
+        // Update imageData with processed image from backend
+        if (result.image) {
+          this.imageData = result.image; // Set the processed image
+        } else {
+          console.error("No image received from backend");
+        }
+
+        return result; // Return response if needed
+      } catch (error) {
+        console.error("Error uploading image:", error);
+      }
+    },
+
     // Handle file selection from the device (local upload)
     async handleLocalFileChange(event) {
       const file = event.target.files[0];
-      
-      if (!file) return; // No file selected
-      if (file && file.type.startsWith('image')) {
+
+      if (!file) return;
+      if (file && file.type.startsWith("image")) {
         const reader = new FileReader();
-        reader.onload = (e) => {
-          this.imageData = e.target.result; // Store image data URL
-          localStorage.setItem('imageData', this.imageData); // Save to localStorage
-        };
-        reader.readAsDataURL(file); // Read the image file as a Data URL
+        // reader.onload = (e) => {
+        //   this.imageData = e.target.result;
+        // };
+        reader.readAsDataURL(file);
 
-        const formData = new FormData();
-        formData.append("image", file); // Corrected from `this.selectedImage`
-
-        // Backend Upload
-        try {
-          const response = await fetch("http://localhost:8080/image/upload", {
-            method: "POST",
-            body: formData,
-            headers: { Accept: "application/json" },
-          });
-  
-          if (!response.ok) throw new Error("Upload failed");
-  
-          const result = await response.json();
-          console.log("Upload Success:", result);
-  
-        } catch (error) {
-          console.error("Error uploading image:", error);
-        }
-
+        // Upload to backend
+        await this.uploadToBackend(file);
       } else {
-        alert('Please select a valid image file');
+        alert("Please select a valid image file");
       }
     },
+
 
     // Toggle the visibility of cloud options
     toggleCloudOptions() {
       this.showCloudOptions = !this.showCloudOptions;
     },
 
-    // Placeholder for Google Drive upload functionality
-    handleGoogleDriveUpload() {
-      alert('Google Drive upload functionality is not implemented yet.');
+    // ----------------------------------------------------------------------------------------------------
+    // google drive functions
+
+    // load gapi and gdrive
+    loadScript(src, callback) {
+      return new Promise((resolve, reject) => {
+        const existingScript = document.querySelector(`script[src="${src}"]`);
+        if (existingScript) {
+          if (callback) {
+            callback();
+          }
+          resolve();
+          return;
+        }
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        script.defer = true;
+        script.onload = () => {
+          if (callback) {
+            callback();
+          }
+          resolve();
+        };
+        script.onerror = (error) => {
+          reject(new Error(`Failed to load script: ${src}`));
+        };
+        document.body.appendChild(script);
+      });
     },
 
+    // initialize picker when gapi is loaded
+    gapiLoaded() {
+      gapi.load('client:picker', this.initializePicker);
+    },
+
+    // initialize picker api
+    async initializePicker() {
+      await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/drive/v3/rest');
+      this.pickerInited = true;
+    },
+
+    // initialize Google Identity Services (GIS) for OAuth authentication
+    gisLoaded() {
+      this.tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: this.CLIENT_ID,
+        scope: this.SCOPES,
+        callback: '',
+      });
+      this.gisInited = true;
+    },
+
+    // triggered on click
+    // calls create picker function if no error
+    handleGoogleDriveUpload() {
+      this.tokenClient.callback = async (response) => {
+        if (response.error !== undefined) {
+          throw response;
+        }
+        this.accessToken = response.access_token;
+        await this.createPicker();
+      };
+
+      if (this.accessToken === null) {
+        this.tokenClient.requestAccessToken({ prompt: 'consent' });
+      } else {
+        this.tokenClient.requestAccessToken({ prompt: '' });
+      }
+    },
+
+    // create and show google picker to select file
+    createPicker() {
+      const view = new google.picker.View(google.picker.ViewId.DOCS);
+      view.setMimeTypes('image/png,image/jpeg,image/jpg');
+      const picker = new google.picker.PickerBuilder()
+        .enableFeature(google.picker.Feature.NAV_HIDDEN)
+        .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
+        .setDeveloperKey(this.API_KEY)
+        .setAppId(this.APP_ID)
+        .setOAuthToken(this.accessToken)
+        .addView(view)
+        .addView(new google.picker.DocsUploadView())
+        .setCallback(this.pickerCallback)
+        .build();
+      picker.setVisible(true);
+    },
+
+    
+    // process selected file
+    async pickerCallback(data) {
+      if (data.action === google.picker.Action.PICKED) {
+        const document = data[google.picker.Response.DOCUMENTS][0];
+        const fileId = document[google.picker.Document.ID];
+        this.getFile(this.accessToken, fileId);
+        this.showCloudOptions = false;
+      }
+    },
+
+    // convert to base64 for preview | upload to backend
+    getFile(accessToken, fileId) {
+      fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+        .then((response) => response.blob())
+        .then(async (blob) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            this.imageData = reader.result;
+          };
+          reader.readAsDataURL(blob);
+
+          // Upload to backend
+          await this.uploadToBackend(blob);
+        })
+        .catch((error) => {
+          console.error("Error fetching the file:", error);
+        });
+    },
+
+    // ----------------------------------------------------------------------------------------------------
     // Placeholder for Dropbox upload functionality
     handleDropboxUpload() {
       alert('Dropbox upload functionality is not implemented yet.');
@@ -111,12 +254,11 @@ export default {
     },
 
     // Handle the "Continue" button click
+    // TODO: handle passing image to next page
     handleProceed() {
-      // alert('Proceeding to the next step...');
-      // Add the logic you want when the user clicks "Continue"
-      // For example, navigating to the next page or form
       if (this.imageData) {
         // Navigate to the image cropping page, passing the image URL as a query parameter
+        localStorage.setItem('imageData', this.imageData); // Save to localStorage
         this.$router.push({ name: 'ImageEdit', query: { image: this.imageData } });
       } else {
         alert('Please upload an image first.');
@@ -159,6 +301,7 @@ h1 {
   align-items: center;
   width: 100%;
   margin-bottom: 20px;
+  gap: 20px;
 }
 
 .button-wrapper {
