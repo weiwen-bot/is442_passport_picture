@@ -14,6 +14,14 @@
         </option>
       </select>
 
+      <label for="aspect" class="font-semibold">Aspect Ratio:</label>
+      <select
+        class="p-2 border border-gray-300 rounded-md"
+      >
+        <option>
+        </option>
+      </select>
+
       <label for="width" class="font-semibold">Width (mm):</label>
       <input
         id="width"
