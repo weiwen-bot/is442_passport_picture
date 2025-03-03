@@ -24,13 +24,12 @@ import javax.imageio.ImageIO;
 @CrossOrigin(origins = "http://localhost:5173") // Allow frontend origin
 public class ImageCroppingController {
 
-    @Value("${upload.directory:uploads/}") // Set upload directory with default value
-    private String uploadDir;
+    // @Value("${upload.directory:uploads/}") // Set upload directory with default value
+    // private String uploadDir;
 
-    static {
-        System.out.println("OpenCV is initialized successfully.");
-    }
-
+    // static {
+    //     System.out.println("OpenCV is initialized successfully.");
+    // }
 
     // Crop the uploaded image
     @PostMapping("/crop")
