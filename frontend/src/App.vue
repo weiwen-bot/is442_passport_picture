@@ -1,6 +1,7 @@
 <script>
 import HelloWorld from './components/HelloWorld.vue'
 import { RouterLink, RouterView } from 'vue-router'
+import BackgroundRemover from "./components/BackgroundRemover.vue"
 
 export default { 
   name: "App",
@@ -8,6 +9,7 @@ export default {
   components:{
 
     // Dashboard,
+    BackgroundRemover
   },
   methods:{
 
@@ -22,7 +24,7 @@ export default {
     <!-- Content -->
     <!-- <div class="col-lg-10 offset-lg-2 col-12 px-0"> -->
     <router-view/>
-    <div>DDDDDDD</div>
+    <!-- <div>ID Photo Generator</div> -->
     <!-- </div> -->
   </div>
 </template>
