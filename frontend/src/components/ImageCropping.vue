@@ -1,7 +1,6 @@
 <template>
-  <div class="flex items-center justify-center space-x-4">
     <!-- Left side: Country Selection and Custom Width/Height Inputs -->
-    <div class="left-side bg-white border rounded-lg shadow-lg p-4 flex flex-col justify-start space-y-2 text-black">
+    <div class="col-span-1 flex flex-col bg-white border rounded-lg shadow-lg p-2 space-y-2 text-black">
       <h2 class="font-bold">Crop Your Image</h2>
       <label for="country" class="font-semibold">Country:</label>
       <select
@@ -46,29 +45,25 @@
     </div>
 
     <!-- Right side: Image Display -->
-    <div class="right-side bg-white border rounded-lg shadow-lg p-4">
-      <div class="image-container flex justify-center items-center">
-        <vue-cropper
-          v-if="imageData"
-          ref="cropper"
-          :src="imageData"
-          :aspect-ratio="aspectRatio"
-          :view-mode="2"
-          :drag-mode="'crop'"
-          guides
-          :background="true"
-          :auto-crop="true"
-          :responsive="true"
-          :auto-crop-area="0.8"
-          :crop-box-resizable="true"
-          :crop-box-draggable="true"
-          @crop="updateInputFields"
-        />
-      </div>
+    <div class="col-span-4 shadow-lg">
+      <vue-cropper
+        v-if="imageData"
+        ref="cropper"
+        class="h-full w-auto max-w-full object-contain"
+        :src="imageData"
+        :aspect-ratio="aspectRatio"
+        :view-mode="2"
+        :drag-mode="'crop'"
+        guides
+        :background="true"
+        :auto-crop="true"
+        :responsive="true"
+        :auto-crop-area="0.8"
+        :crop-box-resizable="true"
+        :crop-box-draggable="true"
+        @crop="updateInputFields"
+      />
     </div>
-
-    
-  </div>
 </template>
 
 <script>
