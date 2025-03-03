@@ -1,9 +1,10 @@
 <template>
-  <div class="flex flex-col items-center space-y-4 p-4">
+  <div class="flex flex-col items-center space-y-4 p-4 w-full">
     <h2 class="text-xl font-bold">Remove Background</h2>
 
-    <div v-if="imageUrl" class="relative w-full max-w-md">
-      <img ref="imageRef" :src="imageUrl" class="w-full" @load="initCropper" />
+    <!-- Ensure image takes full width -->
+    <div v-if="imageUrl" class="relative w-full max-w-4xl">
+      <img ref="imageRef" :src="imageUrl" class="w-full h-auto max-h-[80vh]" @load="initCropper" />
     </div>
 
     <button @click="processImage" :disabled="!imageUrl" 
@@ -12,6 +13,7 @@
     </button>
   </div>
 </template>
+
 
 <script>
 import Cropper from "cropperjs";
