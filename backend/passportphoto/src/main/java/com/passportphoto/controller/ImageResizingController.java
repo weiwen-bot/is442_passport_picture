@@ -28,8 +28,7 @@ public class ImageResizingController {
     }
 
     @PostMapping("/resize")
-    public ResponseEntity<String> resizeImage(@RequestParam("image") MultipartFile file,
-                                              @RequestParam("country") String country) {
+    public ResponseEntity<String> resizeImage(@RequestParam("image") MultipartFile file, @RequestParam("country") String country) {
         try {
             // Convert uploaded image to BufferedImage
             BufferedImage originalImage = ImageIO.read(file.getInputStream());
@@ -42,20 +41,18 @@ public class ImageResizingController {
             int targetWidth = dimensions[0];
             int targetHeight = dimensions[1];
 
-            // Resize while maintaining aspect ratio
-            Size newSize = calculateAspectRatioSize(imageMat.size(), targetWidth, targetHeight);
+            // 1. Resize using COVER strategy
+            Size newSize = calculateCoverSize(imageMat.size(), targetWidth, targetHeight);
             Mat resizedMat = new Mat();
             Imgproc.resize(imageMat, resizedMat, newSize, 0, 0, Imgproc.INTER_AREA);
 
-            // Create a white background image of exact passport size
-            Mat finalImage = new Mat(targetHeight, targetWidth, CvType.CV_8UC3, new Scalar(255, 255, 255));
+            // 2. Center and crop if needed
+            Mat croppedMat = centerCrop(resizedMat, targetWidth, targetHeight);
+            resizedMat.release();
 
-            // Calculate center position for padding
-            int xOffset = (targetWidth - (int) newSize.width) / 2;
-            int yOffset = (targetHeight - (int) newSize.height) / 2;
-            Rect roi = new Rect(xOffset, yOffset, (int) newSize.width, (int) newSize.height);
-            Mat destinationROI = finalImage.submat(roi);
-            resizedMat.copyTo(destinationROI);
+            // 3. Extend the background to fill any remaining gaps
+            Mat finalImage = extendBackground(croppedMat, targetWidth, targetHeight);
+            croppedMat.release();
 
             // Convert back to BufferedImage
             BufferedImage resizedImage = matToBufferedImage(finalImage);
@@ -73,24 +70,179 @@ public class ImageResizingController {
         }
     }
 
-    // Method to maintain aspect ratio
-    private Size calculateAspectRatioSize(Size originalSize, int targetWidth, int targetHeight) {
+    // Method to maintain aspect ratio with COVER strategy
+    private Size calculateCoverSize(Size originalSize, int targetWidth, int targetHeight) {
         double originalAspect = originalSize.width / originalSize.height;
         double targetAspect = (double) targetWidth / targetHeight;
-
+    
         int newWidth, newHeight;
     
         if (originalAspect > targetAspect) {
-            // Image is wider than target aspect ratio, fit width
-            newWidth = targetWidth;
-            newHeight = (int) (targetWidth / originalAspect);
-        } else {
-            // Image is taller than target aspect ratio, fit height
+            // Wider than target aspect ratio → Scale by height
             newHeight = targetHeight;
             newWidth = (int) (targetHeight * originalAspect);
+        } else {
+            // Taller than target aspect ratio → Scale by width
+            newWidth = targetWidth;
+            newHeight = (int) (targetWidth / originalAspect);
         }
     
         return new Size(newWidth, newHeight);
+    }
+
+    // Method to center crop
+    private Mat centerCrop(Mat image, int targetWidth, int targetHeight) {
+        int imgWidth = image.width();
+        int imgHeight = image.height();
+
+        if (imgWidth < targetWidth || imgHeight < targetHeight) {
+            System.out.println("Warning: Image is smaller than target size. Skipping crop.");
+            return image.clone();
+        }
+
+        int startX = (int) ((image.width() - targetWidth) / 2.0);
+        int startY = (int) ((image.height() - targetHeight) / 2.0);
+        
+        // Ensure we don't go out of bounds
+        startX = Math.max(0, startX);
+        startY = Math.max(0, startY);
+        
+        // Create ROI for center crop
+        Rect roi = new Rect(startX, startY, 
+                            Math.min(targetWidth, image.width() - startX), 
+                            Math.min(targetHeight, image.height() - startY));
+        
+        return new Mat(image, roi);
+    }
+
+    private Mat extendBackground(Mat image, int targetWidth, int targetHeight) {
+        // If the image already matches the target size, return it as is
+        if (image.width() == targetWidth && image.height() == targetHeight) {
+            return image.clone();
+        }
+        
+        // Create a new canvas of the target size
+        Mat extendedMat = new Mat(targetHeight, targetWidth, image.type());
+        
+        // Calculate where to place the image in the canvas
+        int xOffset = (targetWidth - image.width()) / 2;
+        int yOffset = (targetHeight - image.height()) / 2;
+        
+        // Create a ROI in the target canvas
+        Rect roi = new Rect(xOffset, yOffset, image.width(), image.height());
+        Mat destinationRoi = extendedMat.submat(roi);
+        
+        // Copy the image to the ROI
+        image.copyTo(destinationRoi);
+        
+        // If there are any gaps, fill them with content-aware extension
+        if (xOffset > 0 || yOffset > 0) {
+            // Handle left edge
+            if (xOffset > 0) {
+                for (int y = 0; y < image.height(); y++) {
+                    for (int x = 0; x < xOffset; x++) {
+                        double blendFactor = (double) x / xOffset;
+                        byte[] edgePixel = new byte[3];
+                        image.get(y, 0, edgePixel);
+                        extendedMat.put(y + yOffset, x, edgePixel);
+                    }
+                }
+            }
+            
+            // Handle right edge
+            if (xOffset > 0) {
+                int rightStart = xOffset + image.width();
+                for (int y = 0; y < image.height(); y++) {
+                    for (int x = rightStart; x < targetWidth; x++) {
+                        byte[] edgePixel = new byte[3];
+                        image.get(y, image.width() - 1, edgePixel);
+                        extendedMat.put(y + yOffset, x, edgePixel);
+                    }
+                }
+            }
+            
+            // Handle top edge
+            if (yOffset > 0) {
+                for (int x = 0; x < image.width(); x++) {
+                    for (int y = 0; y < yOffset; y++) {
+                        byte[] edgePixel = new byte[3];
+                        image.get(0, x, edgePixel);
+                        extendedMat.put(y, x + xOffset, edgePixel);
+                    }
+                }
+            }
+            
+            // Handle bottom edge
+            if (yOffset > 0) {
+                int bottomStart = yOffset + image.height();
+                for (int x = 0; x < image.width(); x++) {
+                    for (int y = bottomStart; y < targetHeight; y++) {
+                        byte[] edgePixel = new byte[3];
+                        image.get(image.height() - 1, x, edgePixel);
+                        extendedMat.put(y, x + xOffset, edgePixel);
+                    }
+                }
+            }
+            
+            // Fill the corners with the corner pixels
+            // Top-left corner
+            if (xOffset > 0 && yOffset > 0) {
+                byte[] cornerPixel = new byte[3];
+                image.get(0, 0, cornerPixel);
+                for (int y = 0; y < yOffset; y++) {
+                    for (int x = 0; x < xOffset; x++) {
+                        extendedMat.put(y, x, cornerPixel);
+                    }
+                }
+            }
+            
+            // Top-right corner
+            if (xOffset > 0 && yOffset > 0) {
+                byte[] cornerPixel = new byte[3];
+                image.get(0, image.width() - 1, cornerPixel);
+                for (int y = 0; y < yOffset; y++) {
+                    for (int x = xOffset + image.width(); x < targetWidth; x++) {
+                        extendedMat.put(y, x, cornerPixel);
+                    }
+                }
+            }
+            
+            // Bottom-left corner
+            if (xOffset > 0 && yOffset > 0) {
+                byte[] cornerPixel = new byte[3];
+                image.get(image.height() - 1, 0, cornerPixel);
+                for (int y = yOffset + image.height(); y < targetHeight; y++) {
+                    for (int x = 0; x < xOffset; x++) {
+                        extendedMat.put(y, x, cornerPixel);
+                    }
+                }
+            }
+            
+            // Bottom-right corner
+            if (xOffset > 0 && yOffset > 0) {
+                byte[] cornerPixel = new byte[3];
+                image.get(image.height() - 1, image.width() - 1, cornerPixel);
+                for (int y = yOffset + image.height(); y < targetHeight; y++) {
+                    for (int x = xOffset + image.width(); x < targetWidth; x++) {
+                        extendedMat.put(y, x, cornerPixel);
+                    }
+                }
+            }
+        }
+        
+        // Apply a slight blur to any extended regions to make them look more natural
+        int blurRadius = 3;
+        Mat blurred = new Mat();
+        Imgproc.GaussianBlur(extendedMat, blurred, new Size(blurRadius * 2 + 1, blurRadius * 2 + 1), 0);
+        
+        // Create a mask for the original image area
+        Mat mask = new Mat(targetHeight, targetWidth, CvType.CV_8UC1, new Scalar(255));
+        Imgproc.rectangle(mask, new Rect(xOffset, yOffset, image.width(), image.height()), new Scalar(0), -1);
+        
+        // Only apply blur to the extended regions
+        blurred.copyTo(extendedMat, mask);
+        
+        return extendedMat;
     }
     
 
