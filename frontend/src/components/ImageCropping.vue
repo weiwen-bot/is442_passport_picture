@@ -16,9 +16,14 @@
 
       <label for="aspect" class="font-semibold">Aspect Ratio:</label>
       <select
+        id="aspect"
+        v-model="selectedAspectRatio"
+        @change="updateAspectRatio"
         class="p-2 border border-gray-300 rounded-md"
       >
-        <option>
+        <option value="" disabled selected>Please select</option>
+        <option v-for="ratio in aspectRatios" :key="ratio.value" :value="ratio.value">
+          {{ ratio.label }}
         </option>
       </select>
 
@@ -45,7 +50,7 @@
       />
 
       <button
-        class="text-white p-2 rounded mt-4"
+        class="text-white bg-gray-800 p-2 rounded mt-4"
         @click="cropImage">
         Crop
       </button>
@@ -93,11 +98,19 @@ export default {
       pxPerMm: 10, // Conversion factor from mm to pixels (adjust this value based on your image resolution)
       processedImage: "", // Cropped image URL
       isCropped: false, // Track if cropping is completed
+      selectedAspectRatio: "",
       selectedCountry: { name: "Singapore", width: 35, height: 45 },
       countries: [
         { name: "Singapore", width: 35, height: 45 },
         { name: "USA", width: 40, height: 50 },
         { name: "Europe", width: 35, height: 45 },
+      ],
+      
+      aspectRatios: [
+        { label: "1:1", value: 1 },
+        { label: "4:5", value: 4 / 5 },
+        { label: "3:4", value: 3 / 4 },
+        { label: "16:9", value: 16 / 9 },
       ],
       isResizing: false, // Track if the crop box is being resized
     };
@@ -192,7 +205,19 @@ export default {
         this.customHeight = Math.round(cropBoxData.height / this.pxPerMm);
       }
     },
+    updateAspectRatio() {
+      const cropper = this.$refs.cropper;
+      if (cropper) {
+        cropper.setAspectRatio(this.selectedAspectRatio);
+      }
+    },
 
   },
 };
 </script>
+
+<style>
+.bg-gray-800 {
+    background-color: #2d3748 !important;
+}
+</style>

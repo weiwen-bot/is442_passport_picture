@@ -26,14 +26,14 @@
         <div class="flex justify-end">
           <!--Discard Button -->
           <button :disabled="!isCropped"
-            class="text-white p-2 rounded mr-3"
+            class="text-white bg-gray-800 p-2 rounded mr-3"
             @click="handleDiscardCrop">
             Discard
           </button>
 
           <!--Download Button -->
           <button
-            class="text-white p-2 rounded">
+            class="text-white bg-gray-800 p-2 rounded">
             Download
           </button>
         </div>
@@ -104,3 +104,9 @@ export default {
   },
 };
 </script>
+
+<style>
+.bg-gray-800 {
+    background-color: #2d3748 !important;
+}
+</style>
