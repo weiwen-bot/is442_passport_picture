@@ -47,5 +47,7 @@ export default {
 </script>
 
 <style scoped>
-/* Optional custom styles for Sidebar */
+::v-deep(.vsm--title) {
+  font-size: 15px; /* Adjust the font size */
+}
 </style>

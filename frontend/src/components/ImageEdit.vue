@@ -2,7 +2,7 @@
     <!-- Sidebar -->
     <SidebarWrapper @update-action="handleAction" :sidebar-width="sidebarWidth" />
 
-    <div class="p-1 grid grid-cols-5 gap-2 ml-[200px] mr-0">
+    <div class="p-1 grid grid-cols-5 gap-2 ml-[180px] mr-0">
       <!-- Show ImageCropping Component when "Crop" is selected -->
       <ImageCropping 
         v-if="currentAction === 'crop' && imageData" 
@@ -58,7 +58,7 @@ export default {
       imageData: null, // Image data that will be passed to child and updated after crop
       originalImage: null, // Store the original image
       currentAction: 'crop', // Start with crop selected
-      sidebarWidth: '250px', // Default width for expanded sidebar
+      sidebarWidth: '240px', // Default width for expanded sidebar
       isCropped: false, // Track cropped state in the parent
     };
   },
