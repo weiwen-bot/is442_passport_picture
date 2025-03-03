@@ -116,149 +116,80 @@ public class ImageResizingController {
     }
     
 
-    // Method to extend background
+    // Method to extend background - using OpenCV
     private Mat extendBackground(Mat image, int targetWidth, int targetHeight) {
-        // If the image already matches the target size, return it as is
+        // 1. If image already matches target, just return
         if (image.width() == targetWidth && image.height() == targetHeight) {
             return image.clone();
         }
     
-        // Create a new canvas of the target size
-        Mat extendedMat = new Mat(targetHeight, targetWidth, image.type(), new Scalar(0, 0, 0));
-    
-        // Calculate where to place the image in the canvas
+        // 2. Create offsets for centering
         int xOffset = (targetWidth - image.width()) / 2;
         int yOffset = (targetHeight - image.height()) / 2;
     
-        // Create a ROI in the target canvas
+        // 3. Create a larger canvas if needed
+        Mat extendedMat = new Mat(targetHeight, targetWidth, image.type());
+        // First, fill with black (or zero), or you could fill with white if you'd like:
+        extendedMat.setTo(new Scalar(0,0,0));
+    
+        // 4. Copy the main image into the center of extendedMat
         Rect roi = new Rect(xOffset, yOffset, image.width(), image.height());
-        Mat destinationRoi = extendedMat.submat(roi);
+        Mat centerRoi = extendedMat.submat(roi);
+        image.copyTo(centerRoi);
     
-        // Copy the image to the ROI
-        image.copyTo(destinationRoi);
+        // 5. We now replicate the border (which is the region outside the ROI).
+        //    Easiest approach: extract the center area to a temporary Mat, call copyMakeBorder
+        Mat justCenter = new Mat();
+        // Copy just the center part from extendedMat
+        extendedMat.submat(roi).copyTo(justCenter);
     
-        // If there are any gaps, fill them with improved extension
-        if (xOffset > 0 || yOffset > 0) {
-            // Extend left edge
-            if (xOffset > 0) {
-                for (int y = 0; y < image.height(); y++) {
-                    // Get the leftmost pixel of this row
-                    byte[] edgePixel = new byte[3];
-                    image.get(y, 0, edgePixel);
-                    
-                    // Fill left extension
-                    for (int x = 0; x < xOffset; x++) {
-                        extendedMat.put(y + yOffset, x, edgePixel);
-                    }
-                }
-            }
-            
-            // Extend right edge
-            if (xOffset > 0) {
-                for (int y = 0; y < image.height(); y++) {
-                    // Get the rightmost pixel of this row
-                    byte[] edgePixel = new byte[3];
-                    image.get(y, image.width() - 1, edgePixel);
-                    
-                    // Fill right extension
-                    for (int x = xOffset + image.width(); x < targetWidth; x++) {
-                        extendedMat.put(y + yOffset, x, edgePixel);
-                    }
-                }
-            }
-            
-            // Extend top edge
-            if (yOffset > 0) {
-                for (int x = 0; x < image.width(); x++) {
-                    // Get the topmost pixel of this column
-                    byte[] edgePixel = new byte[3];
-                    image.get(0, x, edgePixel);
-                    
-                    // Fill top extension
-                    for (int y = 0; y < yOffset; y++) {
-                        extendedMat.put(y, x + xOffset, edgePixel);
-                    }
-                }
-            }
-            
-            // Extend bottom edge
-            if (yOffset > 0) {
-                for (int x = 0; x < image.width(); x++) {
-                    // Get the bottommost pixel of this column
-                    byte[] edgePixel = new byte[3];
-                    image.get(image.height() - 1, x, edgePixel);
-                    
-                    // Fill bottom extension
-                    for (int y = yOffset + image.height(); y < targetHeight; y++) {
-                        extendedMat.put(y, x + xOffset, edgePixel);
-                    }
-                }
-            }
-            
-            // Fill top-left corner
-            if (xOffset > 0 && yOffset > 0) {
-                byte[] cornerPixel = new byte[3];
-                image.get(0, 0, cornerPixel);
-                for (int y = 0; y < yOffset; y++) {
-                    for (int x = 0; x < xOffset; x++) {
-                        extendedMat.put(y, x, cornerPixel);
-                    }
-                }
-            }
-            
-            // Fill top-right corner
-            if (xOffset > 0 && yOffset > 0) {
-                byte[] cornerPixel = new byte[3];
-                image.get(0, image.width() - 1, cornerPixel);
-                for (int y = 0; y < yOffset; y++) {
-                    for (int x = xOffset + image.width(); x < targetWidth; x++) {
-                        extendedMat.put(y, x, cornerPixel);
-                    }
-                }
-            }
-            
-            // Fill bottom-left corner
-            if (xOffset > 0 && yOffset > 0) {
-                byte[] cornerPixel = new byte[3];
-                image.get(image.height() - 1, 0, cornerPixel);
-                for (int y = yOffset + image.height(); y < targetHeight; y++) {
-                    for (int x = 0; x < xOffset; x++) {
-                        extendedMat.put(y, x, cornerPixel);
-                    }
-                }
-            }
-            
-            // Fill bottom-right corner
-            if (xOffset > 0 && yOffset > 0) {
-                byte[] cornerPixel = new byte[3];
-                image.get(image.height() - 1, image.width() - 1, cornerPixel);
-                for (int y = yOffset + image.height(); y < targetHeight; y++) {
-                    for (int x = xOffset + image.width(); x < targetWidth; x++) {
-                        extendedMat.put(y, x, cornerPixel);
-                    }
-                }
-            }
-        }
-        
-        // Apply a slight blur to any extended regions to make them look more natural
-        // Calculate blur radius based on the extension size
-        int maxExtension = Math.max(xOffset, yOffset);
-        int blurRadius = Math.max(3, maxExtension / 10);
-        
-        Mat blurred = new Mat();
-        Imgproc.GaussianBlur(extendedMat, blurred, new Size(blurRadius * 2 + 1, blurRadius * 2 + 1), 0);
-        
-        // Create a mask for the original image area
-        Mat mask = new Mat(targetHeight, targetWidth, CvType.CV_8UC1, new Scalar(255));
-        Imgproc.rectangle(mask, roi, new Scalar(0), -1);
-        
-        // Only apply blur to the extended regions
-        blurred.copyTo(extendedMat, mask);
-        
+        // Now we build a new Mat of size targetWidth/targetHeight using copyMakeBorder:
+        Mat borderReplicated = new Mat();
+        int top = yOffset;
+        int bottom = targetHeight - image.height() - yOffset;
+        int left = xOffset;
+        int right = targetWidth - image.width() - xOffset;
+    
+        Core.copyMakeBorder(
+            justCenter,
+            borderReplicated,
+            top, bottom, left, right,
+            Core.BORDER_REPLICATE
+        );
+    
+        // 'borderReplicated' is now the final image with extended edges
+        // 6. Light blur *only the newly created border region* if desired
+        Mat blurred = applySoftBlurToBorder(borderReplicated, roi);
+    
         // Clean up
-        mask.release();
+        justCenter.release();
+        return blurred;
+    }
+    
+    private Mat applySoftBlurToBorder(Mat extendedMat, Rect roi) {
+        // We'll do a small blur just outside the ROI edges
+    
+        // 1. Duplicate the entire extendedMat
+        Mat blurred = new Mat();
+        Imgproc.GaussianBlur(extendedMat, blurred, new Size(9, 9), 0); 
+        // use a smaller kernel if you want minimal blur
+    
+        // 2. Create a mask where the ROI is black (unblurred) and the rest is white (blurred)
+        Mat mask = Mat.zeros(extendedMat.size(), CvType.CV_8UC1);
+    
+        // ROI is the main image region. We want that region *unblurred*, so set it to 0.
+        // The region outside ROI remains at 0 => we actually want it to be 255 for blur.
+        // We'll do the inverse:
+        //   - Fill entire mask with 255
+        //   - Then fill the ROI with black
+        mask.setTo(new Scalar(255));
+        Imgproc.rectangle(mask, roi, new Scalar(0), -1);
+    
+        // 3. Copy from 'blurred' into 'extendedMat' only where mask=255
+        blurred.copyTo(extendedMat, mask);
+    
         blurred.release();
-        
+        mask.release();
         return extendedMat;
     }
     
