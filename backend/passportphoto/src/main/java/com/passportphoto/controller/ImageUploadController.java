@@ -22,20 +22,9 @@ public class ImageUploadController {
             // Convert MultipartFile to OpenCV Mat
             Mat image = Imgcodecs.imdecode(new MatOfByte(file.getBytes()), Imgcodecs.IMREAD_COLOR);
 
-            // Print original size
-            System.out.println("Original Image Size: " + image.width() + "x" + image.height());
-
-            // Resize Image (Example: Resize to 2000x2000)
-            Mat resizedImage = new Mat();
-            Size size = new Size(2000, 1000);
-            Imgproc.resize(image, resizedImage, size);
-
-            // Print resized size
-            System.out.println("Resized Image Size: " + resizedImage.width() + "x" + resizedImage.height());
-
             // Convert Mat to byte array
             MatOfByte matOfByte = new MatOfByte();
-            Imgcodecs.imencode(".jpg", resizedImage, matOfByte);
+            Imgcodecs.imencode(".jpg", image, matOfByte);
             byte[] imageBytes = matOfByte.toArray();
 
             // Convert to Base64
