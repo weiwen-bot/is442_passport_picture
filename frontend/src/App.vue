@@ -25,7 +25,6 @@ export default {
     <!-- <div class="col-lg-10 offset-lg-2 col-12 px-0"> -->
     <router-view/>
     <!-- <div>ID Photo Generator</div> -->
-    <BackgroundRemover />
     <!-- </div> -->
   </div>
 </template>
