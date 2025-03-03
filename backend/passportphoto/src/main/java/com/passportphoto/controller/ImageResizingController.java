@@ -90,6 +90,27 @@ public class ImageResizingController {
         return new Size(newWidth, newHeight);
     }
 
+    // Method to maintain aspect ratio with FIT strategy
+    private Size calculateFitSize(Size originalSize, int targetWidth, int targetHeight) {
+        double originalAspect = originalSize.width / originalSize.height;
+        double targetAspect = (double) targetWidth / targetHeight;
+    
+        int newWidth, newHeight;
+    
+        if (originalAspect > targetAspect) {
+            // Too wide → Fit to height
+            newHeight = targetHeight;
+            newWidth = (int) (targetHeight * originalAspect);
+        } else {
+            // Too tall → Fit to width
+            newWidth = targetWidth;
+            newHeight = (int) (targetWidth / originalAspect);
+        }
+    
+        return new Size(newWidth, newHeight);
+    }
+    
+
     // Method to center crop
     private Mat centerCrop(Mat image, int targetWidth, int targetHeight) {
         int imgWidth = image.width();
