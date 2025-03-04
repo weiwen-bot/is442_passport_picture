@@ -1,82 +1,85 @@
 <template>
-    <!-- Left side: Country Selection and Custom Width/Height Inputs -->
-    <div class="col-span-1 flex flex-col bg-white border rounded-lg shadow-lg p-2 space-y-2 text-black">
-      <h2 class="font-bold">Crop Your Image</h2>
-      <label for="country" class="font-semibold">Country:</label>
-      <select
-        id="country"
-        v-model="selectedCountry"
-        @change="updateCropBox"
-        class="p-2 border border-gray-300 rounded-md"
+  <!-- Left side: Country Selection and Custom Width/Height Inputs -->
+  <div
+    class="col-span-1 flex flex-col bg-white border rounded-lg shadow-lg p-2 space-y-2 text-black"
+  >
+    <h2 class="font-bold">Crop Your Image</h2>
+    <label for="country" class="font-semibold">Country:</label>
+    <select
+      id="country"
+      v-model="selectedCountry"
+      @change="updateCropBox"
+      class="p-2 border border-gray-300 rounded-md"
+    >
+      <option v-for="country in countries" :key="country.name" :value="country">
+        {{ country.name }}
+      </option>
+    </select>
+
+    <label for="aspect" class="font-semibold">Aspect Ratio:</label>
+    <select
+      id="aspect"
+      v-model="selectedAspectRatio"
+      @change="updateAspectRatio"
+      class="p-2 border border-gray-300 rounded-md"
+    >
+      <option value="" disabled selected>Please select</option>
+      <option
+        v-for="ratio in aspectRatios"
+        :key="ratio.value"
+        :value="ratio.value"
       >
-        <option v-for="country in countries" :key="country.name" :value="country">
-          {{ country.name }}
-        </option>
-      </select>
+        {{ ratio.label }}
+      </option>
+    </select>
 
-      <label for="aspect" class="font-semibold">Aspect Ratio:</label>
-      <select
-        id="aspect"
-        v-model="selectedAspectRatio"
-        @change="updateAspectRatio"
-        class="p-2 border border-gray-300 rounded-md"
-      >
-        <option value="" disabled selected>Please select</option>
-        <option v-for="ratio in aspectRatios" :key="ratio.value" :value="ratio.value">
-          {{ ratio.label }}
-        </option>
-      </select>
+    <label for="width" class="font-semibold">Width (mm):</label>
+    <input
+      id="width"
+      type="number"
+      v-model="customWidth"
+      @input="updateCropBoxManually"
+      placeholder="Enter width"
+      step="0.01"
+      class="p-2 border border-gray-300 rounded-md"
+    />
 
-      <label for="width" class="font-semibold">Width (mm):</label>
-      <input
-        id="width"
-        type="number"
-        v-model="customWidth"
-        @input="updateCropBoxManually"
-        placeholder="Enter width"
-        step="0.01"
-        class="p-2 border border-gray-300 rounded-md"
-      />
+    <label for="height" class="font-semibold">Height (mm):</label>
+    <input
+      id="height"
+      type="number"
+      v-model="customHeight"
+      @input="updateCropBoxManually"
+      placeholder="Enter height"
+      step="0.01"
+      class="p-2 border border-gray-300 rounded-md"
+    />
 
-      <label for="height" class="font-semibold">Height (mm):</label>
-      <input
-        id="height"
-        type="number"
-        v-model="customHeight"
-        @input="updateCropBoxManually"
-        placeholder="Enter height"
-        step="0.01"
-        class="p-2 border border-gray-300 rounded-md"
-      />
+    <button class="text-white bg-gray-800 p-2 rounded mt-4" @click="cropImage">
+      Crop
+    </button>
+  </div>
 
-      <button
-        class="text-white bg-gray-800 p-2 rounded mt-4"
-        @click="cropImage">
-        Crop
-      </button>
-  
-    </div>
-
-    <!-- Right side: Image Display -->
-    <div class="col-span-4 shadow-lg">
-      <vue-cropper
-        v-if="imageData"
-        ref="cropper"
-        class="h-full w-auto max-w-full object-contain cropper"
-        :src="imageData"
-        :aspect-ratio="aspectRatio"
-        :view-mode="2"
-        :drag-mode="'crop'"
-        guides
-        :background="false"
-        :auto-crop="true"
-        :responsive="true"
-        :crop-box-resizable="true"
-        :crop-box-draggable="true"
-        @ready="updateCropBox"
-        @crop="updateInputFields"
-      />
-    </div>
+  <!-- Right side: Image Display -->
+  <div class="col-span-4 shadow-lg">
+    <vue-cropper
+      v-if="imageData"
+      ref="cropper"
+      class="h-full w-auto max-w-full object-contain cropper"
+      :src="imageData"
+      :aspect-ratio="aspectRatio"
+      :view-mode="2"
+      :drag-mode="'crop'"
+      guides
+      :background="false"
+      :auto-crop="true"
+      :responsive="true"
+      :crop-box-resizable="true"
+      :crop-box-draggable="true"
+      @ready="updateCropBox"
+      @crop="updateInputFields"
+    />
+  </div>
 </template>
 
 <script>
@@ -105,7 +108,7 @@ export default {
         { name: "USA", width: 40, height: 50 },
         { name: "Europe", width: 35, height: 45 },
       ],
-      
+
       aspectRatios: [
         { label: "1:1", value: 1 },
         { label: "4:5", value: 4 / 5 },
@@ -121,7 +124,7 @@ export default {
     },
   },
   mounted() {
-    this.selectedCountry = this.countries.find(c => c.name === "Singapore");
+    this.selectedCountry = this.countries.find((c) => c.name === "Singapore");
   },
 
   methods: {
@@ -138,7 +141,7 @@ export default {
 
       console.log("Crop Data:", { cropX, cropY, cropWidth, cropHeight });
 
-      const byteCharacters = atob(this.imageData.split(',')[1]);
+      const byteCharacters = atob(this.imageData.split(",")[1]);
       const byteArrays = [];
       for (let offset = 0; offset < byteCharacters.length; offset += 1024) {
         const slice = byteCharacters.slice(offset, offset + 1024);
@@ -149,7 +152,7 @@ export default {
         byteArrays.push(new Uint8Array(byteNumbers));
       }
 
-      const imageBlob = new Blob(byteArrays, { type: 'image/jpeg' });
+      const imageBlob = new Blob(byteArrays, { type: "image/jpeg" });
 
       let formData = new FormData();
       formData.append("image", imageBlob, "cropped_image.jpg");
@@ -170,11 +173,11 @@ export default {
           this.$emit("crop-complete", responseBody.image); // Send cropped image back to parent
           this.isCropped = true; // Set the flag to true to display the cropped image
           console.log("isCropped:", this.isCropped); // Should log 'true' after cropping
-          
         } else {
-          alert("Error cropping image: " + responseBody.message || 'Unknown error');
+          alert(
+            "Error cropping image: " + responseBody.message || "Unknown error"
+          );
         }
-
       } catch (error) {
         alert("Error cropping image:", error);
       }
@@ -235,14 +238,13 @@ export default {
         cropper.setAspectRatio(this.selectedAspectRatio);
       }
     },
-
   },
 };
 </script>
 
 <style>
 .bg-gray-800 {
-    background-color: #2d3748 !important;
+  background-color: #2d3748 !important;
 }
 .cropper {
   max-width: 100%;
