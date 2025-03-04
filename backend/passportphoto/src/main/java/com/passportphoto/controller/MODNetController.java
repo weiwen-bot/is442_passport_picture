@@ -15,7 +15,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/image")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "http://localhost")
 public class MODNetController {
 
     private static final String MODEL_NAME = "modnet.onnx";
