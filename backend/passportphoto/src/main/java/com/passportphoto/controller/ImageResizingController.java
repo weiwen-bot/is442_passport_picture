@@ -30,35 +30,65 @@ public class ImageResizingController {
     @PostMapping("/resize")
     public ResponseEntity<String> resizeImage(@RequestParam("image") MultipartFile file, @RequestParam("country") String country) {
         try {
-            // Convert uploaded image to BufferedImage
+            // 1. Convert uploaded image to BufferedImage
             BufferedImage originalImage = ImageIO.read(file.getInputStream());
 
-            // Convert BufferedImage to OpenCV Mat
-            Mat imageMat = bufferedImageToMat(originalImage);
+            // 2. Detect if input has alpha channel
+            boolean hasAlpha = originalImage.getColorModel().hasAlpha();
 
-            // Get target passport size
+            // 3. Convert to Mat (BGR or BGRA)
+            Mat imageMat = hasAlpha? bufferedImageToMatRGBA(originalImage): bufferedImageToMatBGR(originalImage);
+
+            // 4. Get target passport size
             int[] dimensions = getPassportPhotoDimensions(country);
             int targetWidth = dimensions[0];
             int targetHeight = dimensions[1];
 
-            // 1. Resize the image to fit the target dimensions
-            Mat resizedMat = resizeToTarget(imageMat, targetWidth, targetHeight);
+            // 5. Resize the image to fit the target dimensions
+            Mat resized;
+            if (hasAlpha) {
+                // 4-channel path
+                resized = resizeWithAlpha(imageMat, targetWidth, targetHeight);
+            } else {
+                // 3-channel path
+                resized = resizeToTargetBGR(imageMat, targetWidth, targetHeight);
+            }
 
-            // 2. Extend the background to fill any remaining gaps
-            Mat finalImage = extendBackground(resizedMat, targetWidth, targetHeight);
-            resizedMat.release();
+            // 6. Extend background if needed
+            Mat finalMat;
+            if (hasAlpha) {
+                // For RGBA, we keep extension transparent.
+                finalMat = extendTransparentBackground(resized, targetWidth, targetHeight);
+            } else {
+                // For BGR, we either replicate/blur or do uniform fill 
+                // depending on whether the background is uniform.
+                finalMat = extendBackgroundBGR(resized, targetWidth, targetHeight);
+            }
 
-            // Convert back to BufferedImage
-            BufferedImage resizedImage = matToBufferedImage(finalImage);
+            // 7. Convert final Mat back to BufferedImage
+            BufferedImage outputImage;
+            if (finalMat.channels() == 4) {
+                // RGBA => use a method that preserves alpha
+                outputImage = matToBufferedImageRGBA(finalMat);
+            } else {
+                // BGR => normal 3-channel
+                outputImage = matToBufferedImageBGR(finalMat);
+            }
 
-            // Convert to Base64 for frontend
+            // 8. Encode to Base64.
+            //    - If RGBA, better use PNG to preserve transparency.
+            //    - If BGR only, JPG is fine.
+            String format = (finalMat.channels() == 4) ? "png" : "jpg";
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ImageIO.write(resizedImage, "jpg", baos);
-            byte[] resizedImageBytes = baos.toByteArray();
+            ImageIO.write(outputImage, format, baos);
+            byte[] bytes = baos.toByteArray();
             baos.close();
 
-            String base64Image = Base64.getEncoder().encodeToString(resizedImageBytes);
-            return ResponseEntity.ok("{\"status\":\"success\", \"message\":\"Image resized successfully\", \"image\":\"data:image/jpeg;base64," + base64Image + "\"}");
+            String base64Image = Base64.getEncoder().encodeToString(bytes);
+            String mimeType = (finalMat.channels() == 4) ? "image/png" : "image/jpeg";
+            String dataUrl = "data:" + mimeType + ";base64," + base64Image;
+
+            return ResponseEntity.ok("{\"status\":\"success\", \"message\":\"Image resized successfully\", \"image\":\"" + dataUrl + "\"}");
         } catch (IOException e) {
             return ResponseEntity.status(500).body("{\"status\":\"error\", \"message\":\"Image resize failed\"}");
         }
@@ -73,26 +103,35 @@ public class ImageResizingController {
         if (originalAspect > targetAspect) {
             // Image is relatively wider -> match target's width
             newWidth = targetWidth;
-            newHeight = (int) (targetWidth / originalAspect);
+            newHeight = (int) Math.round(targetWidth / originalAspect);
         } else {
             // Image is relatively taller (or equal) -> match target's height
             newHeight = targetHeight;
-            newWidth = (int) (targetHeight * originalAspect);
+            newWidth = (int) Math.round(targetHeight * originalAspect);
         }
         return new Size(newWidth, newHeight);
     }
     
-    // Method to resize image to target
-    private Mat resizeToTarget(Mat image, int targetWidth, int targetHeight) {
-        int w = image.width();
-        int h = image.height();
+    /* RESIZING 3-CHANNEL vs 4-CHANNEL */
+
+    // Method to resize RGBA image and returns CV_8UC4
+    private Mat resizeWithAlpha(Mat rgbaImage, int targetWidth, int targetHeight) {
+        Size newSize = calculateFitSize(rgbaImage.size(), targetWidth, targetHeight);
+        Mat resizedRgba = new Mat();
+        Imgproc.resize(rgbaImage, resizedRgba, newSize, 0, 0, Imgproc.INTER_AREA);
+        return resizedRgba;
+    }
+
+    // Method to resise BGR image
+    private Mat resizeToTargetBGR(Mat bgrImage, int targetWidth, int targetHeight) {
+        int w = bgrImage.width();
+        int h = bgrImage.height();
     
         // 1) If bigger in either dimension => "fit" using calculateFitSize()
         if (w > targetWidth || h > targetHeight) {
-            Size newSize = calculateFitSize(image.size(), targetWidth, targetHeight);
-    
+            Size newSize = calculateFitSize(bgrImage.size(), targetWidth, targetHeight);
             Mat resized = new Mat();
-            Imgproc.resize(image, resized, newSize, 0, 0, Imgproc.INTER_AREA);
+            Imgproc.resize(bgrImage, resized, newSize, 0, 0, Imgproc.INTER_AREA);
             return resized;
         }
     
@@ -100,56 +139,120 @@ public class ImageResizingController {
         if (w < targetWidth || h < targetHeight) {
             double scaleX = (double) targetWidth / w;
             double scaleY = (double) targetHeight / h;
-            // We use min(...) so we don't exceed the target in the other dimension
+            // Use min so we don't exceed the target in the other dimension
             double scale = Math.min(scaleX, scaleY);
     
             int newW = (int) Math.round(w * scale);
             int newH = (int) Math.round(h * scale);
     
             Mat resized = new Mat();
-            Imgproc.resize(image, resized, new Size(newW, newH), 0, 0, Imgproc.INTER_AREA);
+            Imgproc.resize(bgrImage, resized, new Size(newW, newH), 0, 0, Imgproc.INTER_AREA);
             return resized;
         }
     
         // 3) If it’s already within targetWidth x targetHeight => no resize
-        return image;
+        return bgrImage;
     }
     
+    /* BACKGROUND EXTENSION */
+    
+    // Method to extend canvas with transparency if image is RGBA
+    private Mat extendTransparentBackground(Mat rgbaImage, int targetWidth, int targetHeight) {
+        // 1) If already the same size, nothing to do
+        if (rgbaImage.width() == targetWidth && rgbaImage.height() == targetHeight) {
+            return rgbaImage.clone();
+        }
 
-    // Method to extend background - using OpenCV
-    private Mat extendBackground(Mat image, int targetWidth, int targetHeight) {
-        // 1. If image already matches target, just return
+        // 2) Compute offsets
+        int xOffset = (int)Math.round((targetWidth - rgbaImage.width()) / 2.0);
+        int yOffset = (int)Math.round((targetHeight - rgbaImage.height()) / 2.0);
+
+        // 3) Create new transparent canvas
+        Mat extended = new Mat(targetHeight, targetWidth, CvType.CV_8UC4, new Scalar(0,0,0,0));
+
+        // 4) Copy the resized image into the center
+        Rect roi = new Rect(xOffset, yOffset, rgbaImage.width(), rgbaImage.height());
+        Mat center = extended.submat(roi);
+        rgbaImage.copyTo(center);
+
+        return extended;
+    }
+
+    /* For a BGR image, we either:
+        1. Detect if the background is uniform, and just fill the extension with that colour
+        2. Use replicate + blur if background is not uniform
+    */
+    private Mat extendBackgroundBGR(Mat bgrImage, int targetWidth, int targetHeight) {
+        if (bgrImage.width() == targetWidth && bgrImage.height() == targetHeight) {
+            return bgrImage.clone();
+        }
+
+        // Quick check for uniform background by sampling corners:
+        Scalar cornerColor = sampleCornerColor(bgrImage);
+        boolean isUniform = checkIfBackgroundIsUniform(bgrImage, cornerColor);
+
+        if (isUniform) {
+            // Extend with the cornerColor
+            return extendBackgroundUniform(bgrImage, targetWidth, targetHeight, cornerColor);
+        } else {
+            // Use replicate + blur
+            return extendBackgroundReplicate(bgrImage, targetWidth, targetHeight);
+        }
+    }
+
+    // Method to extend canvas with uniform colour
+    private Mat extendBackgroundUniform(Mat image, int targetWidth, int targetHeight, Scalar bgColor) {
+        // 1) If image already matches target, just return
         if (image.width() == targetWidth && image.height() == targetHeight) {
             return image.clone();
         }
+        // 2) Create offsets for centering
+        int xOffset = (int) Math.round((targetWidth - image.width()) / 2.0);
+        int yOffset = (int) Math.round((targetHeight - image.height()) / 2.0);
+
+        // 3) Create a new canvas
+        Mat extendedMat = new Mat(targetHeight, targetWidth, image.type());
+        // Fill with the uniform color
+        extendedMat.setTo(bgColor);
+
+        // 4) Copy the main image into the center
+        Rect roi = new Rect(xOffset, yOffset, image.width(), image.height());
+        Mat centerRoi = extendedMat.submat(roi);
+        image.copyTo(centerRoi);
+
+        return extendedMat;
+    }
+
+    // Method to extend background - using OpenCV (replicate + blur)
+    private Mat extendBackgroundReplicate(Mat image, int targetWidth, int targetHeight) {
     
-        // 2. Create offsets for centering
+        // 1. Create offsets for centering
         int xOffset = (int) Math.round((targetWidth - image.width()) / 2.0);
         int yOffset = (int) Math.round((targetHeight - image.height()) / 2.0);
     
-        // 3. Create a larger canvas if needed
+        // 2. Create a larger canvas if needed
         Mat extendedMat = new Mat(targetHeight, targetWidth, image.type());
-        // First, fill with black (or zero), or you could fill with white if you'd like:
+        // Fill with black
         extendedMat.setTo(new Scalar(0,0,0));
     
-        // 4. Copy the main image into the center of extendedMat
+        // 3. Copy the main image into the center of extendedMat
         Rect roi = new Rect(xOffset, yOffset, image.width(), image.height());
         Mat centerRoi = extendedMat.submat(roi);
         image.copyTo(centerRoi);
     
-        // 5. We now replicate the border (which is the region outside the ROI).
-        //    Easiest approach: extract the center area to a temporary Mat, call copyMakeBorder
+        // 4. Extract the center area to a temporary Mat, call copyMakeBorder
         Mat justCenter = new Mat();
         // Copy just the center part from extendedMat
         extendedMat.submat(roi).copyTo(justCenter);
     
-        // Now we build a new Mat of size targetWidth/targetHeight using copyMakeBorder:
-        Mat borderReplicated = new Mat();
+        // 5. Compute border sizes
         int top = yOffset;
         int bottom = targetHeight - image.height() - yOffset;
         int left = xOffset;
         int right = targetWidth - image.width() - xOffset;
     
+        // 6. copyMakeBorder with replicate
+        Mat borderReplicated = new Mat();
         Core.copyMakeBorder(
             justCenter,
             borderReplicated,
@@ -157,31 +260,24 @@ public class ImageResizingController {
             Core.BORDER_REPLICATE
         );
     
-        // 'borderReplicated' is now the final image with extended edges
-        // 6. Light blur *only the newly created border region* if desired
-        Mat blurred = applySoftBlurToBorder(borderReplicated, roi);
-    
+        // 7. Light blur only the newly created border region
+        Rect innerROI = new Rect(xOffset, yOffset, image.width(), image.height());
+        Mat blurred = applySoftBlurToBorder(borderReplicated, innerROI);
+
         // Clean up
         justCenter.release();
         return blurred;
     }
     
+    // Method to do a small blur outside the border region
     private Mat applySoftBlurToBorder(Mat extendedMat, Rect roi) {
-        // We'll do a small blur just outside the ROI edges
     
         // 1. Duplicate the entire extendedMat
         Mat blurred = new Mat();
         Imgproc.GaussianBlur(extendedMat, blurred, new Size(9, 9), 0); 
-        // use a smaller kernel if you want minimal blur
     
         // 2. Create a mask where the ROI is black (unblurred) and the rest is white (blurred)
         Mat mask = Mat.zeros(extendedMat.size(), CvType.CV_8UC1);
-    
-        // ROI is the main image region. We want that region *unblurred*, so set it to 0.
-        // The region outside ROI remains at 0 => we actually want it to be 255 for blur.
-        // We'll do the inverse:
-        //   - Fill entire mask with 255
-        //   - Then fill the ROI with black
         mask.setTo(new Scalar(255));
         Imgproc.rectangle(mask, roi, new Scalar(0), -1);
     
@@ -192,9 +288,46 @@ public class ImageResizingController {
         mask.release();
         return extendedMat;
     }
+
+    /* UNIFORM BACKGROUND DETECTION */
+    private Scalar sampleCornerColor(Mat bgrImage) {
+        // Sample the top-left corner colour
+        double[] cornerPix = bgrImage.get(0, 0);
+        return new Scalar(cornerPix);
+    }
     
-    // Method to convert BufferedImage to OpenCV Mat
-    private Mat bufferedImageToMat(BufferedImage image) {
+    // Sample corners and compare them to cornerColour
+    private boolean checkIfBackgroundIsUniform(Mat bgrImage, Scalar cornerColor) {
+        int height = bgrImage.rows();
+        int width = bgrImage.cols();
+
+        // Sample the four corners
+        Scalar c1 = new Scalar(bgrImage.get(0, 0));
+        Scalar c2 = new Scalar(bgrImage.get(0, width - 1));
+        Scalar c3 = new Scalar(bgrImage.get(height - 1, 0));
+        Scalar c4 = new Scalar(bgrImage.get(height - 1, width - 1));
+
+        // Use a small threshold
+        double threshold = 15.0;
+
+        return (colorDistance(c1, cornerColor) < threshold
+             && colorDistance(c2, cornerColor) < threshold
+             && colorDistance(c3, cornerColor) < threshold
+             && colorDistance(c4, cornerColor) < threshold);
+    }
+
+    private double colorDistance(Scalar a, Scalar b) {
+        // Euclidean distance in BGR space
+        double db = a.val[0] - b.val[0];
+        double dg = a.val[1] - b.val[1];
+        double dr = a.val[2] - b.val[2];
+        return Math.sqrt(db*db + dg*dg + dr*dr);
+    }
+
+    /* BUFFERED IMAGE <-> OPENCV MAT */
+
+    // Method to convert BufferedImage (no alpha) to OpenCV Mat
+    private Mat bufferedImageToMatBGR(BufferedImage image) {
         // Create a new Mat of the right size
         Mat mat = new Mat(image.getHeight(), image.getWidth(), CvType.CV_8UC3);
     
@@ -202,22 +335,40 @@ public class ImageResizingController {
         for (int y = 0; y < image.getHeight(); y++) {
             for (int x = 0; x < image.getWidth(); x++) {
                 int rgb = image.getRGB(x, y);
-                byte[] bgr = new byte[3];
-            
-                // Extract RGB components and store in BGR order for OpenCV
-                bgr[0] = (byte) ((rgb) & 0xFF);        // Blue
-                bgr[1] = (byte) ((rgb >> 8) & 0xFF);   // Green
-                bgr[2] = (byte) ((rgb >> 16) & 0xFF);  // Red
-            
-                mat.put(y, x, bgr);
+                byte b = (byte) (rgb & 0xFF);
+                byte g = (byte) ((rgb >> 8) & 0xFF);
+                byte r = (byte) ((rgb >> 16) & 0xFF);
+
+                mat.put(y, x, new byte[]{b, g, r});
             }
         }
     
         return mat;
     }
 
-    // Method to convert OpenCV Mat back to BufferedImage
-    private BufferedImage matToBufferedImage(Mat mat) {
+    // Method to convert BufferedImage (with alpha) to OpenCV Mat
+    private Mat bufferedImageToMatRGBA(BufferedImage image) {
+        // Create a new Mat of size (height x width) with 4 channels
+        Mat mat = new Mat(image.getHeight(), image.getWidth(), CvType.CV_8UC4);
+
+        for (int y = 0; y < image.getHeight(); y++) {
+            for (int x = 0; x < image.getWidth(); x++) {
+                int rgba = image.getRGB(x, y);
+
+                byte a = (byte) ((rgba >> 24) & 0xFF);
+                byte r = (byte) ((rgba >> 16) & 0xFF);
+                byte g = (byte) ((rgba >> 8) & 0xFF);
+                byte b = (byte) (rgba & 0xFF);
+
+                // OpenCV expects BGRA
+                mat.put(y, x, new byte[]{b, g, r, a});
+            }
+        }
+        return mat;
+    }
+
+    // Method to convert 3-channel BGR Mat back to BufferedImage
+    private BufferedImage matToBufferedImageBGR(Mat mat) {
         // Create a BufferedImage
         BufferedImage image = new BufferedImage(mat.cols(), mat.rows(), BufferedImage.TYPE_3BYTE_BGR);
     
@@ -233,6 +384,28 @@ public class ImageResizingController {
             }
         }
     
+        return image;
+    }
+
+    // Method to convert 4-channel BGRA Mat into a BufferedImage
+    private BufferedImage matToBufferedImageRGBA(Mat mat) {
+        int width = mat.cols();
+        int height = mat.rows();
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_4BYTE_ABGR);
+
+        byte[] bgra = new byte[4];
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                mat.get(y, x, bgra);
+                int alpha = (bgra[3] & 0xFF) << 24;
+                int red   = (bgra[2] & 0xFF) << 16;
+                int green = (bgra[1] & 0xFF) << 8;
+                int blue  = (bgra[0] & 0xFF);
+
+                int rgba = alpha | red | green | blue;
+                image.setRGB(x, y, rgba);
+            }
+        }
         return image;
     }
 
