@@ -124,8 +124,8 @@ public class ImageResizingController {
         }
     
         // 2. Create offsets for centering
-        int xOffset = (targetWidth - image.width()) / 2;
-        int yOffset = (targetHeight - image.height()) / 2;
+        int xOffset = (int) Math.round((targetWidth - image.width()) / 2.0);
+        int yOffset = (int) Math.round((targetHeight - image.height()) / 2.0);
     
         // 3. Create a larger canvas if needed
         Mat extendedMat = new Mat(targetHeight, targetWidth, image.type());
