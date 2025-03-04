@@ -21,6 +21,14 @@
         @discard-background="handleDiscardBackground"
       />
 
+      <!-- Show ProcessImage Component when "Process Image" is selected -->
+      <ProcessImage 
+        v-if="currentAction === 'process-image' && imageData" 
+        :key="imageData"
+        v-model:imageData="imageData"
+        @process-complete="handleProcessComplete"
+        @discard-process="handleDiscardProcess"
+      />
     
       <div class="bg-black fixed bottom-0 left-0 w-full p-2 z-10">
         <div class="flex justify-end">
@@ -45,6 +53,7 @@
 import ImageCropping from "./ImageCropping.vue";
 import SidebarWrapper from "./SidebarWrapper.vue";
 import BackgroundRemover from "./BackgroundRemover.vue";
+import ProcessImage from "./ProcessImage.vue";
 
 
 export default {
@@ -52,6 +61,7 @@ export default {
     ImageCropping,
     SidebarWrapper,
     BackgroundRemover,
+    ProcessImage,
   },
   data() {
     return {
@@ -101,6 +111,16 @@ export default {
     //     this.sidebarWidth = '250px'; // Expanded state width
     //   }
     // },
+
+    // After process complete
+    handleProcessComplete(processedImage) {
+      this.imageData = processedImage;
+    },
+
+    // Discard Processing
+    handleDiscardProcess() {
+      this.imageData = this.originalImage;
+    },
 
     async downloadImage() {
         try {
