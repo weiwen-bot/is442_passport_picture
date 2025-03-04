@@ -74,6 +74,7 @@ public class MODNetController {
      */
     private OrtSession loadModel() throws Exception {
         InputStream modelStream = getClass().getClassLoader().getResourceAsStream(MODEL_NAME);
+        System.out.println(modelStream);
         if (modelStream == null) {
             throw new FileNotFoundException("MODNet model not found in resources: " + MODEL_NAME);
         }

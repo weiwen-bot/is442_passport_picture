@@ -3,6 +3,7 @@ import Home from '../views/Home.vue'
 import ImageUpload from '../components/ImageUpload.vue';
 import ImageEdit from '../components/ImageEdit.vue';
 import BackgroundRemover from '../components/BackgroundRemover.vue';
+import ProcessImage from '../components/ProcessImage.vue';
 
 const routes = [
   {
@@ -25,7 +26,12 @@ const routes = [
     path : '/background-remover',
     name : 'BackgroundRemover',
     component: BackgroundRemover
-  }
+  },
+  // {
+  //   path : '/process-image',
+  //   name : 'ProcessImage',
+  //   component: ProcessImage
+  // }
   
 ]
 

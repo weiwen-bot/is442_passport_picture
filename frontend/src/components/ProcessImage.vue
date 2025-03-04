@@ -60,9 +60,13 @@ export default {
 
       try {
         // Ensure image is resized to 512x512 before sending
+        console.log(this.originalImage.width,this.originalImage.height,"HELLO");
         const resizedBase64 = await this.resizeImage(this.originalImage, 512, 512);
 
         const payload = { image: resizedBase64 };
+        console.log(payload);
+        console.log(JSON.stringify(payload));
+
 
         const response = await fetch("http://localhost:8080/image/process", {
           method: "POST",
