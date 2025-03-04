@@ -65,18 +65,18 @@
     <vue-cropper
       v-if="imageData"
       ref="cropper"
-      class="h-full w-auto max-w-full object-contain"
+      class="h-full w-auto max-w-full object-contain cropper"
       :src="imageData"
       :aspect-ratio="aspectRatio"
       :view-mode="2"
       :drag-mode="'crop'"
       guides
-      :background="true"
+      :background="false"
       :auto-crop="true"
       :responsive="true"
-      :auto-crop-area="0.8"
       :crop-box-resizable="true"
       :crop-box-draggable="true"
+      @ready="updateCropBox"
       @crop="updateInputFields"
     />
   </div>
@@ -123,36 +123,10 @@ export default {
       return this.customWidth / this.customHeight;
     },
   },
-  created() {
-    // Retrieve the image passed from ImageUpload.vue via query params
-    this.imageUrl = this.$route.query.image || "";
-    console.log("Image URL for cropping:", this.imageUrl); // Debugging log
-
-    // Once the image is loaded, update the cropper dimensions
-    const img = new Image();
-    img.src = this.imageUrl;
-    img.onload = () => {
-      this.cropperWidth = img.width; // Set the width of the cropper container in pixels
-      this.cropperHeight = img.height; // Set the height of the cropper container in pixels
-
-      // Convert the image dimensions from pixels to millimeters (optional)
-      this.customWidth = img.width / this.pxPerMm; // Convert pixel width to millimeters
-      this.customHeight = img.height / this.pxPerMm; // Convert pixel height to millimeters
-
-      console.log(
-        `Image Dimensions in mm: ${this.customWidth} mm x ${this.customHeight} mm`
-      );
-
-      // After setting the custom dimensions, update the cropper box
-      this.updateCropBox();
-    };
-  },
   mounted() {
-    // Ensure cropper is initialized with custom width/height
-    this.$nextTick(() => {
-      this.updateCropBox(); // Manually set crop box size after image is loaded
-    });
+    this.selectedCountry = this.countries.find((c) => c.name === "Singapore");
   },
+
   methods: {
     // Backend
     async cropImage() {
@@ -217,42 +191,40 @@ export default {
     updateCropBoxManually() {
       this.updateCropperBox();
     },
+
     updateCropperBox() {
       const cropper = this.$refs.cropper;
-      if (cropper) {
-        const defaultWidthInPx = this.customWidth * this.pxPerMm;
-        const defaultHeightInPx = this.customHeight * this.pxPerMm;
+      if (!cropper) return;
 
-        cropper.setAspectRatio(this.aspectRatio);
-        cropper.setCropBoxData({
-          width: defaultWidthInPx,
-          height: defaultHeightInPx,
-        });
-      }
+      const imageData = cropper.getImageData(); // Get image size in pixels
+      const containerData = cropper.getContainerData(); // Get cropper container size
+
+      const requiredWidthPx = this.selectedCountry.width * this.pxPerMm; // Convert mm to pixels
+      const requiredHeightPx = this.selectedCountry.height * this.pxPerMm;
+
+      // 🔹 Ensure the crop box has the correct aspect ratio
+      cropper.setAspectRatio(requiredWidthPx / requiredHeightPx);
+
+      cropper.setCropBoxData({
+        width: requiredWidthPx,
+        height: requiredHeightPx,
+        left: (containerData.width - requiredWidthPx) / 2, // Center horizontally
+        top: (containerData.height - requiredHeightPx) / 2, // Center vertically
+      });
+
+      // 🔹 Ensure the image fits inside the crop box
+      const scaleX = requiredWidthPx / imageData.naturalWidth;
+      const scaleY = requiredHeightPx / imageData.naturalHeight;
+      const scaleFactor = Math.max(scaleX, scaleY);
+
+      cropper.zoomTo(scaleFactor); // Adjust zoom to fit crop box
+
+      // ✅ Allow crop box resizing so users can select different countries dynamically
+      cropper.setDragMode("crop");
+      cropper.setCropBoxResizable(true);
     },
-    onCropStart() {
-      this.isResizing = true; // Flag for resizing start
-    },
-    onCropMove() {
-      if (this.isResizing) {
-        const cropper = this.$refs.cropper;
-        if (cropper) {
-          const cropBoxData = cropper.getCropBoxData();
-          // Only update dimensions during resizing, not moving
-          if (
-            this.cropBoxData &&
-            (cropBoxData.width !== this.cropBoxData.width ||
-              cropBoxData.height !== this.cropBoxData.height)
-          ) {
-            this.customWidth = (cropBoxData.width / this.pxPerMm).toFixed(2);
-            this.customHeight = (cropBoxData.height / this.pxPerMm).toFixed(2);
-          }
-          this.cropBoxData = cropBoxData; // Save the latest crop box data
-        }
-      }
-    },
-    onCropEnd() {
-      this.isResizing = false; // Reset resizing flag
+
+    updateInputFields(event) {
       const cropper = this.$refs.cropper;
       if (cropper) {
         const cropBoxData = cropper.getCropBoxData();
@@ -273,5 +245,10 @@ export default {
 <style>
 .bg-gray-800 {
   background-color: #2d3748 !important;
+}
+.cropper {
+  max-width: 100%;
+  height: auto;
+  background: transparent;
 }
 </style>
