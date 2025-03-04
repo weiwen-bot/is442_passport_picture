@@ -1,76 +1,68 @@
 <template>
-  <div class="process-container">
-    <h2>Testing Background Removal</h2>
-
-    <!-- File Upload -->
-    <input type="file" @change="handleImageUpload" accept="image/*" />
-
-    <!-- Show original image -->
-    <div v-if="originalImage" class="image-preview">
-      <h3>Original Image</h3>
-      <img :src="originalImage" alt="Original" class="preview-img" />
+  <div class="flex h-[85vh] w-[calc(100vw-240px)] mx-auto">
+    <!-- Left Side: Original Image -->
+    <div class="flex flex-col w-1/2 h-full justify-center items-center border-r border-gray-300">
+      <h3 class="text-lg font-semibold mb-4">Original Image</h3>
+      <div v-if="originalImage" class="w-4/5 max-h-[75%] flex justify-center items-center">
+        <img :src="originalImage" alt="Original" class="max-w-full max-h-full rounded-lg shadow-md border border-gray-400" />
+      </div>
     </div>
 
-    <!-- Show processed image when available -->
-    <div v-if="processedImage" class="image-preview">
-      <h3>Processed Image</h3>
-      <img :src="processedImage" alt="Processed" class="preview-img" />
-    </div>
+    <!-- Right Side: Processed Image -->
+    <div class="flex flex-col w-1/2 h-full justify-center items-center">
+      <h3 class="text-lg font-semibold mb-4">Processed Image</h3>
+      <div v-if="processedImage" class="w-4/5 max-h-[75%] flex justify-center items-center">
+        <img :src="processedImage" alt="Processed" class="max-w-full max-h-full rounded-lg shadow-md border border-gray-400" />
+      </div>
+      <div v-else class="text-gray-500 text-sm">No processed image yet</div>
 
-    <!-- Show loading indicator while processing -->
-    <div v-if="isProcessing" class="loading">
-      <p>Processing image, please wait...</p>
-    </div>
+      <!-- Show loading indicator -->
+      <div v-if="isProcessing" class="mt-4 text-gray-600 text-sm animate-pulse">Processing image, please wait...</div>
 
-    <!-- Error Message -->
-    <div v-if="errorMessage" class="error">
-      <p>{{ errorMessage }}</p>
+      <!-- Error Message -->
+      <div v-if="errorMessage" class="mt-4 text-red-500 text-sm">{{ errorMessage }}</div>
+
+      <!-- Process Button -->
+      <button v-if="originalImage && !processedImage" @click="processImage"
+        class="mt-6 px-5 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded shadow-md transition">
+        Process Image
+      </button>
     </div>
   </div>
 </template>
 
 <script>
 export default {
+  props: {
+    imageData: String, // Receive imageData as a prop from ImageEdit.vue
+  },
   data() {
     return {
-      originalImage: null, // Base64 image from localStorage
+      originalImage: null, // Base64 image from parent/localStorage
       processedImage: null, // Processed image from backend
       isProcessing: false,
       errorMessage: "", // Error message handling
     };
   },
   created() {
-    // Load stored image from localStorage
-    const storedImage = localStorage.getItem("imageData");
-    if (storedImage) {
-      this.originalImage = storedImage;
-      this.processImage();
-    }
+    // Load image from props (from ImageEdit.vue) or localStorage
+    this.originalImage = this.imageData || localStorage.getItem("imageData");
   },
   methods: {
-    async handleImageUpload(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      try {
-        // Resize and store the image
-        const resizedBase64 = await this.resizeImage(file, 512, 512);
-        this.originalImage = resizedBase64;
-        localStorage.setItem("imageData", resizedBase64);
-
-        // Process the resized image
-        this.processImage();
-      } catch (error) {
-        console.error("Error resizing image:", error);
-        this.errorMessage = "Failed to resize image.";
-      }
-    },
-
     async processImage() {
+      if (!this.originalImage) {
+        this.errorMessage = "No image available for processing.";
+        return;
+      }
+
       this.isProcessing = true;
       this.errorMessage = "";
+
       try {
-        const payload = { image: this.originalImage };
+        // Ensure image is resized to 512x512 before sending
+        const resizedBase64 = await this.resizeImage(this.originalImage, 512, 512);
+
+        const payload = { image: resizedBase64 };
 
         const response = await fetch("http://localhost:8080/image/process", {
           method: "POST",
@@ -82,7 +74,7 @@ export default {
 
         const result = await response.json();
         if (result.processedImage) {
-          this.processedImage = result.processedImage; // Base64 processed image
+          this.processedImage = result.processedImage; // Update UI with processed image
         } else {
           throw new Error("No processed image received from backend.");
         }
@@ -94,61 +86,21 @@ export default {
       }
     },
 
-    async resizeImage(file, width, height) {
+    async resizeImage(base64, width, height) {
       return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = (event) => {
-          const img = new Image();
-          img.src = event.target.result;
-          img.onload = () => {
-            const canvas = document.createElement("canvas");
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext("2d");
-            ctx.drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL("image/png"));
-          };
-          img.onerror = () => reject(new Error("Failed to load image"));
+        const img = new Image();
+        img.src = base64;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/png"));
         };
-        reader.onerror = () => reject(new Error("Failed to read file"));
+        img.onerror = () => reject(new Error("Failed to load image"));
       });
     },
   },
 };
 </script>
-
-<style scoped>
-.process-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px;
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.image-preview {
-  margin-top: 20px;
-  text-align: center;
-}
-
-.preview-img {
-  max-width: 80%;
-  border-radius: 5px;
-  border: 2px solid #ddd;
-}
-
-.loading {
-  margin-top: 10px;
-  font-size: 14px;
-  color: gray;
-}
-
-.error {
-  color: red;
-  margin-top: 10px;
-  font-size: 14px;
-}
-</style>
