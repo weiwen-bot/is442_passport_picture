@@ -96,7 +96,7 @@ public class ImageResizingController {
 
     // Method to maintain aspect ratio with FIT strategy
     private Size calculateFitSize(Size originalSize, int targetWidth, int targetHeight) {
-        double originalAspect = originalSize.width / originalSize.height;
+        double originalAspect = (double) originalSize.width / originalSize.height;
         double targetAspect = (double) targetWidth / targetHeight;
     
         int newWidth, newHeight;
