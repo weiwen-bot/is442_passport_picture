@@ -116,10 +116,37 @@ public class ImageResizingController {
 
     // Method to resize RGBA image and returns CV_8UC4
     private Mat resizeWithAlpha(Mat rgbaImage, int targetWidth, int targetHeight) {
-        Size newSize = calculateFitSize(rgbaImage.size(), targetWidth, targetHeight);
-        Mat resizedRgba = new Mat();
-        Imgproc.resize(rgbaImage, resizedRgba, newSize, 0, 0, Imgproc.INTER_AREA);
-        return resizedRgba;
+        int w = rgbaImage.width();
+        int h = rgbaImage.height();
+    
+        // 1) If bigger => downscale using calculateFitSize()
+        if (w > targetWidth || h > targetHeight) {
+            Size newSize = calculateFitSize(rgbaImage.size(), targetWidth, targetHeight);
+            Mat resized = new Mat();
+    
+            // Downscale => INTER_AREA
+            Imgproc.resize(rgbaImage, resized, newSize, 0, 0, Imgproc.INTER_AREA);
+            return resized;
+        }
+    
+        // 2) If smaller => upscale (but do NOT exceed target)
+        if (w < targetWidth || h < targetHeight) {
+            double scaleX = (double) targetWidth / w;
+            double scaleY = (double) targetHeight / h;
+            double scale = Math.min(scaleX, scaleY);
+    
+            int newW = (int) Math.round(w * scale);
+            int newH = (int) Math.round(h * scale);
+            Size newSize = new Size(newW, newH);
+            Mat resized = new Mat();
+    
+            // Upscale => INTER_CUBIC
+            Imgproc.resize(rgbaImage, resized, newSize, 0, 0, Imgproc.INTER_CUBIC);
+            return resized;
+        }
+    
+        // 3) If it already fits within target dims => no resize
+        return rgbaImage;
     }
 
     // Method to resise BGR image
@@ -127,11 +154,14 @@ public class ImageResizingController {
         int w = bgrImage.width();
         int h = bgrImage.height();
     
-        // 1) If bigger in either dimension => "fit" using calculateFitSize()
+        // 1) If bigger in either dimension => "fit" using calculateFitSize() => scale down
         if (w > targetWidth || h > targetHeight) {
             Size newSize = calculateFitSize(bgrImage.size(), targetWidth, targetHeight);
             Mat resized = new Mat();
-            Imgproc.resize(bgrImage, resized, newSize, 0, 0, Imgproc.INTER_AREA);
+    
+            // Scaling down ==> so INTER_AREA is preferred
+            int interpolation = Imgproc.INTER_AREA;
+            Imgproc.resize(bgrImage, resized, newSize, 0, 0, interpolation);
             return resized;
         }
     
@@ -139,18 +169,21 @@ public class ImageResizingController {
         if (w < targetWidth || h < targetHeight) {
             double scaleX = (double) targetWidth / w;
             double scaleY = (double) targetHeight / h;
-            // Use min so we don't exceed the target in the other dimension
-            double scale = Math.min(scaleX, scaleY);
+            double scale = Math.min(scaleX, scaleY); 
     
             int newW = (int) Math.round(w * scale);
             int newH = (int) Math.round(h * scale);
     
+            Size newSize = new Size(newW, newH);
             Mat resized = new Mat();
-            Imgproc.resize(bgrImage, resized, new Size(newW, newH), 0, 0, Imgproc.INTER_AREA);
+    
+            // Scaling up ==> so INTER_CUBIC is typically higher quality
+            int interpolation = Imgproc.INTER_CUBIC;
+            Imgproc.resize(bgrImage, resized, newSize, 0, 0, interpolation);
             return resized;
         }
     
-        // 3) If it’s already within targetWidth x targetHeight => no resize
+        // 3) If already within targetWidth x targetHeight, no resize is needed
         return bgrImage;
     }
     
