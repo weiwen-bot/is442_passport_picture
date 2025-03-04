@@ -31,8 +31,8 @@
             Discard
           </button>
 
-          <!--Download Button -->
-          <button
+          <!-- Download Button -->
+          <button @click="downloadImage" 
             class="text-white p-2 rounded">
             Download
           </button>
@@ -101,6 +101,51 @@ export default {
     //     this.sidebarWidth = '250px'; // Expanded state width
     //   }
     // },
+
+    async downloadImage() {
+        try {
+            if (!this.imageData) {
+                console.error("No image data available for download.");
+                return;
+            }
+
+            // Convert base64 to Blob
+            const blob = await this.base64ToBlob(this.imageData, "image/png");
+
+            // File handling
+            if (window.showSaveFilePicker) {
+                const fileHandle = await window.showSaveFilePicker({
+                    suggestedName: "edited_image.png",
+                    types: [{ description: "Images", accept: { "image/*": [".png", ".jpg", ".jpeg"] } }]
+                });
+
+                const writable = await fileHandle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+            } else {
+                // Fallback method
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download = "edited_image.png";
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        } catch (error) {
+            console.error("Error downloading the image:", error);
+        }
+    },
+
+    // Convert base64 image to Blob
+    base64ToBlob(base64, contentType = "") {
+        const byteCharacters = atob(base64.split(",")[1]); // Remove header from base64
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        return new Blob([byteArray], { type: contentType });
+    },
   },
 };
 </script>
