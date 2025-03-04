@@ -62,18 +62,18 @@
       <vue-cropper
         v-if="imageData"
         ref="cropper"
-        class="h-full w-auto max-w-full object-contain"
+        class="h-full w-auto max-w-full object-contain cropper"
         :src="imageData"
         :aspect-ratio="aspectRatio"
         :view-mode="2"
         :drag-mode="'crop'"
         guides
-        :background="true"
+        :background="false"
         :auto-crop="true"
         :responsive="true"
-        :auto-crop-area="0.8"
         :crop-box-resizable="true"
         :crop-box-draggable="true"
+        @ready="updateCropBox"
         @crop="updateInputFields"
       />
     </div>
@@ -120,6 +120,10 @@ export default {
       return this.customWidth / this.customHeight;
     },
   },
+  mounted() {
+    this.selectedCountry = this.countries.find(c => c.name === "Singapore");
+  },
+
   methods: {
     // Backend
     async cropImage() {
@@ -166,7 +170,7 @@ export default {
           this.$emit("crop-complete", responseBody.image); // Send cropped image back to parent
           this.isCropped = true; // Set the flag to true to display the cropped image
           console.log("isCropped:", this.isCropped); // Should log 'true' after cropping
-
+          
         } else {
           alert("Error cropping image: " + responseBody.message || 'Unknown error');
         }
@@ -184,19 +188,39 @@ export default {
     updateCropBoxManually() {
       this.updateCropperBox();
     },
+
     updateCropperBox() {
       const cropper = this.$refs.cropper;
-      if (cropper) {
-        const defaultWidthInPx = this.customWidth * this.pxPerMm;
-        const defaultHeightInPx = this.customHeight * this.pxPerMm;
+      if (!cropper) return;
 
-        cropper.setAspectRatio(this.aspectRatio);
-        cropper.setCropBoxData({
-          width: defaultWidthInPx,
-          height: defaultHeightInPx,
-        });
-      }
+      const imageData = cropper.getImageData(); // Get image size in pixels
+      const containerData = cropper.getContainerData(); // Get cropper container size
+
+      const requiredWidthPx = this.selectedCountry.width * this.pxPerMm; // Convert mm to pixels
+      const requiredHeightPx = this.selectedCountry.height * this.pxPerMm;
+
+      // 🔹 Ensure the crop box has the correct aspect ratio
+      cropper.setAspectRatio(requiredWidthPx / requiredHeightPx);
+
+      cropper.setCropBoxData({
+        width: requiredWidthPx,
+        height: requiredHeightPx,
+        left: (containerData.width - requiredWidthPx) / 2, // Center horizontally
+        top: (containerData.height - requiredHeightPx) / 2, // Center vertically
+      });
+
+      // 🔹 Ensure the image fits inside the crop box
+      const scaleX = requiredWidthPx / imageData.naturalWidth;
+      const scaleY = requiredHeightPx / imageData.naturalHeight;
+      const scaleFactor = Math.max(scaleX, scaleY);
+
+      cropper.zoomTo(scaleFactor); // Adjust zoom to fit crop box
+
+      // ✅ Allow crop box resizing so users can select different countries dynamically
+      cropper.setDragMode("crop");
+      cropper.setCropBoxResizable(true);
     },
+
     updateInputFields(event) {
       const cropper = this.$refs.cropper;
       if (cropper) {
@@ -219,5 +243,10 @@ export default {
 <style>
 .bg-gray-800 {
     background-color: #2d3748 !important;
+}
+.cropper {
+  max-width: 100%;
+  height: auto;
+  background: transparent;
 }
 </style>
