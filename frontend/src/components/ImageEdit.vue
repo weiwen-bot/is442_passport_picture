@@ -41,7 +41,7 @@
 
           <!-- Download Button -->
           <button @click="downloadImage" 
-            class="text-white p-2 rounded">
+            class="text-white bg-gray-800 p-2 rounded">
             Download
           </button>
         </div>
