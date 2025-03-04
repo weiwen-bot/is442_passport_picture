@@ -32,7 +32,7 @@
 	<dependencies>
 	<!--  https://mvnrepository.com/artifact/org.openpnp/opencv  -->
 <dependency>
-<groupId>org.openpnp</groupId>
+ <groupId>org.openpnp</groupId>
 <artifactId>opencv</artifactId>
 <version>4.9.0-0</version>
 </dependency>
@@ -99,6 +99,7 @@
 						</exclude>
 					</excludes>
 				</configuration>
+				
 			</plugin>
 		</plugins>
 	</build>

@@ -7,12 +7,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.opencv.core.Core;
 import org.opencv.core.CvException;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
+import org.opencv.core.MatOfPoint;
 import org.opencv.core.Scalar;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
@@ -58,7 +61,7 @@ public class BackgroundRemovalService {
 			// Single element matrix with value 3, represents probably foreground label
 			Mat source = new Mat(1, 1, CvType.CV_8U, new Scalar(3));
 			// 8 Iterations
-			Imgproc.grabCut(image, result, rectangle, bgdModel, fgdModel, 8, Imgproc.GC_INIT_WITH_RECT);
+			Imgproc.grabCut(image, result, rectangle, bgdModel, fgdModel, 5, Imgproc.GC_INIT_WITH_RECT);
 
 			// COmpare result mask with source matrix (value 3) then result that match 3 are
 			// set to 255 binary mask
@@ -83,27 +86,25 @@ public class BackgroundRemovalService {
 		}
 		return null;
 	}
-	public class WatershedSegmenter
-	{
-	   public Mat markers=new Mat();
 
-	   public void setMarkers(Mat markerImage)
-	   {
-		   
-		   markerImage.convertTo(markers, CvType.CV_32SC1);
-	   }
+	public class WatershedSegmenter {
+		public Mat markers = new Mat();
 
-	   public Mat process(Mat image)
-	   {
-		   Imgproc.watershed(image,markers);
-		   markers.convertTo(markers,CvType.CV_8U);
+		public void setMarkers(Mat markerImage) {
 
-		   Mat resultColor = new Mat();
-		   Imgproc.applyColorMap(markers, resultColor, Imgproc.COLORMAP_JET);
+			markerImage.convertTo(markers, CvType.CV_32SC1);
+		}
 
-		   return markers;
-	   }
-   }
+		public Mat process(Mat image) {
+			Imgproc.watershed(image, markers);
+			markers.convertTo(markers, CvType.CV_8U);
+
+			Mat resultColor = new Mat();
+			Imgproc.applyColorMap(markers, resultColor, Imgproc.COLORMAP_JET);
+
+			return markers;
+		}
+	}
 
 	public byte[] extractFacewater(ImgDTO imgDTO, MultipartFile file) throws CvException {
 		try {
@@ -134,10 +135,7 @@ public class BackgroundRemovalService {
 			segmenter.setMarkers(markers);
 			result1 = segmenter.process(image);
 
-			Imgproc.cvtColor(result1, image,Imgproc.COLOR_BGR2BGRA,4);
-			
-			
-
+			Imgproc.cvtColor(result1, image, Imgproc.COLOR_BGR2BGRA, 4);
 
 			MatOfByte matOfByte = new MatOfByte();
 			// foreground extracted encoded into a JPEG format stored in a Mat of Byte
@@ -157,29 +155,96 @@ public class BackgroundRemovalService {
 			byte[] bytes = file.getBytes();
 
 			// Byte array decoded into an OpenCV Mat Obj and IMREAD loaded in color
-			Mat image = Imgcodecs.imdecode(new MatOfByte(bytes), Imgcodecs.IMREAD_COLOR);
+			Mat image = Imgcodecs.imdecode(new MatOfByte(bytes), Imgcodecs.IMREAD_GRAYSCALE);
+			// Mat image = Imgcodecs.imdecode(new MatOfByte(bytes), Imgcodecs.IMREAD_COLOR);
+
+			Mat imgThreshold = new Mat();
+
+			// Imgproc.adaptiveThreshold(image, imgThreshold, 255,
+			// Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY,
+			// 11, 10);
+
+			// Apply Gaussian blur to create a smoothed version of the image
+			Mat blurredImage = new Mat();
+			Imgproc.GaussianBlur(image, blurredImage, new Size(51, 51), 0);
+
+			// Convert images to floating-point for division
+			Mat grayImageFloat = new Mat();
+			image.convertTo(grayImageFloat, CvType.CV_32F);
+			Mat blurredImageFloat = new Mat();
+			blurredImage.convertTo(blurredImageFloat, CvType.CV_32F);
+
+			// Divide the original image by the smoothed image
+			Mat lightingSuppressed = new Mat();
+			Core.divide(grayImageFloat, blurredImageFloat, lightingSuppressed);
+
+			// Normalize the result to the range [0, 255]
+			Core.normalize(lightingSuppressed, lightingSuppressed, 0, 255, Core.NORM_MINMAX, CvType.CV_8U);
+
+			Mat kernel = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(5, 5));
+			Imgproc.dilate(lightingSuppressed, lightingSuppressed, kernel);
+
+			Imgproc.threshold(lightingSuppressed, imgThreshold, 50, 255, Imgproc.THRESH_BINARY + Imgproc.THRESH_OTSU);
+			// Imgproc.threshold(image, imgThreshold, 100, 255, Imgproc.THRESH_BINARY);
+
+			// create canvas
+			Mat whiteCanvas = new Mat(image.size(), image.type(), new Scalar(255, 255, 255));
+
+			Mat mask = new Mat(image.size(), image.type(), new Scalar(255, 255, 255));
+
+			List<MatOfPoint> points = new ArrayList<>();
+
+			Mat hierarchy = new Mat();
+
+			// Imgproc.findContours(imgThreshold, points, hierarchy, Imgproc.RETR_LIST,
+			// Imgproc.CHAIN_APPROX_NONE);
+
+			Imgproc.findContours(imgThreshold, points, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+
+			// Mat contourImg = new Mat(image32S.size(), image32S.type());
+			System.out.println(points.size());
+			for (int i = 0; i < points.size(); i++) {
+				if (i != 1) {
+					MatOfPoint currentPoints = points.get(i);
+					Imgproc.fillConvexPoly(mask, currentPoints, new Scalar(0, 0, 0), 8, 0);
+				}
+
+				// Imgproc.fillConvexPoly(mask, new MatOfPoint(tmpROI), new Scalar(255), 8, 0);
+			}
+
+			// Imgproc.findContours(imgThreshold, Imgproc.RETR_LIST,
+			// Imgproc.CHAIN_APPROX_NONE);
+
+			// Imgproc.findContours(imgThreshold, Imgproc.RETR_EXTERNAL,
+			// Imgproc.CHAIN_APPROX_NONE);
+
+			// Mat img_gray = Imgcodecs.cvtColor(image, Imgcodecs.IMREAD_GRAYSCALE);
 			// Mat image = Imgcodecs.imread(imgDTO.getFileNameWithCompletePath());
 
 			// Bounding Box defined
-			Rect rectangle = new Rect(imgDTO.getxOne(), imgDTO.getyOne(), imgDTO.getWidth(), imgDTO.getHeight());
-			// segementation mask generated by grabcut
-			Mat mask = new Mat(image.size(), CvType.CV_8UC1, new Scalar(Imgproc.GC_BGD));
+			// Rect rectangle = new Rect(imgDTO.getxOne(), imgDTO.getyOne(),
+			// imgDTO.getWidth(), imgDTO.getHeight());
+			// // segementation mask generated by grabcut
+			// Mat mask = new Mat(image.size(), CvType.CV_8UC1, new Scalar(Imgproc.GC_BGD));
 
-			// Background and foreground
-			Mat bgdModel = new Mat();
-			Mat fgdModel = new Mat();
-			// Single element matrix with value 3, represents probably foreground label
-			// Mat source = new Mat(1, 1, CvType.CV_8U, new Scalar(3));
-			// 8 Iterations
-			Imgproc.grabCut(image, mask, rectangle, bgdModel, fgdModel, 5, Imgproc.GC_INIT_WITH_RECT);
-			Mat resultMask = new Mat();
-			// COmpare result mask with source matrix (value 3) then result that match 3 are
-			// set to 255 binary mask
-			Core.compare(mask, new Scalar(Imgproc.GC_PR_FGD), resultMask, Core.CMP_EQ);
-			// White Background Scalar is created same size as input image
-			Mat foreground = new Mat(image.size(), CvType.CV_8UC3, Scalar.all(0));
-			// Move pixels from input image to where result mask is non-zero (foreground)
-			image.copyTo(foreground, resultMask);
+			// // Background and foreground
+			// Mat bgdModel = new Mat();
+			// Mat fgdModel = new Mat();
+			// // Single element matrix with value 3, represents probably foreground label
+			// // Mat source = new Mat(1, 1, CvType.CV_8U, new Scalar(3));
+			// // 8 Iterations
+			// Imgproc.grabCut(image, mask, rectangle, bgdModel, fgdModel, 5,
+			// Imgproc.GC_INIT_WITH_RECT);
+			// Mat resultMask = new Mat();
+			// // COmpare result mask with source matrix (value 3) then result that match 3
+			// are
+			// // set to 255 binary mask
+			// Core.compare(mask, new Scalar(Imgproc.GC_PR_FGD), resultMask, Core.CMP_EQ);
+			// // White Background Scalar is created same size as input image
+			// Mat foreground = new Mat(image.size(), CvType.CV_8UC3, new
+			// Scalar(255,255,255));
+			// // Move pixels from input image to where result mask is non-zero (foreground)
+			// image.copyTo(foreground, resultMask);
 
 			// Mat kernel = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(5,
 			// 5));
@@ -190,7 +255,8 @@ public class BackgroundRemovalService {
 
 			MatOfByte matOfByte = new MatOfByte();
 			// foreground extracted encoded into a JPEG format stored in a Mat of Byte
-			Imgcodecs.imencode(".png", foreground, matOfByte);
+			// Imgcodecs.imencode(".png", foreground, matOfByte);
+			Imgcodecs.imencode(".png", imgThreshold, matOfByte);
 			return matOfByte.toArray();
 			// Imgcodecs.imwrite("weiwenphoto-grayq1.jpg", foreground);
 		} catch (IOException e) {
@@ -207,39 +273,81 @@ public class BackgroundRemovalService {
 
 			// Byte array decoded into an OpenCV Mat Obj and IMREAD loaded in color
 			Mat image = Imgcodecs.imdecode(new MatOfByte(bytes), Imgcodecs.IMREAD_COLOR);
+			// Mat image = Imgcodecs.imdecode(new MatOfByte(bytes),
+			// Imgcodecs.IMREAD_GRAYSCALE);
 			// Mat image = Imgcodecs.imread(imgDTO.getFileNameWithCompletePath());
 
-			// Bounding Box defined
+			Mat imgThreshold = new Mat();
+
+			int height = image.rows();
+			int width = image.cols();
+
+			Mat img_gray = Imgcodecs.imdecode(new MatOfByte(bytes), Imgcodecs.IMREAD_GRAYSCALE);
+
+			Mat fg = new Mat(img_gray.size(), CvType.CV_8U);
+			Imgproc.erode(img_gray, fg, new Mat());
+
+			Mat bg = new Mat(img_gray.size(), CvType.CV_8U);
+			Imgproc.dilate(img_gray, bg, new Mat());
+
+			Imgproc.adaptiveThreshold(img_gray, imgThreshold, 255,
+					Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY,
+					9, 7);
+
+			// Convert imgThreshold to a GrabCut-compatible mask
+			Mat grabCutMask = new Mat(imgThreshold.size(), CvType.CV_8UC1, new Scalar(Imgproc.GC_PR_BGD)); // Initialize
+																											// with
+																											// probably
+																											// background
+			imgThreshold.convertTo(grabCutMask, CvType.CV_8U); // Ensure the mask is 8-bit
+			Core.compare(imgThreshold, new Scalar(255), grabCutMask, Core.CMP_EQ); // Set foreground pixels to GC_PR_FGD
+			grabCutMask.setTo(new Scalar(Imgproc.GC_PR_FGD), grabCutMask); // Replace 255 with GC_PR_FGD
+
 			Rect rectangle = new Rect(imgDTO.getxOne(), imgDTO.getyOne(), imgDTO.getWidth(), imgDTO.getHeight());
 			// segementation mask generated by grabcut
-			Mat result = new Mat();
+			// Mat mask = new Mat();
 
 			// Background and foreground
 			Mat bgdModel = new Mat();
 			Mat fgdModel = new Mat();
-			// // Single element matrix with value 3, represents probably foreground label
+			// Single element matrix with value 3, represents probably foreground label
 			Mat source = new Mat(1, 1, CvType.CV_8U, new Scalar(3));
-			// // 8 Iterations
-			Imgproc.grabCut(image, result, rectangle, bgdModel, fgdModel, 5, Imgproc.GC_INIT_WITH_RECT);
+			// 8 Iterations
+			// Imgproc.grabCut(image, mask, rectangle, bgdModel, fgdModel, 8,
+			// Imgproc.GC_INIT_WITH_RECT);
+			Imgproc.grabCut(image, grabCutMask, rectangle, bgdModel, fgdModel, 8, Imgproc.GC_INIT_WITH_MASK);
 
-			// // COmpare result mask with source matrix (value 3) then result that match 3
-			// are set to 255 binary mask
-			Core.compare(result, source, result, Core.CMP_EQ);
+			// COmpare result mask with source matrix (value 3) then result that match 3 are
+			// set to 255 binary mask
+			// Core.compare(mask, source, mask, Core.CMP_EQ);
 			// // White Background Scalar is created same size as input image
-			Mat foreground = new Mat(image.size(), CvType.CV_8UC3, new Scalar(255, 255, 255));
+			// Mat foreground = new Mat(image.size(), CvType.CV_8UC3, new Scalar(255, 255,
+			// 255));
 			// // Move pixels from input image to where result mask is non-zero (foreground)
-			image.copyTo(foreground, result);
+			// image.copyTo(foreground, mask);
+			Mat foregroundMask = new Mat();
+			Core.compare(grabCutMask, new Scalar(Imgproc.GC_PR_FGD), foregroundMask, Core.CMP_EQ);
+			// White Background Scalar is created same size as input image
+			Mat foreground = new Mat(image.size(), CvType.CV_8UC3, new Scalar(255, 255, 255));
+			// Move pixels from input image to where result mask is non-zero (foreground)
+			Mat result = new Mat();
+        	image.copyTo(result, foregroundMask);
 
 			// Mat kernel = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(5,
 			// 5));
 			// Imgproc.morphologyEx(image, image, Imgproc.MORPH_CLOSE, kernel);
 
-			// Imgproc.morphologyEx(mask, mask, Imgproc.MORPH_CLOSE, kernel);
-			// Imgproc.morphologyEx(mask, mask, Imgproc.MORPH_OPEN, kernel);
+			// for (int y = 0; y < height; y++) {
+			// for (int x = 0; x < width; x++) {
+			// if (imgThreshold.get(y, x)[0] == 0) {
+			// mask.put(y, x, Imgproc.GC_FGD); // Set to GC_FGD (foreground)
+			// }
+			// }
+			// }
 
 			MatOfByte matOfByte = new MatOfByte();
 			// foreground extracted encoded into a JPEG format stored in a Mat of Byte
-			Imgcodecs.imencode(".png", image, matOfByte);
+			Imgcodecs.imencode(".png", foregroundMask, matOfByte);
 			System.out.println(matOfByte.toArray() + " -Image");
 			return matOfByte.toArray();
 			// Imgcodecs.imwrite("weiwenphoto-grayq1.jpg", foreground);

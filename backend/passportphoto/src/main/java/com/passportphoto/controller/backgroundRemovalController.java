@@ -28,7 +28,34 @@ public class backgroundRemovalController {
     @PostMapping("/transform")
     public ResponseEntity<byte[]> transformImg(@RequestParam("file") MultipartFile file, @ModelAttribute ImgDTO imgDTO) {
         try {
-            byte[] result = backgroundRemoval.extractFacewater(imgDTO, file); // Transform logic
+            // System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+            byte[] result = backgroundRemoval.extractFace(imgDTO, file); // Transform logic
+             HttpHeaders headers = new HttpHeaders();
+            headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=processed.png");
+            headers.add(HttpHeaders.CONTENT_TYPE, "image/png");
+            return new ResponseEntity<>(result, headers, HttpStatus.OK); // Return transformed image
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @PostMapping("/transform2")
+    public ResponseEntity<byte[]> transformImg2(@RequestParam("file") MultipartFile file, @ModelAttribute ImgDTO imgDTO) {
+        try {
+            byte[] result = backgroundRemoval.extractFace2(imgDTO, file); // Transform logic
+             HttpHeaders headers = new HttpHeaders();
+            headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=processed.png");
+            headers.add(HttpHeaders.CONTENT_TYPE, "image/png");
+            return new ResponseEntity<>(result, headers, HttpStatus.OK); // Return transformed image
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @PostMapping("/transform3")
+    public ResponseEntity<byte[]> transformImg3(@RequestParam("file") MultipartFile file, @ModelAttribute ImgDTO imgDTO) {
+        try {
+            byte[] result = backgroundRemoval.extractFace3(imgDTO, file); // Transform logic
              HttpHeaders headers = new HttpHeaders();
             headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=processed.png");
             headers.add(HttpHeaders.CONTENT_TYPE, "image/png");
