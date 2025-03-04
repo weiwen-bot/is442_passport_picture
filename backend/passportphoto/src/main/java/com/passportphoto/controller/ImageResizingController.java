@@ -220,13 +220,12 @@ public class ImageResizingController {
             return bgrImage.clone();
         }
 
-        // Quick check for uniform background by sampling corners:
-        Scalar cornerColor = sampleCornerColor(bgrImage);
-        boolean isUniform = checkIfBackgroundIsUniform(bgrImage, cornerColor);
+        // Compute stats from border region
+        BorderStats stats = computeBorderStats(bgrImage, 10 /*borderSize*/, 15.0 /*stdDevThreshold*/);
 
-        if (isUniform) {
+        if (stats.isUniform) {
             // Extend with the cornerColor
-            return extendBackgroundUniform(bgrImage, targetWidth, targetHeight, cornerColor);
+            return extendBackgroundUniform(bgrImage, targetWidth, targetHeight, stats.meanColor);
         } else {
             // Use replicate + blur
             return extendBackgroundReplicate(bgrImage, targetWidth, targetHeight);
@@ -322,39 +321,72 @@ public class ImageResizingController {
         return extendedMat;
     }
 
-    /* UNIFORM BACKGROUND DETECTION */
-    private Scalar sampleCornerColor(Mat bgrImage) {
-        // Sample the top-left corner colour
-        double[] cornerPix = bgrImage.get(0, 0);
-        return new Scalar(cornerPix);
+    /* UNIFORM BACKGROUND DETECTION 
+     * Gather pixels from a 10px-wide band around all edges, then compute mean/stddev
+     * If the stddev is below a threshold, consider it uniform
+    */
+    private BorderStats computeBorderStats(Mat bgrImage, int borderSize, double stdDevThreshold) {
+        BorderStats result = new BorderStats();
+
+        // 1) Extract perimeter region (top/bottom/left/right)
+        Mat borderRegion = extractBorderRegion(bgrImage, borderSize);
+        if (borderRegion.empty()) {
+            // fallback: either treat as uniform or return something default
+            result.isUniform = true;
+            result.meanColor = new Scalar(128,128,128); // middle gray
+            return result;
+        }
+    
+        // 2) Compute mean & stddev
+        MatOfDouble mean = new MatOfDouble();
+        MatOfDouble stddev = new MatOfDouble();
+        Core.meanStdDev(borderRegion, mean, stddev);
+    
+        double stdB = stddev.get(0,0)[0];
+        double stdG = stddev.get(1,0)[0];
+        double stdR = stddev.get(2,0)[0];
+    
+        // 3) If all channels have std < threshold => uniform
+        result.isUniform = (stdB < stdDevThreshold && stdG < stdDevThreshold && stdR < stdDevThreshold);
+    
+        double meanB = mean.get(0,0)[0];
+        double meanG = mean.get(1,0)[0];
+        double meanR = mean.get(2,0)[0];
+        result.meanColor = new Scalar(meanB, meanG, meanR);
+    
+        return result;
     }
     
-    // Sample corners and compare them to cornerColour
-    private boolean checkIfBackgroundIsUniform(Mat bgrImage, Scalar cornerColor) {
-        int height = bgrImage.rows();
-        int width = bgrImage.cols();
+    private Mat extractBorderRegion(Mat bgrImage, int borderSize) {
+        int w = bgrImage.cols();
+        int h = bgrImage.rows();
+        if (w < borderSize*2 || h < borderSize*2) {
+            // If image is too small, no perimeter band to extract
+            return new Mat(); // empty
+        }
 
-        // Sample the four corners
-        Scalar c1 = new Scalar(bgrImage.get(0, 0));
-        Scalar c2 = new Scalar(bgrImage.get(0, width - 1));
-        Scalar c3 = new Scalar(bgrImage.get(height - 1, 0));
-        Scalar c4 = new Scalar(bgrImage.get(height - 1, width - 1));
+        Mat top    = bgrImage.submat(0, borderSize, 0, w); 
+        Mat bottom = bgrImage.submat(h-borderSize, h, 0, w);
+        Mat left   = bgrImage.submat(borderSize, h-borderSize, 0, borderSize);
+        Mat right  = bgrImage.submat(borderSize, h-borderSize, w-borderSize, w);
 
-        // Use a small threshold
-        double threshold = 15.0;
+        // Concatenate submats into one single row (or column) to do meanStdDev on it
+        Mat topBottom = new Mat();
+        Core.vconcat(java.util.Arrays.asList(top, bottom), topBottom);
 
-        return (colorDistance(c1, cornerColor) < threshold
-             && colorDistance(c2, cornerColor) < threshold
-             && colorDistance(c3, cornerColor) < threshold
-             && colorDistance(c4, cornerColor) < threshold);
+        Mat leftRight = new Mat();
+        Core.vconcat(java.util.Arrays.asList(left, right), leftRight);
+
+        Mat borderRegion = new Mat();
+        // Combine topBottom + leftRight
+        Core.vconcat(java.util.Arrays.asList(topBottom, leftRight), borderRegion);
+
+        return borderRegion;
     }
 
-    private double colorDistance(Scalar a, Scalar b) {
-        // Euclidean distance in BGR space
-        double db = a.val[0] - b.val[0];
-        double dg = a.val[1] - b.val[1];
-        double dr = a.val[2] - b.val[2];
-        return Math.sqrt(db*db + dg*dg + dr*dr);
+    static class BorderStats {
+        boolean isUniform;
+        Scalar meanColor;
     }
 
     /* BUFFERED IMAGE <-> OPENCV MAT */
