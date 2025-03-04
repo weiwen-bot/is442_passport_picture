@@ -365,23 +365,53 @@ public class ImageResizingController {
             return new Mat(); // empty
         }
 
+        // 1. Create submats for each edge
         Mat top    = bgrImage.submat(0, borderSize, 0, w); 
         Mat bottom = bgrImage.submat(h-borderSize, h, 0, w);
         Mat left   = bgrImage.submat(borderSize, h-borderSize, 0, borderSize);
         Mat right  = bgrImage.submat(borderSize, h-borderSize, w-borderSize, w);
 
-        // Concatenate submats into one single row (or column) to do meanStdDev on it
-        Mat topBottom = new Mat();
-        Core.vconcat(java.util.Arrays.asList(top, bottom), topBottom);
+        // 2. Calculate total number of border pixels
+        int topPixels = top.rows() * top.cols();
+        int bottomPixels = bottom.rows() * bottom.cols();
+        int leftPixels = left.rows() * left.cols();
+        int rightPixels = right.rows() * right.cols();
+        int totalPixels = topPixels + bottomPixels + leftPixels + rightPixels;
 
-        Mat leftRight = new Mat();
-        Core.vconcat(java.util.Arrays.asList(left, right), leftRight);
+        // 3. Create a single-column mat of the same type, which will hold all these pixels
+        Mat borderRegion = new Mat(totalPixels, 1, bgrImage.type());
 
-        Mat borderRegion = new Mat();
-        // Combine topBottom + leftRight
-        Core.vconcat(java.util.Arrays.asList(topBottom, leftRight), borderRegion);
+        // 4. Copy each submat's pixels into 'borderRegion'
+        int currentIndex = 0;
+        copySubmatToColumn(top, borderRegion, currentIndex);
+        currentIndex += topPixels;
+
+        copySubmatToColumn(bottom, borderRegion, currentIndex);
+        currentIndex += bottomPixels;
+
+        copySubmatToColumn(left, borderRegion, currentIndex);
+        currentIndex += leftPixels;
+
+        copySubmatToColumn(right, borderRegion, currentIndex);
 
         return borderRegion;
+    }
+
+    private void copySubmatToColumn(Mat region, Mat dest, int startIndex) {
+        int rows = region.rows();
+        int cols = region.cols();
+    
+        // Read each pixel in 'region' and store it in 'dest' at row [startIndex + ...], col=0
+        byte[] pixel = new byte[(int) region.elemSize()]; 
+    
+        int index = startIndex; 
+        for (int y = 0; y < rows; y++) {
+            for (int x = 0; x < cols; x++) {
+                region.get(y, x, pixel);
+                dest.put(index, 0, pixel);
+                index++;
+            }
+        }
     }
 
     static class BorderStats {
