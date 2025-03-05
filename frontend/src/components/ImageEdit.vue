@@ -5,12 +5,21 @@
     <div class="p-1 grid grid-cols-5 gap-2 ml-[180px] mr-0">
       <!-- Show ImageCropping Component when "Crop" is selected -->
       <ImageCropping 
-        v-if="currentAction === 'crop' && imageData" 
+        v-if="currentAction === 'crop' && imageData && !isCropped"  
         :key="imageData"
         v-model:imageData="imageData"
         @crop-complete="handleCropComplete"
         @discard-crop="handleDiscardCrop" 
       />
+
+      <!-- Show Cropped Image when cropping is done -->
+      <div v-if="currentAction === 'crop' && isCropped" class="col-span-4 shadow-lg">
+        <img
+          :src="imageData"
+          class="h-full w-auto max-w-full object-contain"
+          alt="Cropped Image"
+        />
+      </div>
 
       <!-- Show BackgroundRemover Component when "Background Remover" is selected -->
       <BackgroundRemover 
@@ -96,6 +105,7 @@ export default {
     handleCropComplete(croppedImage) {
       this.imageData = croppedImage; // Update the imageData with the new cropped image
       this.isCropped = true; // Set the flag to true
+      
     },
     // Discard Crop
     handleDiscardCrop() {
