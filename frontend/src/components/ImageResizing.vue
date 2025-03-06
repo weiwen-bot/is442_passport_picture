@@ -1,91 +1,74 @@
 <template>
-  <div class="grid grid-cols-5 gap-4">
-    <!-- Left Side: Country Selection & Actions -->
-    <div
-      class="col-span-1 flex flex-col bg-white border rounded-lg shadow-lg p-2 space-y-2 text-black"
-    >
-      <h2 class="font-bold">Resize Your Image</h2>
-      <label for="country" class="font-semibold">Select Country:</label>
-      <select
-        id="country"
-        v-model="selectedCountry"
-        class="p-2 border border-gray-300 rounded-md"
-      >
-        <option value="" disabled>Select a country</option>
-        <option value="jpn">Japan (35mm x 45mm)</option>
-        <option value="usa">United States (51mm x 51mm)</option>
-        <option value="sgp">Singapore (35mm x 45mm)</option>
-        <option value="chn">China (33mm x 48mm)</option>
-        <option value="mas">Malaysia (35mm x 50mm)</option>
-      </select>
+  <div class="w-full h-full flex justify-center items-center">
+    <!-- Main Container -->
+    <div class="w-full max-w-4xl bg-white shadow-lg p-6 rounded-lg">
+      <h2 class="text-xl font-bold text-center">Resize Your Image</h2>
 
-      <button
-        class="text-white bg-gray-800 p-2 rounded mt-4"
-        @click="handleResize"
-        :disabled="!originalImage || !selectedCountry || isLoading"
-      >
-        Resize
-      </button>
-
-      <button
-        class="text-white bg-green-600 p-2 rounded"
-        @click="handleDownload"
-        :disabled="!resizedImage || isLoading"
-      >
-        Download
-      </button>
-
-      <button
-        class="text-white bg-gray-500 p-2 rounded"
-        @click="handleRetake"
-        :disabled="isLoading"
-      >
-        Upload Another Image
-      </button>
-
-      <button
-        class="text-white bg-blue-600 p-2 rounded"
-        @click="goToRemoveBackground"
-        :disabled="!resizedImage || isLoading"
-      >
-        Next: Remove Background
-      </button>
-    </div>
-
-    <!-- Right Side: Image Display -->
-    <div class="col-span-4 shadow-lg p-4 bg-white border rounded-lg">
-      <div class="flex justify-center gap-4">
+      <div class="grid grid-cols-2 gap-6">
+        <!-- Original Image Section -->
         <div class="flex flex-col items-center">
           <h3 class="font-semibold">Original Image</h3>
           <img
             v-if="originalImage"
             :src="originalImage"
             alt="Original"
-            class="max-w-xs border rounded"
+            class="w-full max-h-[500px] object-contain border rounded shadow-md"
           />
           <div v-else class="text-gray-500">No image loaded</div>
         </div>
 
+        <!-- Resized Image Section -->
         <div class="flex flex-col items-center">
           <h3 class="font-semibold">Resized Image</h3>
           <img
             v-if="resizedImage"
             :src="resizedImage"
             alt="Resized"
-            class="max-w-xs border rounded"
+            class="w-full max-h-[500px] object-contain border rounded shadow-md"
           />
           <div v-else class="text-gray-500">Select a country to resize</div>
         </div>
       </div>
-    </div>
 
-    <!-- Loading Spinner -->
-    <div
-      v-if="isLoading"
-      class="absolute inset-0 flex flex-col justify-center items-center bg-white bg-opacity-80"
-    >
-      <div class="spinner"></div>
-      <p>Processing your image...</p>
+      <!-- Country Dropdown -->
+      <div class="mt-4">
+        <label for="country" class="font-semibold block text-center"
+          >Select a Country</label
+        >
+        <select
+          v-model="selectedCountry"
+          id="country"
+          class="border border-gray-300 rounded p-2 w-full text-black bg-white"
+        >
+          <option value="">-- Select Country --</option>
+          <option
+            v-for="country in countryList"
+            :key="country.code"
+            :value="country.code"
+          >
+            {{ country.name }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex justify-center mt-4 gap-3">
+        <button
+          @click="handleResize"
+          class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
+          :disabled="!originalImage || !selectedCountry || isLoading"
+        >
+          Resize
+        </button>
+
+        <button
+          @click="handleDownload"
+          class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
+          :disabled="!resizedImage || isLoading"
+        >
+          Download
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -100,6 +83,7 @@ export default {
       originalImage: null,
       resizedImage: null,
       selectedCountry: "",
+      countryList: [],
       isLoading: false,
     };
   },
@@ -113,8 +97,21 @@ export default {
       console.warn("No image found! Redirecting to upload.");
       this.$router.push({ name: "ImageUpload" });
     }
+
+    this.fetchCountryList(); // Fetch countries when component loads
   },
   methods: {
+    async fetchCountryList() {
+      try {
+        const response = await fetch("http://localhost:8080/image/countries");
+        if (!response.ok) throw new Error("Failed to fetch country list");
+
+        this.countryList = await response.json();
+      } catch (error) {
+        console.error("Error fetching country list:", error);
+      }
+    },
+
     async handleResize() {
       if (!this.originalImage || !this.selectedCountry) {
         alert("Please select a country first.");
