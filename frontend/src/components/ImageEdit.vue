@@ -9,7 +9,7 @@
       :key="imageData"
       v-model:imageData="imageData"
       @crop-complete="handleCropComplete"
-      @discard-crop="handleDiscardCrop" 
+      @discard-crop="handleDiscard" 
     />
 
     <!-- Show Cropped Image when cropping is done -->
@@ -20,6 +20,7 @@
         class="h-full w-auto max-w-full object-contain"
         alt="Cropped Image"
       />
+     
     </div>
 
     <!-- Show BackgroundRemover Component when "Background Remover" is selected -->
@@ -28,7 +29,7 @@
       :key="imageData"
       v-model:imageData="imageData"
       @remove-background="handleRemoveBackground"
-      @discard-background="handleDiscardBackground"
+      @discard-background="handleDiscard"
     />
 
     <!-- Show ProcessImage Component when "Process Image" is selected -->
@@ -37,7 +38,7 @@
       :key="imageData"
       v-model:imageData="imageData"
       @process-complete="handleProcessComplete"
-      @discard-process="handleDiscardProcess"
+      @discard-process="handleDiscardCrop"
     />
   
     <div class="bg-black fixed bottom-0 left-0 w-full p-2 z-10">
@@ -46,7 +47,12 @@
         <button :disabled="!isCropped"
           class="text-white bg-gray-800 p-2 rounded mr-3"
           @click="handleDiscardCrop">
-          Discard
+          Discard Changes
+        </button>
+        <button :disabled="imageHistory.length === 0"
+          class="text-white bg-gray-800 p-2 rounded mr-3"
+          @click="handleDiscard">
+          Undo
         </button>
 
         <!-- Download Button -->
@@ -77,6 +83,7 @@ data() {
   return {
     imageData: null, // Image data that will be passed to child and updated after crop
     originalImage: null, // Store the original image
+    imageHistory: [],// Stack to Store Previous Image States
     currentAction: 'crop', // Start with crop selected
     sidebarWidth: '240px', // Default width for expanded sidebar
     isCropped: false, // Track cropped state in the parent
@@ -101,9 +108,20 @@ methods: {
   handleAction(action) {
     console.log("Handling action:", action);
     this.currentAction = action; 
+
+    if (action === "crop") {
+      // If user clicks "Crop" again, allow re-cropping the already cropped image
+      this.isCropped = false; 
+    }
+
+    this.currentAction = action;
+  
   },
   // After crop complete
   handleCropComplete(croppedImage) {
+    if (this.imageData) {
+      this.imageHistory.push(this.imageData); // Save current state before replacing it
+    }
     this.imageData = croppedImage; // Update the imageData with the new cropped image
     this.isCropped = true; // Set the flag to true
     
@@ -125,12 +143,25 @@ methods: {
 
   // After process complete
   handleProcessComplete(processedImage) {
+    if (this.imageData) {
+      this.imageHistory.push(this.imageData); // Save current state before replacing it
+    }
     this.imageData = processedImage;
   },
 
   // Discard Processing
   handleDiscardProcess() {
     this.imageData = this.originalImage;
+  },
+
+  handleDiscard() {
+    if (this.imageHistory.length > 0) {
+      this.imageData = this.imageHistory.pop(); // Go back to previous state
+    } else {
+      this.imageData = this.originalImage; // If no history, revert to original
+    }
+
+    this.isCropped = false; // Reset cropped state
   },
 
   async downloadImage() {
