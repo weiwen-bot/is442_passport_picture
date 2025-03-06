@@ -49,6 +49,7 @@ export default {
     this.originalImage = this.imageData || localStorage.getItem("imageData");
   },
   methods: {
+
     async processImage() {
       if (!this.originalImage) {
         this.errorMessage = "No image available for processing.";
@@ -59,10 +60,11 @@ export default {
       this.errorMessage = "";
 
       try {
-        // Ensure image is resized to 512x512 before sending
-        const resizedBase64 = await this.resizeImage(this.originalImage, 512, 512);
+        // Crop + scale to multiple-of-32 dimension
+        // const finalBase64 = await this.cropToSquareMultipleOf32(this.originalImage);
+        const finalBase64 = await this.resizeToClosestMultipleOf32(this.originalImage);
 
-        const payload = { image: resizedBase64 };
+        const payload = { image: finalBase64 };
 
         const response = await fetch("http://localhost:8080/image/process", {
           method: "POST",
@@ -74,7 +76,7 @@ export default {
 
         const result = await response.json();
         if (result.processedImage) {
-          this.processedImage = result.processedImage; // Update UI with processed image
+          this.processedImage = result.processedImage; 
         } else {
           throw new Error("No processed image received from backend.");
         }
@@ -86,21 +88,50 @@ export default {
       }
     },
 
-    async resizeImage(base64, width, height) {
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.src = base64;
-        img.onload = () => {
-          const canvas = document.createElement("canvas");
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL("image/png"));
-        };
-        img.onerror = () => reject(new Error("Failed to load image"));
-      });
-    },
+    async resizeToClosestMultipleOf32(base64) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.src = base64;
+      img.onload = () => {
+        const originalWidth = img.width;
+        const originalHeight = img.height;
+
+        // 1) Round each dimension to the nearest multiple of 32
+        const newWidth = this.roundToNearestMultiple(originalWidth, 32);
+        const newHeight = this.roundToNearestMultiple(originalHeight, 32);
+
+        // 2) Create a canvas at the new size
+        const canvas = document.createElement("canvas");
+        canvas.width = newWidth;
+        canvas.height = newHeight;
+        const ctx = canvas.getContext("2d");
+
+        // 3) Draw the entire original image scaled to the new dimension
+        ctx.drawImage(img, 0, 0, newWidth, newHeight);
+
+        // 4) Convert to base64 and return
+        const resizedBase64 = canvas.toDataURL("image/png");
+        resolve(resizedBase64);
+      };
+      img.onerror = () => reject(new Error("Failed to load image"));
+    });
+  },
+
+  // Helper to round a number to the nearest multiple of 'm'
+  roundToNearestMultiple(value, m) {
+    // e.g. if value=185, remainder=185 % 32=25, down=160, up=192 -> 185 is closer to 192 => returns 192
+    const remainder = value % m;
+    const down = value - remainder; // e.g. 185 - 25 = 160
+    const up = down + m;           // e.g. 160 + 32 = 192
+
+    // Decide which is closer to 'value'
+    if (remainder <= m / 2) {
+      return down;   // e.g. if remainder < 16, we pick 160
+    } else {
+      return up;     // e.g. remainder >=16 => we pick 192
+    }
+  },
+
   },
 };
 </script>
