@@ -259,7 +259,7 @@ export default {
       if (this.imageData) {
         // Navigate to the image cropping page, passing the image URL as a query parameter
         localStorage.setItem('imageData', this.imageData); // Save to localStorage
-        this.$router.push({ name: 'ImageEdit', query: { image: this.imageData } });
+        this.$router.push({ name: 'ImageEdit'});
       } else {
         alert('Please upload an image first.');
       }
