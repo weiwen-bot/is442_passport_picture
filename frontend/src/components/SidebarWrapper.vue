@@ -1,15 +1,15 @@
 <template>
   <div>
-    <SidebarMenu 
-      :menu="menu" 
-      @click.native="handleSelect" 
-      :width="sidebarWidth" 
-      :hide-toggle="true" 
+    <SidebarMenu
+      :menu="menu"
+      @click.native="handleSelect"
+      :width="sidebarWidth"
+      :hide-toggle="true"
       :collapsed="false"
     />
 
-  <!-- :hide-toggle="true": Hide the collapse button -->
-  <!-- :collapsed="false": Ensure it's not in collapsed state -->
+    <!-- :hide-toggle="true": Hide the collapse button -->
+    <!-- :collapsed="false": Ensure it's not in collapsed state -->
   </div>
 </template>
 
@@ -22,7 +22,7 @@ export default {
   props: {
     sidebarWidth: {
       type: String,
-      default: '250px',
+      default: "250px",
     },
   },
   data() {
@@ -30,14 +30,25 @@ export default {
       menu: [
         { header: "Main Navigation", hiddenOnCollapse: true },
         { title: "Crop", icon: "fa-solid fa-crop", action: "crop" },
-        { title: "Background Remover", icon: "fa-solid fa-eraser", action: "background-remover" },
-        { title: "Process Image", icon: "fa-solid fa-eraser", action: "process-image" },
+        { title: "Resize", icon: "fa-solid fa-expand", action: "resize" },
+        {
+          title: "Background Remover",
+          icon: "fa-solid fa-eraser",
+          action: "background-remover",
+        },
+        {
+          title: "Process Image",
+          icon: "fa-solid fa-eraser",
+          action: "process-image",
+        },
       ],
     };
   },
   methods: {
     handleSelect(event) {
-      const selectedItem = this.menu.find(item => item.title === event.target.innerText);
+      const selectedItem = this.menu.find(
+        (item) => item.title === event.target.innerText
+      );
       if (selectedItem && selectedItem.action) {
         this.$emit("update-action", selectedItem.action); // Emit action to parent component
         console.log("Emitting action:", selectedItem.action);

@@ -27,6 +27,18 @@ public class ImageResizingController {
         }
     }
 
+    @GetMapping("/countries")
+    public ResponseEntity<String> getCountryList() {
+        String countryListJson = "[{\"code\":\"jpn\", \"name\":\"Japan\"}," +
+        "{\"code\":\"usa\", \"name\":\"United States\"}," +
+        "{\"code\":\"sgp\", \"name\":\"Singapore\"}," +
+        "{\"code\":\"chn\", \"name\":\"China\"}," +
+        "{\"code\":\"mas\", \"name\":\"Malaysia\"}]";
+        
+        return ResponseEntity.ok(countryListJson);
+    }
+
+
     @PostMapping("/resize")
     public ResponseEntity<String> resizeImage(@RequestParam("image") MultipartFile file, @RequestParam("country") String country) {
         try {
