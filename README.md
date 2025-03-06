@@ -18,6 +18,35 @@ List Functions
 - I also attach a simple postman collection to run the background removal
     - Ensure its a post request and select file and update a file you have (It may take awhile)
 
+### Google Picker & Drive API Setup
+Follow these steps to enable **Google Picker API** and **Google Drive API** and obtain the required credentials.
+
+#### 1. Enable APIs
+- Go to [Google Cloud Console](https://console.cloud.google.com/).
+- Create or select a project.
+- Navigate to **APIs & Services > Library**.
+- Enable **Google Picker API** and **Google Drive API**.
+
+#### 2. Get OAuth Client ID
+- Go to **APIs & Services > Credentials**.
+- Click **Create Credentials > OAuth Client ID**.
+- If prompted, set up the **OAuth Consent Screen**.
+- Select **Web Application** and add **Authorized JavaScript origins**:
+  - Example for local development: `http://localhost:3000`
+  - Example for production: `https://yourdomain.com`
+- Click **Create** and copy the **Client ID**.
+
+#### 3. Get API Key
+- Go to **APIs & Services > Credentials**.
+- Click **Create Credentials > API Key** and copy it.
+
+#### 4. Store Credentials in Environment File
+- In your `frontend` directory, create or update the `.env` file:
+    ```
+    VITE_GOOGLE_CLIENT_ID=<your-client-id-here>
+    VITE_GOOGLE_API_KEY=<your-api-key-here>
+    ```
+
 ### Information about the java directory
 [ReadThisArticle](https://malshani-wijekoon.medium.com/spring-boot-folder-structure-best-practices-18ef78a81819) 
 
