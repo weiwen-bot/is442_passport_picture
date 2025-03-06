@@ -104,8 +104,15 @@ export default {
     };
   },
   created() {
-    // Load image from props (if provided) or localStorage (fallback)
+    console.log("Checking props:", this.imageData);
+    console.log("Checking localStorage:", localStorage.getItem("imageData"));
+
     this.originalImage = this.imageData || localStorage.getItem("imageData");
+
+    if (!this.originalImage) {
+      console.warn("No image found! Redirecting to upload.");
+      this.$router.push({ name: "ImageUpload" });
+    }
   },
   methods: {
     async handleResize() {
