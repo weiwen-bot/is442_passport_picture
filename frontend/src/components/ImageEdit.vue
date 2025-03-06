@@ -14,6 +14,7 @@
 
     <!-- Show Cropped Image when cropping is done -->
     <div v-if="currentAction === 'crop' && isCropped" class="col-span-4 shadow-lg">
+      <h2 class="text-lg font-semibold mb-2">Your Cropped Image</h2>
       <img
         :src="imageData"
         class="h-full w-auto max-w-full object-contain"
