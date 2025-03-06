@@ -3,6 +3,7 @@ import Home from "../views/Home.vue";
 import ImageUpload from "../components/ImageUpload.vue";
 import ImageEdit from "../components/ImageEdit.vue";
 import BackgroundRemover from "../components/BackgroundRemover.vue";
+import ImageResizing from "../components/ImageResizing.vue";
 
 const routes = [
   {
