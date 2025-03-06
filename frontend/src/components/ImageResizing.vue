@@ -5,7 +5,6 @@
       class="col-span-1 flex flex-col bg-white border rounded-lg shadow-lg p-2 space-y-2 text-black"
     >
       <h2 class="font-bold">Resize Your Image</h2>
-
       <label for="country" class="font-semibold">Select Country:</label>
       <select
         id="country"
@@ -93,6 +92,9 @@
 
 <script>
 export default {
+  props: {
+    imageData: String,
+  },
   data() {
     return {
       originalImage: null,
@@ -101,20 +103,9 @@ export default {
       isLoading: false,
     };
   },
-  mounted() {
-    // Load image from localStorage
-    const savedImageData = localStorage.getItem("imageData");
-    if (savedImageData) {
-      this.originalImage = savedImageData;
-    } else {
-      // Check for image via route query
-      const queryImage = this.$route.query.image;
-      if (queryImage) {
-        this.originalImage = queryImage;
-      } else {
-        this.$router.push({ name: "ImageUpload" });
-      }
-    }
+  created() {
+    // Load image from props (if provided) or localStorage (fallback)
+    this.originalImage = this.imageData || localStorage.getItem("imageData");
   },
   methods: {
     async handleResize() {
@@ -124,7 +115,6 @@ export default {
       }
 
       this.isLoading = true;
-
       try {
         // Convert base64 to Blob
         const file = this.base64ToFile(
@@ -165,7 +155,6 @@ export default {
 
     handleDownload() {
       if (!this.resizedImage) return;
-
       const downloadLink = document.createElement("a");
       downloadLink.href = this.resizedImage;
       const fileExtension = this.resizedImage.includes("image/png")
