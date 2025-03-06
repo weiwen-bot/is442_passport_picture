@@ -60,15 +60,14 @@ export default {
 
       try {
         // Ensure image is resized to 512x512 before sending
-        console.log(this.originalImage.width,this.originalImage.height,"HELLO");
-        const resizedBase64 = await this.resizeImage(this.originalImage, 512, 512);
+        const resizedBase64 = await this.resizeImage(this.originalImage);
 
         const payload = { image: resizedBase64 };
         console.log(payload);
         console.log(JSON.stringify(payload));
 
 
-        const response = await fetch("http://localhost:8080/image/process", {
+        const response = await fetch("http://localhost:8080/image2/process", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -90,16 +89,22 @@ export default {
       }
     },
 
-    async resizeImage(base64, width, height) {
+    async resizeImage(base64) {
       return new Promise((resolve, reject) => {
         const img = new Image();
         img.src = base64;
+        
+        
         img.onload = () => {
+          const rw = img.width;
+          // const rh = (img.height ) * (rw/img.weight);
+          const rh = img.height;
           const canvas = document.createElement("canvas");
-          canvas.width = width;
-          canvas.height = height;
+          canvas.width = rw;
+          canvas.height = rh;
+          console.log(rw,rh,"$%jj");
           const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0, width, height);
+          ctx.drawImage(img, 0, 0, rw, rh);
           resolve(canvas.toDataURL("image/png"));
         };
         img.onerror = () => reject(new Error("Failed to load image"));
