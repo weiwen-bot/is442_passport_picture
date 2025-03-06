@@ -74,20 +74,9 @@ data() {
     customHeight: 45, // Custom height in mm (default value)
     pxPerMm: 10, // Conversion factor from mm to pixels (adjust this value based on your image resolution)
     processedImage: "", // Cropped image URL
-    isCropped: false, // Track if cropping is completed
-    selectedCountry: { name: "Singapore", width: 35, height: 45 },
-    countries: [
-      { name: "Singapore", width: 35, height: 45 },
-      { name: "USA", width: 40, height: 50 },
-      { name: "Europe", width: 35, height: 45 },
-    ],
-    
+    isCropped: false, // Track if cropping is completed    
     isResizing: false, // Track if the crop box is being resized
   };
-},
-
-mounted() {
-  this.selectedCountry = this.countries.find(c => c.name === "Singapore");
 },
 
 methods: {
@@ -148,8 +137,8 @@ methods: {
 
   updateCropBox() {
     if (!this.isResizing) { 
-      this.customWidth = this.selectedCountry.width;
-      this.customHeight = this.selectedCountry.height;
+      this.customWidth = 35;
+      this.customHeight = 45;
     }
     this.updateCropperBox();
   },
@@ -174,8 +163,8 @@ methods: {
     const imageData = cropper.getImageData(); // Get image size in pixels
     const containerData = cropper.getContainerData(); // Get cropper container size
 
-    const requiredWidthPx = this.selectedCountry.width * this.pxPerMm; // Convert mm to pixels
-    const requiredHeightPx = this.selectedCountry.height * this.pxPerMm;
+    const requiredWidthPx = 35 * this.pxPerMm; // Convert mm to pixels
+    const requiredHeightPx = 45 * this.pxPerMm;
 
 
 
