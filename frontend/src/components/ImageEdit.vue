@@ -1,7 +1,7 @@
 <template>
-  <!--Main Image Edit (Parent Component)-->
+  <!-- Main Image Edit (Parent Component) -->
   <!-- Sidebar -->
-  <SidebarWrapper @update-action="handleAction" :sidebar-width="sidebarWidth" />
+  <SidebarWrapper @update-action="handleAction" :sidebar-width="sidebarWidth" @reset-data="resetData"/>
 
   <div class="p-1 grid grid-cols-5 gap-2 ml-[180px] mr-0">
     <!-- Show ImageCropping Component when "Crop" is selected -->
@@ -55,7 +55,7 @@
 
     <div class="bg-black fixed bottom-0 left-0 w-full p-2 z-10">
       <div class="flex justify-end">
-        <!--Discard Button -->
+        <!-- Discard Button -->
         <button
           :disabled="!isCropped"
           class="text-white bg-gray-800 p-2 rounded mr-3"
@@ -77,6 +77,26 @@
           class="text-white bg-gray-800 p-2 rounded"
         >
           Download
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmation Modal for Reset (Overlay on top of content)-->
+  <div v-if="showResetModal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded shadow-lg w-120">
+      <h3 class="text-xl font-semibold text-gray-900 mb-10">
+        Are you sure you want to reset? <br/>
+        This will discard your photo and all changes.
+      </h3>
+      <div class="flex justify-end space-x-4">
+        <!-- Cancel Button (Same as Discard) -->
+        <button @click="cancelReset" class="bg-gray-800 text-white px-4 py-2 rounded">
+          Cancel
+        </button>
+        <!-- Confirm Button (Dark Red) -->
+        <button @click="confirmReset" class="bg-red-800 text-white px-4 py-2 rounded">
+          Confirm
         </button>
       </div>
     </div>
@@ -106,6 +126,7 @@ export default {
       currentAction: "crop", // Start with crop selected
       sidebarWidth: "240px", // Default width for expanded sidebar
       isCropped: false, // Track cropped state in the parent
+      showResetModal: false, // Flag to show confirmation modal
     };
   },
   mounted() {
@@ -135,6 +156,7 @@ export default {
 
       this.currentAction = action;
     },
+
     // After crop complete
     handleCropComplete(croppedImage) {
       if (this.imageData) {
@@ -228,6 +250,30 @@ export default {
       }
     },
 
+    // Show the reset modal 
+    resetData() {
+      this.showResetModal = true;
+    },
+
+    // Close the modal without resetting data
+    cancelReset() {
+      this.showResetModal = false;
+    },
+
+    // Reset data and image state
+    confirmReset() {
+      localStorage.removeItem('imageData');
+      this.imageData = null;
+      this.isCropped = false;
+      this.imageHistory = [];
+
+      // Close the modal
+      this.showResetModal = false;
+
+      // Navigate to the 'image-upload' page 
+      this.$router.push({ name: 'ImageUpload' });
+    },
+
     // Convert base64 image to Blob
     base64ToBlob(base64, contentType = "") {
       const byteCharacters = atob(base64.split(",")[1]); // Remove header from base64
@@ -245,5 +291,8 @@ export default {
 <style>
 .bg-gray-800 {
   background-color: #2d3748 !important;
+}
+.bg-red-800 {
+  background-color: #c53030 !important; /* Dark Red */
 }
 </style>
