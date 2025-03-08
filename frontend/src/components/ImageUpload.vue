@@ -2,7 +2,10 @@
   <div class="upload-container">
     <h1>ID Photo Generator</h1>
     
-    <p class="instruction">Upload your photo and preview it before editing.</p>
+    <p class="instruction">
+      Upload your photo and preview it before editing.
+      Maximum file size allowed is 10MB.
+    </p>
 
     <!-- Main Upload Button Options -->
     <div class="button-container">
@@ -100,6 +103,12 @@ export default {
       const file = event.target.files[0];
 
       if (!file) return;
+
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+        alert("File size exceeds 10MB. Please choose a smaller file.");
+        return;
+      }
+
       if (file && file.type.startsWith("image")) {
         const reader = new FileReader();
         // reader.onload = (e) => {
@@ -228,10 +237,12 @@ export default {
       })
         .then((response) => response.blob())
         .then(async (blob) => {
+          if (blob.size > 10 * 1024 * 1024) { // 10MB limit
+            alert("File size exceeds 10MB. Please choose a smaller file.");
+            return;
+          }
+
           const reader = new FileReader();
-          reader.onloadend = () => {
-            this.imageData = reader.result;
-          };
           reader.readAsDataURL(blob);
 
           // Upload to backend
