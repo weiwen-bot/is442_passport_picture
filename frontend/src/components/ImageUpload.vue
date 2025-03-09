@@ -315,9 +315,9 @@ h1 {
 }
 
 .upload-btn {
-  display: flex; /* Align items in a row */
-  align-items: center; /* Center items vertically */
-  justify-content: center; /* Center content */
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 200px;
   padding: 12px 24px;
   background-color: #2d3748;

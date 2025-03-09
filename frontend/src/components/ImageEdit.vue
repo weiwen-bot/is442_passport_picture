@@ -72,12 +72,19 @@
         </button>
 
         <!-- Download Button -->
-        <button
+        <!-- <button
           @click="downloadImage"
           class="text-white bg-gray-800 p-2 rounded"
         >
           Download
-        </button>
+        </button> -->
+        <div class="relative">
+          <button @click="toggleDropdown" class="text-white bg-gray-800 p-2 rounded">Download</button>
+          <div v-if="showDropdown" class="absolute bottom-12 right-0 bg-gray-800 shadow-md rounded p-3 space-y-2 w-48">
+            <button @click="downloadImage" class="block w-full text-left p-2 hover:bg-gray-200">Download Image</button>
+            <button @click="handleGoogleDownload" class="block w-full text-left p-2 hover:bg-gray-200">Upload to Google Drive</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -127,11 +134,18 @@ export default {
       sidebarWidth: "240px", // Default width for expanded sidebar
       isCropped: false, // Track cropped state in the parent
       showResetModal: false, // Flag to show confirmation modal
+      showDropdown: false, // Flag to show download dropdown
+      accessToken: null, // Stores access token for Google authentication
+      gisInited: false,
+      tokenClient: null,
+      SCOPES: 'https://www.googleapis.com/auth/drive.file',
+      CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID,
     };
   },
-  mounted() {
+  async mounted() {
     this.imageData = localStorage.getItem("imageData") || null;
     this.originalImage = localStorage.getItem("imageData") || null;
+    await this.loadScript('https://accounts.google.com/gsi/client', this.gisLoaded);
   },
   watch: {
     imageData(newImageData) {
@@ -211,6 +225,10 @@ export default {
       this.isCropped = false; // Reset cropped state
     },
 
+    toggleDropdown() {
+      this.showDropdown = !this.showDropdown;
+    },
+
     async downloadImage() {
       try {
         if (!this.imageData) {
@@ -284,6 +302,109 @@ export default {
       const byteArray = new Uint8Array(byteNumbers);
       return new Blob([byteArray], { type: contentType });
     },
+
+    // load gdrive
+    loadScript(src, callback) {
+      return new Promise((resolve, reject) => {
+        const existingScript = document.querySelector(`script[src="${src}"]`);
+        if (existingScript) {
+          if (callback) {
+            callback();
+          }
+          resolve();
+          return;
+        }
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        script.defer = true;
+        script.onload = () => {
+          if (callback) {
+            callback();
+          }
+          resolve();
+        };
+        script.onerror = (error) => {
+          reject(new Error(`Failed to load script: ${src}`));
+        };
+        document.body.appendChild(script);
+      });
+    },
+
+    // initialize Google Identity Services (GIS) for OAuth authentication
+    gisLoaded() {
+      this.tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: this.CLIENT_ID,
+        scope: this.SCOPES,
+        callback: '',
+      });
+      this.gisInited = true;
+    },
+
+    // Trigger Google Drive download
+    async handleGoogleDownload() {
+      this.tokenClient.callback = async (response) => {
+        if (response.error !== undefined) {
+          throw response;
+        }
+        this.accessToken = response.access_token;
+        this.uploadImageToGoogleDrive();
+      };
+
+      if (this.accessToken === null) {
+        this.tokenClient.requestAccessToken({ prompt: 'consent' });
+      } else {
+        this.tokenClient.requestAccessToken({ prompt: '' });
+      }
+    },
+
+    // Upload image to Google Drive
+    async uploadImageToGoogleDrive() {
+      if (!this.imageData || !this.accessToken) {
+        console.error("No image data or access token available.");
+        return;
+      }
+
+      // Convert base64 image data to a Blob
+      const imageBlob = await this.base64ToBlob(this.imageData, "image/png");
+
+      // Define metadata
+      const metadata = {
+        name: "uploaded_image.png",
+        mimeType: "image/png",
+      };
+
+      const metadataBlob = new Blob([JSON.stringify(metadata)], { type: "application/json" });
+
+      const formData = new FormData();
+      formData.append("metadata", metadataBlob);
+      formData.append("file", imageBlob);
+
+      try {
+        const uploadResponse = await fetch(
+          "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${this.accessToken}`,
+            },
+            body: formData,
+          }
+        );
+
+        const result = await uploadResponse.json();
+
+        if (uploadResponse.ok) {
+          console.log("Image uploaded successfully!");
+          console.log(`https://drive.google.com/file/d/${result.id}/view`)
+        } else {
+          console.error("Upload failed:", result.error);
+        }
+      } catch (error) {
+        console.error("Error during upload:", error);
+      }
+    },
+
   },
 };
 </script>
