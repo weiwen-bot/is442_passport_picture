@@ -6,7 +6,12 @@
       :width="sidebarWidth"
       :hide-toggle="true"
       :collapsed="false"
-    />
+    >
+    <template v-slot:footer>
+      <button class="reset-button" @click="resetData">Reset</button>
+    </template>
+
+    </SidebarMenu>
 
     <!-- :hide-toggle="true": Hide the collapse button -->
     <!-- :collapsed="false": Ensure it's not in collapsed state -->
@@ -54,6 +59,9 @@ export default {
         console.log("Emitting action:", selectedItem.action);
       }
     },
+    resetData() {
+      this.$emit("reset-data");
+    },
   },
 };
 </script>
@@ -61,5 +69,20 @@ export default {
 <style scoped>
 ::v-deep(.vsm--title) {
   font-size: 15px; /* Adjust the font size */
+}
+
+.reset-button {
+  margin: 11px 20px; 
+  padding: 10px 20px; 
+  color: white; 
+  border: none; 
+  border-radius: 5px; 
+  cursor: pointer; 
+  font-size: 14px; 
+  transition: background-color 0.3s ease; 
+}
+
+.reset-button:hover {
+  background-color: #b91d1d; 
 }
 </style>

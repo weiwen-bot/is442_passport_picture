@@ -2,7 +2,10 @@
   <div class="upload-container">
     <h1>ID Photo Generator</h1>
     
-    <p class="instruction">Upload your photo and preview it before editing.</p>
+    <p class="instruction">
+      Upload your photo and preview it before editing.
+      Maximum file size allowed is 10MB.
+    </p>
 
     <!-- Main Upload Button Options -->
     <div class="button-container">
@@ -14,21 +17,10 @@
 
       <!-- Choose from Cloud -->
       <div class="button-wrapper">
-        <button @click="toggleCloudOptions" class="upload-btn">Choose from Cloud</button>
-        <div v-if="showCloudOptions" class="cloud-options">
-          <button @click="handleGoogleDriveUpload" class="cloud-btn">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/4/4c/Google_Drive_icon.svg" alt="Google Drive" class="cloud-icon" />
-            Google Drive
-          </button>
-          <button v-if="false" @click="handleDropboxUpload" class="cloud-btn">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/3/3b/Dropbox_logo_2015.svg" alt="Dropbox" class="cloud-icon" />
-            Dropbox
-          </button>
-          <button v-if="false" @click="handleOneDriveUpload" class="cloud-btn">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/OneDrive_logo_2013.svg" alt="OneDrive" class="cloud-icon" />
-            OneDrive
-          </button>
-        </div>
+        <button @click="handleGoogleDriveUpload" class="upload-btn">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/d/da/Google_Drive_logo.png" alt="Google Drive" class="cloud-icon" />
+          Google Drive
+        </button>
       </div>
     </div>
 
@@ -100,6 +92,12 @@ export default {
       const file = event.target.files[0];
 
       if (!file) return;
+
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+        alert("File size exceeds 10MB. Please choose a smaller file.");
+        return;
+      }
+
       if (file && file.type.startsWith("image")) {
         const reader = new FileReader();
         // reader.onload = (e) => {
@@ -228,10 +226,12 @@ export default {
       })
         .then((response) => response.blob())
         .then(async (blob) => {
+          if (blob.size > 10 * 1024 * 1024) { // 10MB limit
+            alert("File size exceeds 10MB. Please choose a smaller file.");
+            return;
+          }
+
           const reader = new FileReader();
-          reader.onloadend = () => {
-            this.imageData = reader.result;
-          };
           reader.readAsDataURL(blob);
 
           // Upload to backend
@@ -301,7 +301,7 @@ h1 {
   align-items: center;
   width: 100%;
   margin-bottom: 20px;
-  gap: 20px;
+  gap: 30px;
 }
 
 .button-wrapper {
@@ -315,8 +315,12 @@ h1 {
 }
 
 .upload-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 200px;
   padding: 12px 24px;
-  background-color: #007bff;
+  background-color: #2d3748;
   color: white;
   font-size: 16px;
   border-radius: 5px;
@@ -325,39 +329,7 @@ h1 {
 }
 
 .upload-btn:hover {
-  background-color: #0056b3;
-}
-
-.cloud-options {
-  display: flex;
-  flex-direction: column;
-  margin-top: 10px;
-  gap: 10px;
-  position: absolute;
-  top: 100%;
-  left: 0;
-  width: 100%;
-  z-index: 1000;
-  background-color: #fff;
-  border-radius: 5px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.cloud-btn {
-  padding: 12px 24px;
-  background-color: #34a853;
-  color: white;
-  font-size: 16px;
-  border-radius: 5px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  transition: background-color 0.3s;
-  border: none;
-}
-
-.cloud-btn:hover {
-  background-color: #2c8d42;
+  background-color: black;
 }
 
 .cloud-icon {
