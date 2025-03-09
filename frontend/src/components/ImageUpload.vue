@@ -17,21 +17,10 @@
 
       <!-- Choose from Cloud -->
       <div class="button-wrapper">
-        <button @click="toggleCloudOptions" class="upload-btn">Choose from Cloud</button>
-        <div v-if="showCloudOptions" class="cloud-options">
-          <button @click="handleGoogleDriveUpload" class="cloud-btn">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/4/4c/Google_Drive_icon.svg" alt="Google Drive" class="cloud-icon" />
-            Google Drive
-          </button>
-          <button v-if="false" @click="handleDropboxUpload" class="cloud-btn">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/3/3b/Dropbox_logo_2015.svg" alt="Dropbox" class="cloud-icon" />
-            Dropbox
-          </button>
-          <button v-if="false" @click="handleOneDriveUpload" class="cloud-btn">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/OneDrive_logo_2013.svg" alt="OneDrive" class="cloud-icon" />
-            OneDrive
-          </button>
-        </div>
+        <button @click="handleGoogleDriveUpload" class="upload-btn">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/d/da/Google_Drive_logo.png" alt="Google Drive" class="cloud-icon" />
+          Google Drive
+        </button>
       </div>
     </div>
 
@@ -312,7 +301,7 @@ h1 {
   align-items: center;
   width: 100%;
   margin-bottom: 20px;
-  gap: 20px;
+  gap: 30px;
 }
 
 .button-wrapper {
@@ -326,8 +315,12 @@ h1 {
 }
 
 .upload-btn {
+  display: flex; /* Align items in a row */
+  align-items: center; /* Center items vertically */
+  justify-content: center; /* Center content */
+  width: 200px;
   padding: 12px 24px;
-  background-color: #007bff;
+  background-color: #2d3748;
   color: white;
   font-size: 16px;
   border-radius: 5px;
@@ -336,39 +329,7 @@ h1 {
 }
 
 .upload-btn:hover {
-  background-color: #0056b3;
-}
-
-.cloud-options {
-  display: flex;
-  flex-direction: column;
-  margin-top: 10px;
-  gap: 10px;
-  position: absolute;
-  top: 100%;
-  left: 0;
-  width: 100%;
-  z-index: 1000;
-  background-color: #fff;
-  border-radius: 5px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.cloud-btn {
-  padding: 12px 24px;
-  background-color: #34a853;
-  color: white;
-  font-size: 16px;
-  border-radius: 5px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  transition: background-color 0.3s;
-  border: none;
-}
-
-.cloud-btn:hover {
-  background-color: #2c8d42;
+  background-color: black;
 }
 
 .cloud-icon {
