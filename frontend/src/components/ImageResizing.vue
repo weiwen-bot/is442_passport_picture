@@ -78,14 +78,13 @@ export default {
   },
   created() {
     console.log("Checking props:", this.imageData);
-    console.log("Checking localStorage:", localStorage.getItem("imageData"));
 
-    // Load the original image (cropped or uploaded)
-    this.originalImage = this.imageData || localStorage.getItem("imageData");
+    // Load the original image from the parent component's data
+    this.originalImage = this.imageData;
 
-    // Don't load previous resized image
-    this.resizedImage = localStorage.getItem("resizedImage") || null;
+    this.resizedImage = null;
 
+    // Load the previously selected country if any
     this.selectedCountry = localStorage.getItem("selectedCountry") || "";
 
     if (!this.originalImage) {
@@ -147,24 +146,18 @@ export default {
             result.image ? result.image.substring(0, 50) + "..." : "NULL"
           );
 
-          // Clear `resizedImage` before setting it to ensure Vue detects changes
+          // Clear resizedImage before setting it to ensure Vue detects changes
           this.resizedImage = "";
 
           this.$nextTick(() => {
             this.resizedImage = result.image;
 
             if (this.resizedImage) {
-              console.log("✅ Trying to store resizedImage in localStorage...");
-              localStorage.setItem("resizedImage", this.resizedImage);
-
-              // Immediately check if localStorage holds the image
-              console.log("🔍 Verifying localStorage:");
-              console.log(localStorage.getItem("resizedImage")); // Should return a base64 string
-
-              console.log(
-                "✅ Successfully stored resized image in localStorage:",
-                this.resizedImage.substring(0, 50) + "..."
-              );
+              // Emit the resize-complete event to let the parent component
+              // Store the current image in history before applying the resize
+              console.log("About to emit resize-complete event");
+              this.$emit("resize-complete", this.resizedImage);
+              console.log("Emitted resize-complete event");
             } else {
               console.error(
                 "🚨 resizedImage is NULL, not storing in localStorage."
