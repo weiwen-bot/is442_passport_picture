@@ -34,7 +34,7 @@
   <!-- Right side: Image Display -->
   <div class="col-span-4 flex flex-col items-center space-y-4">
     <h3 class="font-semibold">
-      {{ resizedImage ? "Resized Image" : "No Image Yet" }}
+      {{ resizedImage ? "Resized Image" : "Original Image" }}
     </h3>
 
     <img
@@ -42,6 +42,13 @@
       :src="resizedImage"
       alt="Resized"
       class="max-w-full max-h-[500px] w-auto h-auto object-contain border rounded shadow-md"
+    />
+
+    <img
+      v-else-if="originalImage"
+      :src="originalImage"
+      alt="Original"
+      class="max-w-full max-h-[500px] w-auto h-auto object-contain border rounded shadow-md opacity-70"
     />
 
     <div v-else class="text-gray-500 text-center">
@@ -55,7 +62,7 @@ export default {
   props: {
     imageData: String,
   },
-  emits: ["resize-complete", "discard-resize"],
+  emits: ["resize-complete", "discard-resize", "update:imageData"],
   data() {
     return {
       originalImage: null,
@@ -78,14 +85,13 @@ export default {
   },
   created() {
     console.log("Checking props:", this.imageData);
-    console.log("Checking localStorage:", localStorage.getItem("imageData"));
 
-    // Load the original image (cropped or uploaded)
-    this.originalImage = this.imageData || localStorage.getItem("imageData");
+    // Load the original image from the parent component's data
+    this.originalImage = this.imageData;
 
-    // Don't load previous resized image
-    this.resizedImage = localStorage.getItem("resizedImage") || null;
+    this.resizedImage = null;
 
+    // Load the previously selected country if any
     this.selectedCountry = localStorage.getItem("selectedCountry") || "";
 
     if (!this.originalImage) {
@@ -147,36 +153,22 @@ export default {
             result.image ? result.image.substring(0, 50) + "..." : "NULL"
           );
 
-          // Clear `resizedImage` before setting it to ensure Vue detects changes
-          this.resizedImage = "";
+          // Set the resized image
+          this.resizedImage = result.image;
 
-          this.$nextTick(() => {
-            this.resizedImage = result.image;
+          // Emit the resize-complete event ONCE after the image is set
+          if (this.resizedImage) {
+            console.log("Emitting resize-complete event");
+            // Update the parent component with the new image
+            this.$emit("update:imageData", this.resizedImage);
 
-            if (this.resizedImage) {
-              console.log("✅ Trying to store resizedImage in localStorage...");
-              localStorage.setItem("resizedImage", this.resizedImage);
-
-              // Immediately check if localStorage holds the image
-              console.log("🔍 Verifying localStorage:");
-              console.log(localStorage.getItem("resizedImage")); // Should return a base64 string
-
-              console.log(
-                "✅ Successfully stored resized image in localStorage:",
-                this.resizedImage.substring(0, 50) + "..."
-              );
-            } else {
-              console.error(
-                "🚨 resizedImage is NULL, not storing in localStorage."
-              );
-            }
-
-            console.log("About to emit resize-complete event");
+            // Emit the resize-complete event
             this.$emit("resize-complete", this.resizedImage);
-            console.log("Emitted resize-complete event");
-          });
-        } else {
-          throw new Error(result.message || "Resizing failed");
+          } else {
+            console.error(
+              "🚨 resizedImage is NULL, not storing in localStorage."
+            );
+          }
         }
       } catch (error) {
         console.error("Error resizing image:", error);
