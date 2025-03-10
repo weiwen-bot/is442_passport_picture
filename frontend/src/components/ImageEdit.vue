@@ -35,13 +35,13 @@
       @discard-background="handleDiscard"
     />
 
-    <!-- Show ProcessImage Component when "Process Image" is selected -->
-    <ProcessImage
-      v-if="currentAction === 'process-image' && imageData"
+    <!-- Show BackgroundRemover2 Component when "Background Remover" is selected -->
+    <BackgroundRemover2
+      v-if="currentAction === 'background-remover2' && imageData"
       :key="imageData"
       v-model:imageData="imageData"
-      @process-complete="handleProcessComplete"
-      @discard-process="handleDiscardCrop"
+      @remove-background="handleRemoveBackground"
+      @discard-background="handleDiscard"
     />
 
     <!-- Show ImageResizing Component when "Resize" is selected -->
@@ -114,15 +114,16 @@
 import ImageCropping from "./ImageCropping.vue";
 import SidebarWrapper from "./SidebarWrapper.vue";
 import BackgroundRemover from "./BackgroundRemover.vue";
-import ProcessImage from "./ProcessImage.vue";
+import BackgroundRemover2 from "./BackgroundRemover2.vue";
 import ImageResizing from "./ImageResizing.vue";
+
 
 export default {
   components: {
     ImageCropping,
     SidebarWrapper,
     BackgroundRemover,
-    ProcessImage,
+    BackgroundRemover2,
     ImageResizing,
   },
   data() {

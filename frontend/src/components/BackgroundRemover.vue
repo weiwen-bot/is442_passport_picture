@@ -1,114 +1,142 @@
 <template>
-  <div class="flex flex-col items-center space-y-4 p-4 w-full">
-    <h2 class="text-xl font-bold">Remove Background</h2>
+  <div class="col-span-8 flex flex-col rounded-lg shadow-lg p-2 space-y-2 text-black bg-white shad">
+    <h2 class="text-2xl font-semibold mb-6 text-black">Remove Background</h2>
 
-    <!-- Ensure image takes full width -->
-    <div v-if="imageUrl" class="relative w-full max-w-4xl">
-      <img ref="imageRef" :src="imageUrl" class="w-full h-auto max-h-[80vh]" @load="initCropper" />
+    <!-- Image Display center -->
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:space-x-4">
+      <div class="flex flex-col items-center space-y-4 sm:w-1/2 w-full">
+        <h3 class="text-lg font-semibold mb-4">Original Image</h3>
+        <div v-if="originalImage" class="relative">
+          <img :src="originalImage" alt="Original" class="w-full max-w-4xl h-auto rounded-lg shadow-md border border-gray-300" />
+        </div>
+        <div v-else class="text-gray-500 text-sm">No image selected</div>
+      </div>
+
+      <div class="flex flex-col items-center space-y-4 sm:w-1/2 w-full">
+        <h3 class="text-lg font-semibold mb-4">Processed Image</h3>
+        <div v-if="processedImage" class="relative">
+          <img :src="processedImage" alt="Processed" class="w-full max-w-4xl h-auto rounded-lg shadow-md border border-gray-300" />
+        </div>
+        <div v-else class="text-gray-500 text-sm">No processed image available</div>
+      </div>
     </div>
 
-    <button @click="processImage" :disabled="!imageUrl" 
-            class="bg-blue-500 text-white px-4 py-2 rounded disabled:bg-gray-400">
+    <!-- Processing Status -->
+    <div v-if="isProcessing" class="text-gray-600 text-sm animate-pulse mb-4">Processing image, please wait...</div>
+
+    <!-- Error Message -->
+    <div v-if="errorMessage" class="mt-4 text-red-500 text-sm">{{ errorMessage }}</div>
+
+    <!-- Remove Background Button -->
+    <button
+      v-if="originalImage && !processedImage"
+      @click="processImage"
+      class="mt-6 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg shadow-md transition duration-300 transform hover:scale-105"
+    >
       Remove Background
     </button>
   </div>
 </template>
 
-
 <script>
-import Cropper from "cropperjs";
-import "cropperjs/dist/cropper.css";
-import axios from "axios";
-
 export default {
   props: {
-    imageData: String, // ✅ Accepts image from ImageEdit.vue
+    imageData: String, // Receive imageData as a prop from ImageEdit.vue
   },
   data() {
     return {
-      cropper: null,
-      imageFile: null, // ✅ Maintain imageFile for processing
+      originalImage: null, // Base64 image from parent/localStorage
+      processedImage: null, // Processed image from backend
+      isProcessing: false,
+      errorMessage: "", // Error message handling
     };
   },
-  computed: {
-    imageUrl() {
-      return this.imageData;
-    },
+  created() {
+    // Load image from props (from ImageEdit.vue) or localStorage
+    this.originalImage = this.imageData || localStorage.getItem("imageData");
   },
-  watch: {
-    imageData: {
-      immediate: true, // ✅ Ensures watcher runs on mount
-      handler(newImage) {
-        if (newImage) {
-          console.log("New image detected:", newImage);
-          this.imageFile = this.dataURLtoFile(newImage, "uploaded-image.jpg");
-          this.$nextTick(this.initCropper); // ✅ Ensure Cropper initializes
-        }
-      },
-    },
-  },
-
   methods: {
-    initCropper() {
-      if (this.cropper) {
-        this.cropper.destroy();
-      }
-      const image = this.$refs.imageRef;
-      this.cropper = new Cropper(image, {
-        aspectRatio: NaN,
-        viewMode: 1,
-        autoCropArea: 0.8,
-        movable: true,
-        zoomable: true,
-        rotatable: true,
-        scalable: true,
-      });
-    },
+
     async processImage() {
-      console.log("Processing image...");
-
-      if (!this.imageFile) {
-        console.error("❌ No image file detected!");
-        alert("No image file detected!");
+      if (!this.originalImage) {
+        this.errorMessage = "No image available for processing.";
         return;
       }
 
-      if (!this.cropper) {
-        console.error("❌ Cropper is not initialized!");
-        alert("Cropper is not initialized!");
-        return;
+      this.isProcessing = true;
+      this.errorMessage = "";
+
+      try {
+        // Crop + scale to multiple-of-32 dimension
+        const finalBase64 = await this.resizeToClosestMultipleOf32(this.originalImage);
+
+        const payload = { image: finalBase64 };
+
+        const response = await fetch("http://localhost:8080/image/process", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) throw new Error("Processing failed");
+
+        const result = await response.json();
+        if (result.processedImage) {
+          this.processedImage = result.processedImage; 
+
+        } else {
+          throw new Error("No processed image received from backend.");
+        }
+      } catch (error) {
+        console.error("Error processing image:", error);
+        this.errorMessage = "Error processing image.";
+      } finally {
+        this.isProcessing = false;
       }
-
-      const cropData = this.cropper.getData();
-      console.log("Crop data:", cropData);
-
-      if (!cropData.width || !cropData.height) {
-        console.error("❌ Invalid crop dimensions!");
-        alert("Invalid crop dimensions!");
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append("file", this.imageFile);
-      formData.append("x", Math.round(cropData.x));
-      formData.append("y", Math.round(cropData.y));
-      formData.append("width", Math.round(cropData.width));
-      formData.append("height", Math.round(cropData.height));
-
-      alert(`x: ${Math.round(cropData.x)}, y: ${Math.round(cropData.y)}, width: ${Math.round(cropData.width)}, height: ${Math.round(cropData.height)}`);
     },
-    dataURLtoFile(dataUrl, filename) {
-      let arr = dataUrl.split(","),
-        mime = arr[0].match(/:(.*?);/)[1],
-        bstr = atob(arr[1]),
-        n = bstr.length,
-        u8arr = new Uint8Array(n);
 
-      while (n--) {
-        u8arr[n] = bstr.charCodeAt(n);
-      }
-      return new File([u8arr], filename, { type: mime });
-    },
+    async resizeToClosestMultipleOf32(base64) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.src = base64;
+      img.onload = () => {
+        const originalWidth = img.width;
+        const originalHeight = img.height;
+
+        // 1) Round each dimension to the nearest multiple of 32
+        const newWidth = this.roundToNearestMultiple(originalWidth, 32);
+        const newHeight = this.roundToNearestMultiple(originalHeight, 32);
+
+        // 2) Create a canvas at the new size
+        const canvas = document.createElement("canvas");
+        canvas.width = newWidth;
+        canvas.height = newHeight;
+        const ctx = canvas.getContext("2d");
+
+        // 3) Draw the entire original image scaled to the new dimension
+        ctx.drawImage(img, 0, 0, newWidth, newHeight);
+
+        // 4) Convert to base64 and return
+        const resizedBase64 = canvas.toDataURL("image/png");
+        resolve(resizedBase64);
+      };
+      img.onerror = () => reject(new Error("Failed to load image"));
+    });
+  },
+
+  // Helper to round a number to the nearest multiple of 'm'
+  roundToNearestMultiple(value, m) {
+    const remainder = value % m;
+    const down = value - remainder; // e.g. 185 - 25 = 160
+    const up = down + m;           // e.g. 160 + 32 = 192
+
+    if (remainder <= m / 2) {
+      return down;   // e.g. if remainder < 16, we pick 160
+    } else {
+      return up;     // e.g. remainder >=16 => we pick 192
+    }
+  },
+
   },
 };
 </script>

@@ -42,10 +42,11 @@ export default {
           action: "background-remover",
         },
         {
-          title: "Process Image",
+          title: "Background Remover2",
           icon: "fa-solid fa-eraser",
-          action: "process-image",
+          action: "background-remover2",
         },
+
       ],
     };
   },
