@@ -29,7 +29,7 @@
       </button>
       <!-- <UploadButton @input="updateImage" ></UploadButton> -->
       <label for="favcolor">Select your favorite color:</label>
-      <input type="color" id="favcolor" name="favcolor" :value="color">
+      <input type="color" id="favcolor" name="favcolor" v-model="color">
       <ImagePreview :image="backgroundImage" />
       <UploadImageButton @image-uploaded="updateImage" />
     </div>
@@ -55,7 +55,7 @@ export default {
       errorMessage: "", // Error message handling
       uploadImage: null,
       backgroundImage: null,
-      color: "#ff0000",
+      color: "#FFFFFF",
       payload :{}
     };
   },
