@@ -24,17 +24,28 @@
 
       <!-- Process Button -->
       <button v-if="originalImage && !processedImage" @click="processImage"
-        class="mt-6 px-5 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded shadow-md transition">
+        class="mt-6 px-5 py-2 bg-blue-500 hover:bg-blue-600 text-black font-semibold rounded shadow-md transition">
         Process Image
       </button>
+      <!-- <UploadButton @input="updateImage" ></UploadButton> -->
+      <label for="favcolor">Select your favorite color:</label>
+      <input type="color" id="favcolor" name="favcolor" :value="color">
+      <ImagePreview :image="backgroundImage" />
+      <UploadImageButton @image-uploaded="updateImage" />
     </div>
   </div>
 </template>
 
 <script>
+import UploadImageButton from "./UploadImageButton.vue";
+import ImagePreview from "./ImagePreview.vue"
 export default {
   props: {
     imageData: String, // Receive imageData as a prop from ImageEdit.vue
+  },
+  components:{
+  UploadImageButton,
+  ImagePreview,
   },
   data() {
     return {
@@ -42,6 +53,10 @@ export default {
       processedImage: null, // Processed image from backend
       isProcessing: false,
       errorMessage: "", // Error message handling
+      uploadImage: null,
+      backgroundImage: null,
+      color: "#ff0000",
+      payload :{}
     };
   },
   created() {
@@ -49,7 +64,12 @@ export default {
     this.originalImage = this.imageData || localStorage.getItem("imageData");
   },
   methods: {
+    
 
+    updateImage(image){
+      console.log(image,"HEHEHE");
+      this.backgroundImage = image;
+    },
     async processImage() {
       if (!this.originalImage) {
         this.errorMessage = "No image available for processing.";
@@ -64,12 +84,20 @@ export default {
         // const finalBase64 = await this.cropToSquareMultipleOf32(this.originalImage);
         const finalBase64 = await this.resizeToClosestMultipleOf32(this.originalImage);
 
-        const payload = { image: finalBase64 };
+        console.log(this.backgroundImage)
+        const category = "ew";
+        if (this.backgroundImage == null){
+          this.payload = { image: finalBase64, category: "color", colorString: this.color };
+        } else {
+          this.payload = { image: finalBase64, category: "background", backgroundString: this.backgroundImage };
+        }
+
+        
 
         const response = await fetch("http://localhost:8080/image/process", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(this.payload),
         });
 
         if (!response.ok) throw new Error("Processing failed");
@@ -131,6 +159,7 @@ export default {
       return up;     // e.g. remainder >=16 => we pick 192
     }
   },
+
 
   },
 };
