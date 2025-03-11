@@ -43,6 +43,7 @@
     <ImageResizing
       v-if="currentAction === 'resize' && imageData"
       :key="imageData"
+      :reset-counter="resetCounter"
       v-model:imageData="imageData"
       @resize-complete="handleResizeComplete"
       @discard-resize="handleDiscard"
@@ -159,6 +160,7 @@ export default {
       tokenClient: null,
       SCOPES: "https://www.googleapis.com/auth/drive.file",
       CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+      resetCounter: 0,
     };
   },
   async mounted() {
@@ -205,15 +207,9 @@ export default {
     handleReset() {
       this.imageData = this.originalImage;
       this.isCropped = false; // Reset the cropped state
-
-      // Only re-mount ImageResizing.vue if the user is already on the resizing page
-      if (this.currentAction === "resize") {
-        const tempAction = this.currentAction;
-        this.currentAction = null;
-        this.$nextTick(() => {
-          this.currentAction = tempAction; // Re-mount ImageResizing.vue
-        });
-      }
+      console.log("Current resetCounter:", this.resetCounter);
+      this.resetCounter += 1; // Increment first
+      console.log("resetCounter incremented:", this.resetCounter);
     },
 
     // Method to toggle sidebar width (collapsed or expanded)
