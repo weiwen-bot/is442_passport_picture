@@ -1,24 +1,33 @@
 <template>
   <div class="upload-container">
     <h1>ID Photo Generator</h1>
-    
+
     <p class="instruction">
-      Upload your photo and preview it before editing.
-      Maximum file size allowed is 10MB.
+      Upload your photo and preview it before editing. Maximum file size allowed
+      is 10MB.
     </p>
 
     <!-- Main Upload Button Options -->
     <div class="button-container">
       <!-- Choose from Device -->
       <div class="button-wrapper">
-        <input type="file" accept="image/*" @change="handleLocalFileChange" id="file-upload" />
+        <input
+          type="file"
+          accept="image/*"
+          @change="handleLocalFileChange"
+          id="file-upload"
+        />
         <label for="file-upload" class="upload-btn">Choose from Device</label>
       </div>
 
       <!-- Choose from Cloud -->
       <div class="button-wrapper">
         <button @click="handleGoogleDriveUpload" class="upload-btn">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/d/da/Google_Drive_logo.png" alt="Google Drive" class="cloud-icon" />
+          <img
+            src="https://upload.wikimedia.org/wikipedia/commons/d/da/Google_Drive_logo.png"
+            alt="Google Drive"
+            class="cloud-icon"
+          />
           Google Drive
         </button>
       </div>
@@ -28,7 +37,7 @@
     <div v-if="imageData" class="preview-container">
       <h2 class="preview-heading">Image Preview:</h2>
       <img :src="imageData" alt="Uploaded Image" class="preview-image" />
-      
+
       <!-- Proceed button, placed below the image -->
       <button @click="handleProceed" class="proceed-btn">Continue</button>
     </div>
@@ -39,10 +48,10 @@
 export default {
   data() {
     return {
-      imageData: null,       // Stores the image data URL
+      imageData: null, // Stores the image data URL
       showCloudOptions: false, // Flag to toggle cloud upload options
 
-      SCOPES: 'https://www.googleapis.com/auth/drive.metadata.readonly',
+      SCOPES: "https://www.googleapis.com/auth/drive.metadata.readonly",
       CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID,
       API_KEY: import.meta.env.VITE_GOOGLE_API_KEY,
       accessToken: null,
@@ -52,11 +61,13 @@ export default {
     };
   },
   async mounted() {
-    await this.loadScript('https://apis.google.com/js/api.js', this.gapiLoaded);
-    await this.loadScript('https://accounts.google.com/gsi/client', this.gisLoaded);
+    await this.loadScript("https://apis.google.com/js/api.js", this.gapiLoaded);
+    await this.loadScript(
+      "https://accounts.google.com/gsi/client",
+      this.gisLoaded
+    );
   },
   methods: {
-    
     // handle backend upload
     async uploadToBackend(file) {
       const formData = new FormData();
@@ -73,7 +84,7 @@ export default {
 
         const result = await response.json();
         console.log("Upload Success:", result);
-        
+
         // Update imageData with processed image from backend
         if (result.image) {
           this.imageData = result.image; // Set the processed image
@@ -93,7 +104,8 @@ export default {
 
       if (!file) return;
 
-      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+      if (file.size > 10 * 1024 * 1024) {
+        // 10MB limit
         alert("File size exceeds 10MB. Please choose a smaller file.");
         return;
       }
@@ -111,7 +123,6 @@ export default {
         alert("Please select a valid image file");
       }
     },
-
 
     // Toggle the visibility of cloud options
     toggleCloudOptions() {
@@ -132,7 +143,7 @@ export default {
           resolve();
           return;
         }
-        const script = document.createElement('script');
+        const script = document.createElement("script");
         script.src = src;
         script.async = true;
         script.defer = true;
@@ -151,12 +162,14 @@ export default {
 
     // initialize picker when gapi is loaded
     gapiLoaded() {
-      gapi.load('client:picker', this.initializePicker);
+      gapi.load("client:picker", this.initializePicker);
     },
 
     // initialize picker api
     async initializePicker() {
-      await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/drive/v3/rest');
+      await gapi.client.load(
+        "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"
+      );
       this.pickerInited = true;
     },
 
@@ -165,7 +178,7 @@ export default {
       this.tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: this.CLIENT_ID,
         scope: this.SCOPES,
-        callback: '',
+        callback: "",
       });
       this.gisInited = true;
     },
@@ -182,16 +195,16 @@ export default {
       };
 
       if (this.accessToken === null) {
-        this.tokenClient.requestAccessToken({ prompt: 'consent' });
+        this.tokenClient.requestAccessToken({ prompt: "consent" });
       } else {
-        this.tokenClient.requestAccessToken({ prompt: '' });
+        this.tokenClient.requestAccessToken({ prompt: "" });
       }
     },
 
     // create and show google picker to select file
     createPicker() {
       const view = new google.picker.View(google.picker.ViewId.DOCS);
-      view.setMimeTypes('image/png,image/jpeg,image/jpg');
+      view.setMimeTypes("image/png,image/jpeg,image/jpg");
       const picker = new google.picker.PickerBuilder()
         .enableFeature(google.picker.Feature.NAV_HIDDEN)
         .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
@@ -205,7 +218,6 @@ export default {
       picker.setVisible(true);
     },
 
-    
     // process selected file
     async pickerCallback(data) {
       if (data.action === google.picker.Action.PICKED) {
@@ -226,7 +238,8 @@ export default {
       })
         .then((response) => response.blob())
         .then(async (blob) => {
-          if (blob.size > 10 * 1024 * 1024) { // 10MB limit
+          if (blob.size > 10 * 1024 * 1024) {
+            // 10MB limit
             alert("File size exceeds 10MB. Please choose a smaller file.");
             return;
           }
@@ -245,12 +258,12 @@ export default {
     // ----------------------------------------------------------------------------------------------------
     // Placeholder for Dropbox upload functionality
     handleDropboxUpload() {
-      alert('Dropbox upload functionality is not implemented yet.');
+      alert("Dropbox upload functionality is not implemented yet.");
     },
 
     // Placeholder for OneDrive upload functionality
     handleOneDriveUpload() {
-      alert('OneDrive upload functionality is not implemented yet.');
+      alert("OneDrive upload functionality is not implemented yet.");
     },
 
     // Handle the "Continue" button click
@@ -258,15 +271,15 @@ export default {
     handleProceed() {
       if (this.imageData) {
         // Navigate to the image cropping page, passing the image URL as a query parameter
-        localStorage.setItem('imageData', this.imageData); // Save to localStorage
-        this.$router.push({ name: 'ImageEdit'});
+        localStorage.setItem("imageData", this.imageData); // Save to localStorage
+        localStorage.setItem("originalImage", this.imageData); // Save original on first upload
+        this.$router.push({ name: "ImageEdit" });
       } else {
-        alert('Please upload an image first.');
+        alert("Please upload an image first.");
       }
     },
   },
-}
-
+};
 </script>
 
 <style scoped>
