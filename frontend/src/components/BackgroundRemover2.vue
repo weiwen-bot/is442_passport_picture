@@ -63,10 +63,29 @@ export default {
       this.errorMessage = "";
 
       try {
-        const finalBase64 = await this.resizeToClosestMultipleOf32(this.originalImage);
+        // Get the original image dimensions
+        const img = new Image();
+        img.src = this.originalImage;
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = () => reject(new Error("Failed to load image"));
+        });
 
-        const payload = { image: finalBase64 };
+        const originalWidth = img.width;
+        const originalHeight = img.height;
+        console.log("og", originalWidth, originalHeight);
 
+        // Step 1: Resize with padding to nearest multiple of 32
+        const { base64: paddedBase64, newWidth, newHeight } = await this.resizeWithPadding(
+          this.originalImage, 
+          originalWidth, 
+          originalHeight
+        );
+        console.log("new", newWidth, newHeight);
+
+        const payload = { image: paddedBase64 };
+
+        // Step 2: Send the padded image for processing
         const response = await fetch("http://localhost:8080/image/process", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -76,14 +95,14 @@ export default {
         if (!response.ok) throw new Error("Processing failed");
 
         const result = await response.json();
-        if (result.processedImage) {
-          this.processedImage = result.processedImage;
-          // Save processed image to props (from ImageEdit.vue) or localStorage
-          this.$emit("update:imageData", this.processedImage);
-          localStorage.setItem("imageData", this.processedImage);
-        } else {
-          throw new Error("No processed image received from backend.");
-        }
+        if (!result.processedImage) throw new Error("No processed image received from backend.");
+
+        // Step 3: Crop the processed image back to original dimensions
+        this.processedImage = await this.cropBackToOriginal(result.processedImage, originalWidth, originalHeight);
+
+        // Save the final cropped image
+        this.$emit("update:imageData", this.processedImage);
+        localStorage.setItem("imageData", this.processedImage);
       } catch (error) {
         console.error("Error processing image:", error);
         this.errorMessage = "Error processing image.";
@@ -92,46 +111,57 @@ export default {
       }
     },
 
-    async resizeToClosestMultipleOf32(base64) {
+    async resizeWithPadding(base64, originalWidth, originalHeight) {
       return new Promise((resolve, reject) => {
         const img = new Image();
         img.src = base64;
         img.onload = () => {
-          const originalWidth = img.width;
-          const originalHeight = img.height;
-
-          const newWidth = this.roundToNearestMultiple(originalWidth, 32);
-          const newHeight = this.roundToNearestMultiple(originalHeight, 32);
+          const newWidth = this.roundUpToMultiple(originalWidth, 32);
+          const newHeight = this.roundUpToMultiple(originalHeight, 32);
 
           const canvas = document.createElement("canvas");
           canvas.width = newWidth;
           canvas.height = newHeight;
           const ctx = canvas.getContext("2d");
 
-          ctx.drawImage(img, 0, 0, newWidth, newHeight);
+          // Ensure transparency by clearing the canvas
+          ctx.clearRect(0, 0, newWidth, newHeight);
 
-          const resizedBase64 = canvas.toDataURL("image/png");
-          resolve(resizedBase64);
+          // Draw the image at (0,0), padding will appear in the remaining space
+          ctx.drawImage(img, 0, 0);
+
+          const paddedBase64 = canvas.toDataURL("image/png");
+          resolve({ base64: paddedBase64, newWidth, newHeight });
         };
         img.onerror = () => reject(new Error("Failed to load image"));
       });
     },
 
-    roundToNearestMultiple(value, m) {
-      const remainder = value % m;
-      const down = value - remainder;
-      const up = down + m;
+    // Round up to the nearest multiple of 32
+    roundUpToMultiple(value, m) {
+      return Math.ceil(value / m) * m;
+    },
 
-      if (remainder <= m / 2) {
-        return down;
-      } else {
-        return up;
-      }
+    async cropBackToOriginal(base64, originalWidth, originalHeight) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.src = base64;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = originalWidth;
+          canvas.height = originalHeight;
+          const ctx = canvas.getContext("2d");
+
+          // Crop the image back to its original size
+          ctx.drawImage(img, 0, 0, originalWidth, originalHeight, 0, 0, originalWidth, originalHeight);
+
+          const croppedBase64 = canvas.toDataURL("image/png");
+          resolve(croppedBase64);
+        };
+        img.onerror = () => reject(new Error("Failed to load processed image"));
+      });
     },
   },
 };
 </script>
 
-<style scoped>
-/* Add additional styling here if needed */
-</style>
