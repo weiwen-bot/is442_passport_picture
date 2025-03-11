@@ -35,15 +35,6 @@
       @discard-background="handleDiscard"
     />
 
-    <!-- Show BackgroundRemover2 Component when "Background Remover" is selected -->
-    <BackgroundRemover2
-      v-if="currentAction === 'background-remover2' && imageData"
-      :key="imageData"
-      v-model:imageData="imageData"
-      @remove-background="handleRemoveBackground"
-      @discard-background="handleDiscard"
-    />
-
     <!-- Show ImageResizing Component when "Resize" is selected -->
     <ImageResizing
       v-if="currentAction === 'resize' && imageData"
@@ -114,7 +105,6 @@
 import ImageCropping from "./ImageCropping.vue";
 import SidebarWrapper from "./SidebarWrapper.vue";
 import BackgroundRemover from "./BackgroundRemover.vue";
-import BackgroundRemover2 from "./BackgroundRemover2.vue";
 import ImageResizing from "./ImageResizing.vue";
 
 
@@ -123,7 +113,6 @@ export default {
     ImageCropping,
     SidebarWrapper,
     BackgroundRemover,
-    BackgroundRemover2,
     ImageResizing,
   },
   data() {

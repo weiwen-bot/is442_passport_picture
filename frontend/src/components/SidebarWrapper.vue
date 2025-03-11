@@ -41,12 +41,6 @@ export default {
           icon: "fa-solid fa-eraser",
           action: "background-remover",
         },
-        {
-          title: "Background Remover2",
-          icon: "fa-solid fa-eraser",
-          action: "background-remover2",
-        },
-
       ],
     };
   },
