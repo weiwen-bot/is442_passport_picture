@@ -27,6 +27,11 @@
     Remove Background
   </button>
 
+  <label for="favcolor">Select your favorite color:</label>
+      <input type="color" id="favcolor" name="favcolor" v-model="color">
+      <ImagePreview :image="backgroundImage" />
+      <UploadImageButton @image-uploaded="updateImage" />
+
   <!-- Processed Image Display -->
   <div v-if="processedImage" class="w-3/4 max-w-md mt-6">
     <h3 class="text-lg font-semibold mb-4">Processed Image</h3>
@@ -36,16 +41,26 @@
 </template>
 
 <script>
+import UploadImageButton from "./UploadImageButton.vue";
+import ImagePreview from "./ImagePreview.vue"
 export default {
 props: {
   imageData: String, // Receive imageData as a prop from ImageEdit.vue
 },
+  components:{
+  UploadImageButton,
+  ImagePreview,
+  },
 data() {
   return {
     originalImage: null, // Base64 image from parent/localStorage
     processedImage: null, // Processed image from backend
     isProcessing: false,
     errorMessage: "", // Error message handling
+    uploadImage: null,
+      backgroundImage: null,
+      color: "#FFFFFF",
+      payload :{}
   };
 },
 created() {
@@ -65,12 +80,18 @@ methods: {
     try {
       const finalBase64 = await this.resizeToClosestMultipleOf32(this.originalImage);
 
-      const payload = { image: finalBase64 };
+      const category = "";
+        if (this.backgroundImage == null){
+          this.payload = { image: finalBase64, category: "color", colorString: this.color };
+        } else {
+          this.payload = { image: finalBase64, category: "background", backgroundString: this.backgroundImage };
+        }
+
 
       const response = await fetch("http://localhost:8080/image/process", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(this.payload),
       });
 
       if (!response.ok) throw new Error("Processing failed");

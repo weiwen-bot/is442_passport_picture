@@ -3,12 +3,14 @@ package com.passportphoto.controller;
 import ai.onnxruntime.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.util.ResourceUtils;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.FloatBuffer;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Map;
@@ -31,9 +33,17 @@ public class MODNetController {
             // Decode Base64 image
             String base64Image = request.get("image");
             BufferedImage image = decodeBase64ToImage(base64Image);
+            int rh = image.getHeight();
+            int rw = image.getWidth();
             if (image == null) {
                 return ResponseEntity.badRequest().body(Collections.singletonMap("error", "Invalid image format"));
             }
+
+            String category = request.get("category");
+
+
+
+            
 
             // Make sure we have a consistent type (ARGB)
             image = convertToARGB(image);
@@ -55,9 +65,28 @@ public class MODNetController {
 
             // Convert this to 2D matte (0..1)
             float[][] matte2D = createMatte2D(outputArray, image.getWidth(), image.getHeight());
+            System.out.printf("%d %d\n",rh,rw);
+            // BufferedImage mask = createGrayscaleMask(matte2D);
+
+            // BufferedImage customImage = loadCustomImage();
+
+            // BufferedImage foreground = replaceBlackWithImage(mask, customImage);
+            
+            BufferedImage foreground = null;
+
+            if (category.equals("background")){
+                String backgroundString = request.getOrDefault("backgroundString", null);
+                BufferedImage customImage = decodeBase64ToImage(backgroundString);
+                foreground = blendWithBackground(image, customImage, matte2D);
+            } else if (category.equals("color")){
+                String colorstring = request.getOrDefault("colorString", "#FFFFFF");
+                foreground = alphaBlendWithColor(image, matte2D,colorstring);
+            }
 
             // Perform alpha blending with white background
-            BufferedImage foreground = alphaBlendWithWhite(image, matte2D);
+            // BufferedImage foreground = alphaBlendWithWhite(image, matte2D);
+            // System.out.printf("The new Width is %d and Height is %d \n",rh,rw);
+            // System.out.printf("The new Width is %d and Height is %d \n",foreground.getHeight(),foreground.getWidth());
 
             // Encode to base64 and return
             String processedBase64 = encodeImageToBase64(foreground);
@@ -67,6 +96,94 @@ public class MODNetController {
             e.printStackTrace();
             return ResponseEntity.status(500).body(Collections.singletonMap("error", "Image processing failed"));
         }
+    }
+    public BufferedImage loadCustomImage() throws IOException {
+        // Load the image from resources
+        InputStream is = getClass().getClassLoader().getResourceAsStream("background.png");
+        
+        if (is == null) {
+            throw new IOException("Custom image not found in resources!");
+        }
+        
+        return ImageIO.read(is);
+    }
+
+    private BufferedImage blendWithBackground(BufferedImage original, BufferedImage background, float[][] matte) {
+        int width = original.getWidth();
+        int height = original.getHeight();
+    
+        // Resize background to match the mask size while keeping the aspect ratio
+        BufferedImage resizedBackground = resizeImageWithAspectRatio(background, width, height);
+    
+        BufferedImage output = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+    
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int originalPixel = original.getRGB(x, y);
+                int backgroundPixel = resizedBackground.getRGB(x, y);
+    
+                float alpha = matte[y][x]; // Alpha values between 0 (transparent) and 1 (opaque)
+    
+                // Extract foreground color components
+                int oR = (originalPixel >> 16) & 0xFF;
+                int oG = (originalPixel >> 8) & 0xFF;
+                int oB = (originalPixel) & 0xFF;
+    
+                // Extract background color components
+                int bR = (backgroundPixel >> 16) & 0xFF;
+                int bG = (backgroundPixel >> 8) & 0xFF;
+                int bB = (backgroundPixel) & 0xFF;
+    
+                // Blend based on alpha (matte value)
+                int outR = (int) (oR * alpha + bR * (1 - alpha));
+                int outG = (int) (oG * alpha + bG * (1 - alpha));
+                int outB = (int) (oB * alpha + bB * (1 - alpha));
+    
+                // Set output pixel with full opacity (255)
+                int outPixel = (255 << 24) | (outR << 16) | (outG << 8) | outB;
+                output.setRGB(x, y, outPixel);
+            }
+        }
+    
+        return output;
+    }
+    
+
+   
+    private BufferedImage resizeImageWithAspectRatio(BufferedImage image, int targetWidth, int targetHeight) {
+        int originalWidth = image.getWidth();
+        int originalHeight = image.getHeight();
+    
+        // Calculate the new dimensions while maintaining the aspect ratio
+        double aspectRatio = (double) originalWidth / originalHeight;
+        int newWidth = targetWidth;
+        int newHeight = (int) (targetWidth / aspectRatio);
+    
+        if (targetHeight > targetWidth) {
+            newHeight = targetHeight;
+            newWidth = (int) (targetHeight * aspectRatio);
+        } else {
+            newWidth = targetWidth;
+            newHeight = (int) (targetWidth / aspectRatio);
+        }
+
+        // Create a transparent image with the target dimensions
+        BufferedImage resizedImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2d = resizedImage.createGraphics();
+    
+        // Enable high-quality rendering
+        g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+    
+        // Center the resized image within the target dimensions
+        int x = (targetWidth - newWidth) / 2;
+        int y = (targetHeight - newHeight) / 2;
+
+        g2d.drawImage(image, x, y, newWidth, newHeight, null);
+        g2d.dispose();
+    
+        return resizedImage;
     }
 
     /**
@@ -202,6 +319,45 @@ public class MODNetController {
                 int outB = (int) (b * alpha + 255 * invAlpha);
 
                 // Set alpha to 255 (fully opaque) in the output
+                int outA = 255;
+
+                int outPixel = (outA << 24) | (outR << 16) | (outG << 8) | outB;
+                blended.setRGB(x, y, outPixel);
+            }
+        }
+        return blended;
+    }
+
+    public static BufferedImage alphaBlendWithColor(BufferedImage original, float[][] matte, String hexColor) {
+        int width = original.getWidth();
+        int height = original.getHeight();
+
+        // Parse the hex color and extract RGB values
+        Color bgColor = Color.decode(hexColor);
+        int bgR = bgColor.getRed();
+        int bgG = bgColor.getGreen();
+        int bgB = bgColor.getBlue();
+
+        // Output: ARGB
+        BufferedImage blended = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int rgb = original.getRGB(x, y);
+
+                int r = (rgb >> 16) & 0xFF;
+                int g = (rgb >> 8)  & 0xFF;
+                int b = (rgb)       & 0xFF;
+
+                float alpha = matte[y][x]; // in [0..1]
+                float invAlpha = 1.0f - alpha;
+
+                // Blend with the background color
+                int outR = (int) (r * alpha + bgR * invAlpha);
+                int outG = (int) (g * alpha + bgG * invAlpha);
+                int outB = (int) (b * alpha + bgB * invAlpha);
+
+                // Set alpha to fully opaque (255)
                 int outA = 255;
 
                 int outPixel = (outA << 24) | (outR << 16) | (outG << 8) | outB;
