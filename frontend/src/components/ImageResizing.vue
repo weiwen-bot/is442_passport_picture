@@ -25,7 +25,7 @@
     <button
       @click="handleResize"
       :class="resizeButtonClass"
-      :disabled="!originalImage || !selectedCountry || isLoading"
+      :disabled="!baseImage || !selectedCountry || isLoading"
     >
       Resize
     </button>
@@ -33,9 +33,7 @@
 
   <!-- Right side: Image Display -->
   <div class="col-span-4 flex flex-col items-center space-y-4">
-    <h3 class="font-semibold">
-      {{ resizedImage ? "Resized Image" : "Original Image" }}
-    </h3>
+    <h3 class="font-semibold">Image</h3>
 
     <img
       v-if="resizedImage"
@@ -45,8 +43,8 @@
     />
 
     <img
-      v-else-if="originalImage"
-      :src="originalImage"
+      v-else-if="baseImage"
+      :src="baseImage"
       alt="Original"
       class="max-w-full max-h-[500px] w-auto h-auto object-contain border rounded shadow-md opacity-70"
     />
@@ -60,17 +58,24 @@
 <script>
 export default {
   props: {
-    imageData: String,
+    imageData: String, // Parent passes the original image
   },
   emits: ["resize-complete", "discard-resize", "update:imageData"],
   data() {
     return {
-      originalImage: null,
-      resizedImage: null,
+      originalImage: null, // Always stores the very first image (NEVER CHANGES)
+      baseImage: null, // Stores the working image (resets when needed)
+      resizedImage: null, // Stores resized image
       selectedCountry: "",
       countryList: [],
       isLoading: false,
     };
+  },
+  mounted() {
+    if (!this.originalImage) {
+      this.originalImage = this.imageData;
+      this.baseImage = this.imageData;
+    }
   },
   computed: {
     resizeButtonClass() {
@@ -84,23 +89,23 @@ export default {
     },
   },
   created() {
-    console.log("Checking props:", this.imageData);
-
-    // Load the original image from the parent component's data
-    this.originalImage = this.imageData;
+    console.log("Component created with imageData:", this.imageData);
 
     this.resizedImage = null;
 
     // Load the previously selected country if any
     this.selectedCountry = localStorage.getItem("selectedCountry") || "";
 
-    if (!this.originalImage) {
-      console.warn("No image found! Redirecting to upload.");
-      this.$router.push({ name: "ImageUpload" });
-    }
-
     this.fetchCountryList(); // Fetch countries when component loads
   },
+  beforeUnmount() {
+    // Emit only if there's a resized image before leaving the page
+    if (this.resizedImage) {
+      console.log("🚀 Passing resized image to parent before leaving");
+      this.$emit("update:imageData", this.resizedImage);
+    }
+  },
+
   methods: {
     async fetchCountryList() {
       try {
@@ -155,20 +160,8 @@ export default {
 
           // Set the resized image
           this.resizedImage = result.image;
-
-          // Emit the resize-complete event ONCE after the image is set
-          if (this.resizedImage) {
-            console.log("Emitting resize-complete event");
-            // Update the parent component with the new image
-            this.$emit("update:imageData", this.resizedImage);
-
-            // Emit the resize-complete event
-            this.$emit("resize-complete", this.resizedImage);
-          } else {
-            console.error(
-              "🚨 resizedImage is NULL, not storing in localStorage."
-            );
-          }
+          // Reset the baseImage to original
+          this.baseImage = this.originalImage;
         }
       } catch (error) {
         console.error("Error resizing image:", error);
