@@ -48,18 +48,17 @@
       <div class="flex justify-end">
         <!-- Discard Button -->
         <button
-          :disabled="!isCropped"
           class="text-white bg-gray-800 p-2 rounded mr-3"
-          @click="handleDiscardCrop"
+          @click="handleReset"
         >
-          Discard Changes
+          Reset Original Image
         </button>
         <button
           :disabled="imageHistory.length === 0"
           class="text-white bg-gray-800 p-2 rounded mr-3"
-          @click="handleDiscard"
+          @click="handleUndo"
         >
-          Undo
+          Undo Previous Action
         </button>
 
         <!-- Download Button -->
@@ -169,8 +168,8 @@ export default {
       this.imageData = croppedImage; // Update the imageData with the new cropped image
       this.isCropped = true; // Set the flag to true
     },
-    // Discard Crop
-    handleDiscardCrop() {
+    // Reset Original Image
+    handleReset() {
       this.imageData = this.originalImage;
       this.isCropped = false; // Reset the cropped state
     },
@@ -200,12 +199,7 @@ export default {
       this.imageData = processedImage;
     },
 
-    // Discard Processing
-    handleDiscardProcess() {
-      this.imageData = this.originalImage;
-    },
-
-    handleDiscard() {
+    handleUndo() {
       if (this.imageHistory.length > 0) {
         this.imageData = this.imageHistory.pop(); // Go back to previous state
       } else {
