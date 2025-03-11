@@ -1,7 +1,7 @@
 <template>
   <!-- Left side: Country Selection -->
   <div
-    class="col-span-1 flex flex-col bg-white border rounded-lg shadow-lg p-4 space-y-4 text-black"
+    class="col-span-4 flex flex-col bg-white border rounded-lg shadow-lg p-4 space-y-4 text-black"
   >
     <h2 class="font-bold text-lg">Resize Your Image</h2>
 
@@ -32,7 +32,7 @@
   </div>
 
   <!-- Right side: Image Display -->
-  <div class="col-span-4 flex flex-col items-center space-y-4">
+  <div class="col-span-8 flex flex-col items-center space-y-4">
     <h3 class="font-semibold">
       {{ resizedImage ? "Resized Image" : "Original Image" }}
     </h3>

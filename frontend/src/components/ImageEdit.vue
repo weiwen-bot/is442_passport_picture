@@ -3,7 +3,7 @@
   <!-- Sidebar -->
   <SidebarWrapper @update-action="handleAction" :sidebar-width="sidebarWidth" @reset-data="resetData"/>
 
-  <div class="p-1 grid grid-cols-5 gap-2 ml-[180px] mr-0">
+  <div class="p-1 grid grid-cols-12 gap-2 ml-[180px] mr-0">
     <!-- Show ImageCropping Component when "Crop" is selected -->
     <ImageCropping
       v-if="currentAction === 'crop' && imageData && !isCropped"
