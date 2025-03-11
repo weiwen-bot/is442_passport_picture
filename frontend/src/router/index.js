@@ -6,13 +6,18 @@ import BackgroundRemover from "../components/BackgroundRemover.vue";
 import ImageResizing from "../components/ImageResizing.vue";
 
 const routes = [
+  // {
+  //   path: "/",
+  //   name: "Home",
+  //   component: Home,
+  // },
+  // {
+  //   path: "/image-upload",
+  //   name: "ImageUpload",
+  //   component: ImageUpload,
+  // },
   {
     path: "/",
-    name: "Home",
-    component: Home,
-  },
-  {
-    path: "/image-upload",
     name: "ImageUpload",
     component: ImageUpload,
   },

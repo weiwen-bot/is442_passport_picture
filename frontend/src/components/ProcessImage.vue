@@ -67,7 +67,7 @@ export default {
     
 
     updateImage(image){
-      console.log(image,"HEHEHE");
+      
       this.backgroundImage = image;
     },
     async processImage() {
@@ -85,7 +85,7 @@ export default {
         const finalBase64 = await this.resizeToClosestMultipleOf32(this.originalImage);
 
         console.log(this.backgroundImage)
-        const category = "ew";
+        const category = "";
         if (this.backgroundImage == null){
           this.payload = { image: finalBase64, category: "color", colorString: this.color };
         } else {
