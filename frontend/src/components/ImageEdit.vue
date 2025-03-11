@@ -1,7 +1,11 @@
 <template>
   <!-- Main Image Edit (Parent Component) -->
   <!-- Sidebar -->
-  <SidebarWrapper @update-action="handleAction" :sidebar-width="sidebarWidth" @reset-data="resetData"/>
+  <SidebarWrapper
+    @update-action="handleAction"
+    :sidebar-width="sidebarWidth"
+    @reset-data="resetData"
+  />
 
   <div class="p-1 grid grid-cols-5 gap-2 ml-[180px] mr-0">
     <!-- Show ImageCropping Component when "Crop" is selected -->
@@ -69,10 +73,28 @@
           Download
         </button> -->
         <div class="relative">
-          <button @click="toggleDropdown" class="text-white bg-gray-800 p-2 rounded">Download</button>
-          <div v-if="showDropdown" class="absolute bottom-12 right-0 bg-gray-800 shadow-md rounded p-3 space-y-2 w-48">
-            <button @click="downloadImage" class="block w-full text-left p-2 hover:bg-gray-200">Download Image</button>
-            <button @click="handleGoogleDownload" class="block w-full text-left p-2 hover:bg-gray-200">Upload to Google Drive</button>
+          <button
+            @click="toggleDropdown"
+            class="text-white bg-gray-800 p-2 rounded"
+          >
+            Download
+          </button>
+          <div
+            v-if="showDropdown"
+            class="absolute bottom-12 right-0 bg-gray-800 shadow-md rounded p-3 space-y-2 w-48"
+          >
+            <button
+              @click="downloadImage"
+              class="block w-full text-left p-2 hover:bg-gray-200"
+            >
+              Download Image
+            </button>
+            <button
+              @click="handleGoogleDownload"
+              class="block w-full text-left p-2 hover:bg-gray-200"
+            >
+              Upload to Google Drive
+            </button>
           </div>
         </div>
       </div>
@@ -80,19 +102,28 @@
   </div>
 
   <!-- Confirmation Modal for Reset (Overlay on top of content)-->
-  <div v-if="showResetModal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+  <div
+    v-if="showResetModal"
+    class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50"
+  >
     <div class="bg-white p-6 rounded shadow-lg w-120">
       <h3 class="text-xl font-semibold text-gray-900 mb-10">
-        Are you sure you want to reset? <br/>
+        Are you sure you want to reset? <br />
         This will discard your photo and all changes.
       </h3>
       <div class="flex justify-end space-x-4">
         <!-- Cancel Button (Same as Discard) -->
-        <button @click="cancelReset" class="bg-gray-800 text-white px-4 py-2 rounded">
+        <button
+          @click="cancelReset"
+          class="bg-gray-800 text-white px-4 py-2 rounded"
+        >
           Cancel
         </button>
         <!-- Confirm Button (Dark Red) -->
-        <button @click="confirmReset" class="bg-red-800 text-white px-4 py-2 rounded">
+        <button
+          @click="confirmReset"
+          class="bg-red-800 text-white px-4 py-2 rounded"
+        >
           Confirm
         </button>
       </div>
@@ -105,7 +136,6 @@ import ImageCropping from "./ImageCropping.vue";
 import SidebarWrapper from "./SidebarWrapper.vue";
 import BackgroundRemover from "./BackgroundRemover.vue";
 import ImageResizing from "./ImageResizing.vue";
-
 
 export default {
   components: {
@@ -127,14 +157,17 @@ export default {
       accessToken: null, // Stores access token for Google authentication
       gisInited: false,
       tokenClient: null,
-      SCOPES: 'https://www.googleapis.com/auth/drive.file',
+      SCOPES: "https://www.googleapis.com/auth/drive.file",
       CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID,
     };
   },
   async mounted() {
     this.imageData = localStorage.getItem("imageData") || null;
     this.originalImage = localStorage.getItem("imageData") || null;
-    await this.loadScript('https://accounts.google.com/gsi/client', this.gisLoaded);
+    await this.loadScript(
+      "https://accounts.google.com/gsi/client",
+      this.gisLoaded
+    );
   },
   watch: {
     imageData(newImageData) {
@@ -172,6 +205,15 @@ export default {
     handleReset() {
       this.imageData = this.originalImage;
       this.isCropped = false; // Reset the cropped state
+
+      // Only re-mount ImageResizing.vue if the user is already on the resizing page
+      if (this.currentAction === "resize") {
+        const tempAction = this.currentAction;
+        this.currentAction = null;
+        this.$nextTick(() => {
+          this.currentAction = tempAction; // Re-mount ImageResizing.vue
+        });
+      }
     },
 
     // Method to toggle sidebar width (collapsed or expanded)
@@ -252,7 +294,7 @@ export default {
       }
     },
 
-    // Show the reset modal 
+    // Show the reset modal
     resetData() {
       this.showResetModal = true;
     },
@@ -264,7 +306,7 @@ export default {
 
     // Reset data and image state
     confirmReset() {
-      localStorage.removeItem('imageData');
+      localStorage.removeItem("imageData");
       this.imageData = null;
       this.isCropped = false;
       this.imageHistory = [];
@@ -272,8 +314,8 @@ export default {
       // Close the modal
       this.showResetModal = false;
 
-      // Navigate to the 'image-upload' page 
-      this.$router.push({ name: 'ImageUpload' });
+      // Navigate to the 'image-upload' page
+      this.$router.push({ name: "ImageUpload" });
     },
 
     // Convert base64 image to Blob
@@ -298,7 +340,7 @@ export default {
           resolve();
           return;
         }
-        const script = document.createElement('script');
+        const script = document.createElement("script");
         script.src = src;
         script.async = true;
         script.defer = true;
@@ -320,7 +362,7 @@ export default {
       this.tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: this.CLIENT_ID,
         scope: this.SCOPES,
-        callback: '',
+        callback: "",
       });
       this.gisInited = true;
     },
@@ -336,9 +378,9 @@ export default {
       };
 
       if (this.accessToken === null) {
-        this.tokenClient.requestAccessToken({ prompt: 'consent' });
+        this.tokenClient.requestAccessToken({ prompt: "consent" });
       } else {
-        this.tokenClient.requestAccessToken({ prompt: '' });
+        this.tokenClient.requestAccessToken({ prompt: "" });
       }
     },
 
@@ -358,7 +400,9 @@ export default {
         mimeType: "image/png",
       };
 
-      const metadataBlob = new Blob([JSON.stringify(metadata)], { type: "application/json" });
+      const metadataBlob = new Blob([JSON.stringify(metadata)], {
+        type: "application/json",
+      });
 
       const formData = new FormData();
       formData.append("metadata", metadataBlob);
@@ -380,7 +424,7 @@ export default {
 
         if (uploadResponse.ok) {
           console.log("Image uploaded successfully!");
-          console.log(`https://drive.google.com/file/d/${result.id}/view`)
+          console.log(`https://drive.google.com/file/d/${result.id}/view`);
         } else {
           console.error("Upload failed:", result.error);
         }
@@ -388,7 +432,6 @@ export default {
         console.error("Error during upload:", error);
       }
     },
-
   },
 };
 </script>
