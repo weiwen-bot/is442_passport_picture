@@ -59,6 +59,10 @@
 export default {
   props: {
     imageData: String, // Parent passes the original image
+    resetCounter: {
+      type: Number,
+      default: 0,
+    },
   },
   emits: ["resize-complete", "update:imageData"],
   data() {
@@ -104,12 +108,23 @@ export default {
   beforeUnmount() {
     // Only update parent with resized image if it exists
     if (this.resizedImage && this.resizedImage !== this.originalUploadedImage) {
-      console.log("🚀 Passing resized image to parent before leaving");
+      console.log("Leaving - passing resized image to parent");
       this.$emit("update:imageData", this.resizedImage);
     }
   },
 
   watch: {
+    resetCounter(newVal, oldVal) {
+      if (newVal !== oldVal) {
+        console.log(`resetCounter changed: ${oldVal} → ${newVal}`);
+        this.baseImage = null; // Temporarily set to null
+        this.$nextTick(() => {
+          this.baseImage = this.originalImage; // Ensure Vue detects a full update
+          this.resizedImage = null; // Clear resized image
+        });
+      }
+    },
+
     imageData(newImage, oldImage) {
       if (newImage !== oldImage) {
         console.log("🖼 imageData updated in ImageResizing.vue:", newImage);
