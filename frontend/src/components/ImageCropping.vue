@@ -1,6 +1,6 @@
 <template>
   <!-- Left side: Country Selection and Custom Width/Height Inputs -->
-  <div class="col-span-1 flex flex-col bg-white border rounded-lg shadow-lg p-2 space-y-2 text-black">
+  <div class="col-span-4 flex flex-col bg-white border rounded-lg shadow-lg p-2 space-y-2 text-black">
     <h2 class="font-bold">Crop Your Image</h2>
 
     <label for="width" class="font-semibold">Width (mm):</label>
@@ -36,7 +36,7 @@
   </div>
 
   <!-- Right side: Image Display -->
-  <div class="col-span-4 shadow-lg">
+  <div class="col-span-8 shadow-lg">
     <vue-cropper
       v-if="imageData"
       ref="cropper"
