@@ -100,10 +100,22 @@ export default {
 
     this.resizedImage = null;
 
-    // Load the previously selected country if any
-    this.selectedCountry = localStorage.getItem("selectedCountry") || "";
+    const storedCountry = localStorage.getItem("selectedCountry");
 
-    this.fetchCountryList(); // Fetch countries when component loads
+    // Fetch the country list first
+    this.fetchCountryList().then(() => {
+      // After countries are loaded, validate the stored country
+      if (
+        storedCountry &&
+        this.countryList.some((country) => country.code === storedCountry)
+      ) {
+        this.selectedCountry = storedCountry;
+        console.log("Restored saved country:", this.selectedCountry);
+      } else {
+        this.selectedCountry = ""; // Default to "-- Select Country --"
+        console.log("Saved country not found or invalid, using default");
+      }
+    });
   },
   beforeUnmount() {
     // Only update parent with resized image if it exists
@@ -146,8 +158,11 @@ export default {
         if (!response.ok) throw new Error("Failed to fetch country list");
 
         this.countryList = await response.json();
+        return this.countryList;
       } catch (error) {
         console.error("Error fetching country list:", error);
+        this.countryList = [];
+        return [];
       }
     },
     saveSelectedCountry() {
