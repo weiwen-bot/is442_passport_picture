@@ -60,10 +60,10 @@ export default {
   props: {
     imageData: String, // Parent passes the original image
   },
-  emits: ["resize-complete", "discard-resize", "update:imageData"],
+  emits: ["resize-complete", "update:imageData"],
   data() {
     return {
-      originalImage: null, // Always stores the very first image (NEVER CHANGES)
+      originalImage: null, // Always stores the uploaded image (NEVER CHANGES)
       baseImage: null, // Stores the working image (resets when needed)
       resizedImage: null, // Stores resized image
       selectedCountry: "",
@@ -72,11 +72,14 @@ export default {
     };
   },
   mounted() {
+    // Store the uploaded image only when first mounting
     if (!this.originalImage) {
       this.originalImage = this.imageData;
-      this.baseImage = this.imageData;
     }
+
+    this.baseImage = this.imageData;
   },
+
   computed: {
     resizeButtonClass() {
       if (!this.originalImage || this.isLoading) {
@@ -99,14 +102,29 @@ export default {
     this.fetchCountryList(); // Fetch countries when component loads
   },
   beforeUnmount() {
-    // Emit only if there's a resized image before leaving the page
-    if (this.resizedImage) {
+    // Only update parent with resized image if it exists
+    if (this.resizedImage && this.resizedImage !== this.originalUploadedImage) {
       console.log("🚀 Passing resized image to parent before leaving");
       this.$emit("update:imageData", this.resizedImage);
     }
   },
 
+  watch: {
+    imageData(newImage, oldImage) {
+      if (newImage !== oldImage) {
+        console.log("🖼 imageData updated in ImageResizing.vue:", newImage);
+        this.handleReset(); // Reset component state when parent updates imageData
+      }
+    },
+  },
+
   methods: {
+    handleReset() {
+      console.log("🔄 Resetting ImageResizing.vue to the uploaded image!");
+      this.baseImage = this.originalImage; // Reset displayed image
+      this.resizedImage = null; // Clear resized image
+    },
+
     async fetchCountryList() {
       try {
         const response = await fetch("http://localhost:8080/image/countries");
