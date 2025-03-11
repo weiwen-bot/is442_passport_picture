@@ -32,7 +32,7 @@
   </div>
 
   <!-- Right side: Image Display -->
-  <div class="col-span-4 flex flex-col items-center space-y-4">
+  <div class="col-span-8 flex flex-col items-center space-y-4">
     <h3 class="font-semibold">Image</h3>
 
     <img
