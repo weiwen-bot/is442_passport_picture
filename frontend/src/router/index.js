@@ -6,6 +6,7 @@ import BackgroundRemover from "../components/BackgroundRemover.vue";
 import ImageResizing from "../components/ImageResizing.vue";
 import PhotoEnhancement from "../components/PhotoEnhancement.vue";
 
+
 const routes = [
   // {
   //   path: "/",
@@ -44,6 +45,7 @@ const routes = [
     name: "PhotoEnhancement",
     component: PhotoEnhancement,
   },
+
 ];
 
 const router = createRouter({
