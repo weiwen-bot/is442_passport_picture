@@ -49,15 +49,6 @@
       @discard-resize="handleDiscard"
     />
 
-    <!-- Show PhotoEnhancement Component when "Enhance" is selected -->
-    <PhotoEnhancement
-      v-if="currentAction === 'enhance' && imageData"
-      :key="imageData"
-      v-model:imageData="imageData"
-      @enhancement-complete="handleEnhancementComplete"
-      @discard-resize="handleDiscard"
-    />
-
     <div class="bg-black fixed bottom-0 left-0 w-full p-2 z-10">
       <div class="flex justify-end">
         <!-- Discard Button -->
@@ -146,7 +137,6 @@ import ImageCropping from "./ImageCropping.vue";
 import SidebarWrapper from "./SidebarWrapper.vue";
 import BackgroundRemover from "./BackgroundRemover.vue";
 import ImageResizing from "./ImageResizing.vue";
-import PhotoEnhancement from "./PhotoEnhancement.vue";
 
 export default {
   components: {
@@ -154,7 +144,6 @@ export default {
     SidebarWrapper,
     BackgroundRemover,
     ImageResizing,
-    PhotoEnhancement,
   },
   data() {
     return {
@@ -221,14 +210,6 @@ export default {
       console.log("Current resetCounter:", this.resetCounter);
       this.resetCounter += 1; // Increment first
       console.log("resetCounter incremented:", this.resetCounter);
-    },
-
-    // After enhancement complete
-    handleEnhancementComplete(enhancedImage) {
-      if (this.imageData) {
-        this.imageHistory.push(this.imageData); // Save current state before replacing it
-      }
-      this.imageData = enhancedImage; // Update the imageData with the enhanced image
     },
 
     // Method to toggle sidebar width (collapsed or expanded)

@@ -41,11 +41,6 @@ export default {
           icon: "fa-solid fa-eraser",
           action: "background-remover",
         },
-        { 
-          title: "Enhance", 
-          icon: "fa-solid fa-wand-magic-sparkles", 
-          action: "enhance" 
-        },
       ],
     };
   },
