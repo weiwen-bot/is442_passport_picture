@@ -231,7 +231,6 @@ export default {
       this.imageData = enhancedImage; // Update the imageData with the enhanced image
     },
 
-
     // Method to toggle sidebar width (collapsed or expanded)
     // toggleSidebar() {
     //   if (this.sidebarWidth === '250px') {
