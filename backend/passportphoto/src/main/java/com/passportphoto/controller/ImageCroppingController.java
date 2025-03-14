@@ -1,7 +1,7 @@
 package com.passportphoto.controller;
 
 import com.passportphoto.dto.ImageCropRequest;
-import com.passportphoto.service.ImageProcessingService;
+import com.passportphoto.service.ImageCroppingService;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,9 +17,9 @@ import java.util.Map;
 @CrossOrigin(origins = "http://localhost:5173") 
 public class ImageCroppingController {
 
-    private final ImageProcessingService imageProcessingService;
+    private final ImageCroppingService imageProcessingService;
 
-    public ImageCroppingController(ImageProcessingService imageProcessingService) {
+    public ImageCroppingController(ImageCroppingService imageProcessingService) {
         this.imageProcessingService = imageProcessingService;
     }
 

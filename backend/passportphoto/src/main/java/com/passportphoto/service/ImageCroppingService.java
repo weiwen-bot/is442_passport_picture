@@ -9,9 +9,9 @@ import java.io.IOException;
 import java.util.Base64;
 import javax.imageio.ImageIO;
 
-//  Handles all image processing logic (conversion, cropping, encoding).
+//Handles all image processing logic (conversion, cropping, encoding).
 @Service
-public class ImageProcessingService {
+public class ImageCroppingService {
 
     public BufferedImage convertToBufferedImage(MultipartFile imageFile) throws IOException {
         return ImageIO.read(imageFile.getInputStream());
