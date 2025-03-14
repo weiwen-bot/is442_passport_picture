@@ -14,7 +14,6 @@
       :key="imageData"
       v-model:imageData="imageData"
       @crop-complete="handleCropComplete"
-      @discard-crop="handleDiscard"
     />
 
     <!-- Show Cropped Image when cropping is done -->
@@ -36,7 +35,6 @@
       :key="imageData"
       v-model:imageData="imageData"
       @remove-background="handleRemoveBackground"
-      @discard-background="handleDiscard"
     />
 
     <!-- Show ImageResizing Component when "Resize" is selected -->
@@ -46,24 +44,34 @@
       :reset-counter="resetCounter"
       v-model:imageData="imageData"
       @resize-complete="handleResizeComplete"
-      @discard-resize="handleDiscard"
     />
 
     <div class="bg-black fixed bottom-0 left-0 w-full p-2 z-10">
       <div class="flex justify-end">
-        <!-- Discard Button -->
+        <!-- Reset Button -->
         <button
-          class="text-white bg-gray-800 p-2 rounded mr-3"
+          class="text-white bg-gray-800 p-2 rounded mr-3 flex items-center"
           @click="handleReset"
         >
-          Reset Original Image
+          <i class="fas fa-eraser mr-2"></i> Revert to Original
         </button>
+
+        <!-- Undo Button -->
         <button
           :disabled="imageHistory.length === 0"
-          class="text-white bg-gray-800 p-2 rounded mr-3"
+          class="text-white bg-gray-800 p-2 rounded mr-3 flex items-center"
           @click="handleUndo"
         >
-          Undo Previous Action
+          <i class="fas fa-undo mr-2"></i> Undo
+        </button>
+
+        <!-- Redo Button -->
+        <button
+          :disabled="redoHistory.length === 0"
+          class="text-white bg-gray-800 p-2 rounded mr-3 flex items-center"
+          @click="handleRedo"
+        >
+          <i class="fas fa-redo mr-2"></i> Redo
         </button>
 
         <!-- Download Button -->
@@ -78,7 +86,7 @@
             @click="toggleDropdown"
             class="text-white bg-gray-800 p-2 rounded"
           >
-            Download
+          <i class="fa-solid fa-download"></i> Download
           </button>
           <div
             v-if="showDropdown"
@@ -94,7 +102,7 @@
               @click="handleGoogleDownload"
               class="block w-full text-left p-2 hover:bg-gray-200"
             >
-              Upload to Google Drive
+            <i class="fa-solid fa-cloud-arrow-down"></i> Upload to Google Drive
             </button>
           </div>
         </div>
@@ -149,7 +157,8 @@ export default {
     return {
       imageData: null, // Image data that will be passed to child and updated after crop
       originalImage: null, // Store the original image
-      imageHistory: [], // Stack to Store Previous Image States
+      imageHistory: [], // Stack for undo
+      redoHistory: [], // Stack for redo
       currentAction: "crop", // Start with crop selected
       sidebarWidth: "240px", // Default width for expanded sidebar
       isCropped: false, // Track cropped state in the parent
@@ -195,6 +204,27 @@ export default {
       this.currentAction = action;
     },
 
+    handleUndo() {
+      if (this.imageHistory.length > 0) {
+        this.redoHistory.push(this.imageData); // Save current state to redo
+        this.imageData = this.imageHistory.pop(); // Go back to previous state
+        this.isCropped = false; // Reset cropped state
+      }
+    },
+    handleRedo() {
+      if (this.redoHistory.length > 0) {
+        this.imageHistory.push(this.imageData); // Save current state to undo
+        this.imageData = this.redoHistory.pop(); // Restore last undone state
+        this.isCropped = false; // Reset cropped state
+      }
+    },
+    handleReset() {
+      this.imageHistory.push(this.imageData); // Save for undo
+      this.redoHistory = []; // Clear redo history
+      this.imageData = this.originalImage;
+      this.isCropped = false; // Reset cropped state
+    },
+
     // After crop complete
     handleCropComplete(croppedImage) {
       if (this.imageData) {
@@ -202,14 +232,6 @@ export default {
       }
       this.imageData = croppedImage; // Update the imageData with the new cropped image
       this.isCropped = true; // Set the flag to true
-    },
-    // Reset Original Image
-    handleReset() {
-      this.imageData = this.originalImage;
-      this.isCropped = false; // Reset the cropped state
-      console.log("Current resetCounter:", this.resetCounter);
-      this.resetCounter += 1; // Increment first
-      console.log("resetCounter incremented:", this.resetCounter);
     },
 
     // Method to toggle sidebar width (collapsed or expanded)
@@ -235,16 +257,6 @@ export default {
         this.imageHistory.push(this.imageData); // Save current state before replacing it
       }
       this.imageData = processedImage;
-    },
-
-    handleUndo() {
-      if (this.imageHistory.length > 0) {
-        this.imageData = this.imageHistory.pop(); // Go back to previous state
-      } else {
-        this.imageData = this.originalImage; // If no history, revert to original
-      }
-
-      this.isCropped = false; // Reset cropped state
     },
 
     toggleDropdown() {
