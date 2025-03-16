@@ -15,7 +15,7 @@
       v-model:imageData="imageData"
       @crop-complete="handleCropComplete"
     />
-    
+
     <!-- Show Cropped Image when cropping is done -->
     <div
       v-if="currentAction === 'crop' && isCropped"
@@ -95,7 +95,7 @@
             @click="toggleDropdown"
             class="text-white bg-gray-800 p-2 rounded"
           >
-          <i class="fa-solid fa-download"></i> Download
+            <i class="fa-solid fa-download"></i> Download
           </button>
           <div
             v-if="showDropdown"
@@ -111,7 +111,8 @@
               @click="handleGoogleDownload"
               class="block w-full text-left p-2 hover:bg-gray-200"
             >
-            <i class="fa-solid fa-cloud-arrow-down"></i> Upload to Google Drive
+              <i class="fa-solid fa-cloud-arrow-down"></i> Upload to Google
+              Drive
             </button>
           </div>
         </div>
@@ -155,7 +156,6 @@ import SidebarWrapper from "./SidebarWrapper.vue";
 import BackgroundRemover from "./BackgroundRemover.vue";
 import ImageResizing from "./ImageResizing.vue";
 import ImageEnhancement from "./ImageEnhancement.vue";
-
 
 export default {
   components: {
@@ -212,28 +212,36 @@ export default {
         // If user clicks "Crop" again, allow re-cropping the already cropped image
         this.isCropped = false;
       }
-
-      this.currentAction = action;
     },
 
     handleUndo() {
       if (this.imageHistory.length > 0) {
+        console.log("Undo triggered.");
         this.redoHistory.push(this.imageData); // Save current state to redo
         this.imageData = this.imageHistory.pop(); // Go back to previous state
+        this.$emit("update:imageData", this.imageData); // Notify child components
         this.isCropped = false; // Reset cropped state
+      } else {
+        console.log("No previous state to undo.");
       }
     },
     handleRedo() {
       if (this.redoHistory.length > 0) {
+        console.log("Redo triggered.");
         this.imageHistory.push(this.imageData); // Save current state to undo
         this.imageData = this.redoHistory.pop(); // Restore last undone state
+        this.$emit("update:imageData", this.imageData); // Notify child components
         this.isCropped = false; // Reset cropped state
+      } else {
+        console.log("No redo available.");
       }
     },
     handleReset() {
+      console.log("Reverting to the original uploaded image!");
       this.imageHistory.push(this.imageData); // Save for undo
       this.redoHistory = []; // Clear redo history
       this.imageData = this.originalImage;
+      this.$emit("update:imageData", this.originalImage); // Notify child components
       this.isCropped = false; // Reset cropped state
     },
 
