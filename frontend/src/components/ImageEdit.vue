@@ -217,10 +217,13 @@ export default {
     handleUndo() {
       if (this.imageHistory.length > 0) {
         console.log("Undo triggered.");
+
         this.redoHistory.push(this.imageData); // Save current state to redo
         this.imageData = this.imageHistory.pop(); // Go back to previous state
-        this.$emit("update:imageData", this.imageData); // Notify child components
         this.isCropped = false; // Reset cropped state
+
+        this.$emit("update:imageData", this.imageData); // Notify child components
+        this.$forceUpdate();
       } else {
         console.log("No previous state to undo.");
       }
@@ -228,21 +231,27 @@ export default {
     handleRedo() {
       if (this.redoHistory.length > 0) {
         console.log("Redo triggered.");
+
         this.imageHistory.push(this.imageData); // Save current state to undo
         this.imageData = this.redoHistory.pop(); // Restore last undone state
-        this.$emit("update:imageData", this.imageData); // Notify child components
         this.isCropped = false; // Reset cropped state
+
+        this.$emit("update:imageData", this.imageData); // Notify child components
+        this.$forceUpdate();
       } else {
         console.log("No redo available.");
       }
     },
     handleReset() {
       console.log("Reverting to the original uploaded image!");
+
       this.imageHistory.push(this.imageData); // Save for undo
       this.redoHistory = []; // Clear redo history
       this.imageData = this.originalImage;
-      this.$emit("update:imageData", this.originalImage); // Notify child components
       this.isCropped = false; // Reset cropped state
+
+      this.$emit("update:imageData", this.originalImage); // Notify child components
+      this.$forceUpdate();
     },
 
     // After crop complete
