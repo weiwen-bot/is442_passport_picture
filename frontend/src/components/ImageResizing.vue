@@ -1,21 +1,29 @@
 <template>
   <!-- Left side: Country Selection -->
   <h2 class="col-span-12 font-bold p-4 text-2xl">Image</h2>
-  <div class="col-span-4 bg-white border rounded-lg shadow-lg p-4 space-y-2 text-black">
+  <div
+    class="col-span-4 bg-white border rounded-lg shadow-lg p-4 space-y-2 text-black"
+  >
     <h2 class="font-bold text-lg">Resize Your Image</h2>
     <div class="max-w-sm space-y-3 pt-2">
       <div>
-        <label for="country" class="block font-medium mb-2 font-semibold text-left">Select a Country</label>
+        <label
+          for="country"
+          class="block font-medium mb-2 font-semibold text-left"
+          >Select a Country</label
+        >
         <select
           v-model="selectedCountry"
           @change="saveSelectedCountry"
           id="country"
-          class="sm:py-3 ps-3 pe-10 block w-full rounded-lg border border-gray-300">
+          class="sm:py-3 ps-3 pe-10 block w-full rounded-lg border border-gray-300"
+        >
           <option value="">-- Select Country --</option>
           <option
             v-for="country in countryList"
             :key="country.code"
-            :value="country.code">
+            :value="country.code"
+          >
             {{ country.name }}
           </option>
         </select>
@@ -26,11 +34,11 @@
         @click="handleResize"
         :class="resizeButtonClass"
         :disabled="!baseImage || !selectedCountry || isLoading"
-        class="sm:py-3 ps-3 pe-10 block w-full rounded-lg text-black">
+        class="sm:py-3 ps-3 pe-10 block w-full rounded-lg text-black"
+      >
         Resize
       </button>
     </div>
-    
   </div>
 
   <!-- Right side: Image Display -->
@@ -63,25 +71,45 @@ export default {
       type: Number,
       default: 0,
     },
+    originalImage: String, // Receive the first uploaded image from the parent
   },
-  emits: ["resize-complete", "update:imageData"],
+  expose: ["handleLocalUndo", "handleLocalRedo", "handleLocalReset"],
+  emits: [
+    "resize-complete",
+    "update:imageData",
+    "update:imageHistory",
+    "update:redoHistory",
+  ],
   data() {
     return {
-      originalImage: null, // Always stores the uploaded image (NEVER CHANGES)
       baseImage: null, // Stores the working image (resets when needed)
       resizedImage: null, // Stores resized image
       selectedCountry: "",
       countryList: [],
       isLoading: false,
+
+      // Local history for undo/redo within Image Resizing page
+      localImageHistory: [],
+      localRedoHistory: [],
     };
   },
   mounted() {
+    if (this.imageData && this.localImageHistory.length === 0) {
+      this.localImageHistory = [this.imageData];
+    }
+
     // Store the uploaded image only when first mounting
     if (!this.originalImage) {
       this.originalImage = this.imageData;
     }
 
     this.baseImage = this.imageData;
+
+    console.log(
+      "ImageResizing mounted with history:",
+      this.localImageHistory.length,
+      "items"
+    );
   },
 
   computed: {
@@ -100,17 +128,32 @@ export default {
 
     this.resizedImage = null;
 
-    // Load the previously selected country if any
-    this.selectedCountry = localStorage.getItem("selectedCountry") || "";
+    const storedCountry = localStorage.getItem("selectedCountry");
 
-    this.fetchCountryList(); // Fetch countries when component loads
+    // Fetch the country list first
+    this.fetchCountryList().then(() => {
+      // After countries are loaded, validate the stored country
+      if (
+        storedCountry &&
+        this.countryList.some((country) => country.code === storedCountry)
+      ) {
+        this.selectedCountry = storedCountry;
+        console.log("Restored saved country:", this.selectedCountry);
+      } else {
+        this.selectedCountry = ""; // Default to "-- Select Country --"
+        console.log("Saved country not found or invalid, using default");
+      }
+    });
   },
   beforeUnmount() {
     // Only update parent with resized image if it exists
-    if (this.resizedImage && this.resizedImage !== this.originalUploadedImage) {
+    if (this.resizedImage && this.resizedImage !== this.originalImage) {
       console.log("Leaving - passing resized image to parent");
       this.$emit("update:imageData", this.resizedImage);
     }
+
+    this.$emit("update:imageHistory", this.localImageHistory);
+    this.$emit("update:redoHistory", this.localRedoHistory);
   },
 
   watch: {
@@ -128,26 +171,36 @@ export default {
     imageData(newImage, oldImage) {
       if (newImage !== oldImage) {
         console.log("🖼 imageData updated in ImageResizing.vue:", newImage);
-        this.handleReset(); // Reset component state when parent updates imageData
+
+        // Save previous state in history for undo
+        if (oldImage) {
+          this.localImageHistory.push(oldImage);
+        }
+
+        this.baseImage = ""; // Temporarily clear to force reactivity
+        this.$nextTick(() => {
+          this.baseImage = newImage; // Set correct image after reactivity updates
+          this.resizedImage = null;
+        });
+
+        // Clear redo history when a new change is made
+        this.localRedoHistory = [];
       }
     },
   },
 
   methods: {
-    handleReset() {
-      console.log("🔄 Resetting ImageResizing.vue to the uploaded image!");
-      this.baseImage = this.originalImage; // Reset displayed image
-      this.resizedImage = null; // Clear resized image
-    },
-
     async fetchCountryList() {
       try {
         const response = await fetch("http://localhost:8080/image/countries");
         if (!response.ok) throw new Error("Failed to fetch country list");
 
         this.countryList = await response.json();
+        return this.countryList;
       } catch (error) {
         console.error("Error fetching country list:", error);
+        this.countryList = [];
+        return [];
       }
     },
     saveSelectedCountry() {
@@ -155,7 +208,7 @@ export default {
       console.log("✅ Selected country saved:", this.selectedCountry);
     },
     async handleResize() {
-      if (!this.originalImage || !this.selectedCountry) {
+      if (!this.imageData || !this.selectedCountry) {
         alert("Please select a country first.");
         return;
       }
@@ -163,10 +216,7 @@ export default {
       this.isLoading = true;
       try {
         // Convert base64 to Blob
-        const file = this.base64ToFile(
-          this.originalImage,
-          "uploaded-image.jpg"
-        );
+        const file = this.base64ToFile(this.imageData, "uploaded-image.jpg");
 
         // Create FormData
         const formData = new FormData();
@@ -191,10 +241,12 @@ export default {
             result.image ? result.image.substring(0, 50) + "..." : "NULL"
           );
 
+          this.localImageHistory.push(this.baseImage);
+          this.localRedoHistory = [];
+
           // Set the resized image
           this.resizedImage = result.image;
-          // Reset the baseImage to original
-          this.baseImage = this.originalImage;
+          this.baseImage = result.image;
         }
       } catch (error) {
         console.error("Error resizing image:", error);
@@ -202,6 +254,54 @@ export default {
       } finally {
         this.isLoading = false;
       }
+    },
+
+    handleLocalUndo() {
+      console.log(
+        "📜 localImageHistory length:",
+        this.localImageHistory.length
+      );
+      if (this.localImageHistory.length > 0) {
+        this.localRedoHistory.push(this.baseImage);
+        this.baseImage = this.localImageHistory.pop();
+        this.resizedImage = this.baseImage;
+
+        // Emit updated history to parent
+        this.$emit("update:imageHistory", this.localImageHistory);
+        this.$emit("update:redoHistory", this.localRedoHistory);
+        this.$emit("update:imageData", this.baseImage);
+      }
+    },
+
+    handleLocalRedo() {
+      if (this.localRedoHistory.length > 0) {
+        console.log("↪️ Local Redo in ImageResizing.vue");
+        this.localImageHistory.push(this.baseImage);
+        this.baseImage = this.localRedoHistory.pop();
+        this.resizedImage = this.baseImage;
+
+        // Emit updated history to parent
+        this.$emit("update:imageHistory", this.localImageHistory);
+        this.$emit("update:redoHistory", this.localRedoHistory);
+        this.$emit("update:imageData", this.baseImage);
+      }
+    },
+
+    handleLocalReset() {
+      console.log("🔄 Local Reset in ImageResizing.vue");
+      if (this.baseImage !== this.originalImage) {
+        this.localImageHistory.push(this.baseImage);
+        this.localRedoHistory = []; // Reset redo history
+      }
+
+      // Reset image to original
+      this.baseImage = this.originalImage;
+      this.resizedImage = null;
+
+      // Emit reset event
+      this.$emit("update:imageData", this.originalImage);
+      this.$emit("update:imageHistory", this.localImageHistory);
+      this.$emit("update:redoHistory", this.localRedoHistory);
     },
 
     base64ToFile(base64String, fileName) {
@@ -231,7 +331,7 @@ button {
   font-family: inherit; /* Keep the same font as the rest of the app */
   border: 1px solid transparent; /* Prevent shifting when enabling/disabling */
   color: black;
-} 
+}
 
 /* Default disabled button (light gray but visible) */
 .bg-gray-400 {

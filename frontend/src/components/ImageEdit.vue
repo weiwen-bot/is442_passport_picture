@@ -15,7 +15,7 @@
       v-model:imageData="imageData"
       @crop-complete="handleCropComplete"
     />
-    
+
     <!-- Show Cropped Image when cropping is done -->
     <div
       v-if="currentAction === 'crop' && isCropped"
@@ -42,10 +42,14 @@
     <!-- Show ImageResizing Component when "Resize" is selected -->
     <ImageResizing
       v-if="currentAction === 'resize' && imageData"
+      ref="imageResizing"
       :key="imageData"
       :reset-counter="resetCounter"
       v-model:imageData="imageData"
+      :original-image="originalImage"
       @resize-complete="handleResizeComplete"
+      @update:imageHistory="updateImageHistory"
+      @update:redoHistory="updateRedoHistory"
     />
     <!-- Show ImageEnhancement Component when "Enhance" is selected -->
     <ImageEnhancement
@@ -95,7 +99,7 @@
             @click="toggleDropdown"
             class="text-white bg-gray-800 p-2 rounded"
           >
-          <i class="fa-solid fa-download"></i> Download
+            <i class="fa-solid fa-download"></i> Download
           </button>
           <div
             v-if="showDropdown"
@@ -111,7 +115,8 @@
               @click="handleGoogleDownload"
               class="block w-full text-left p-2 hover:bg-gray-200"
             >
-            <i class="fa-solid fa-cloud-arrow-down"></i> Upload to Google Drive
+              <i class="fa-solid fa-cloud-arrow-down"></i> Upload to Google
+              Drive
             </button>
           </div>
         </div>
@@ -156,7 +161,6 @@ import BackgroundRemover from "./BackgroundRemover.vue";
 import ImageResizing from "./ImageResizing.vue";
 import ImageEnhancement from "./ImageEnhancement.vue";
 
-
 export default {
   components: {
     ImageCropping,
@@ -186,7 +190,10 @@ export default {
   },
   async mounted() {
     this.imageData = localStorage.getItem("imageData") || null;
-    this.originalImage = localStorage.getItem("imageData") || null;
+    // Store the first uploaded image only ONCE
+    if (!this.originalImage) {
+      this.originalImage = this.imageData;
+    }
     await this.loadScript(
       "https://accounts.google.com/gsi/client",
       this.gisLoaded
@@ -213,28 +220,69 @@ export default {
         this.isCropped = false;
       }
 
-      this.currentAction = action;
+      this.$nextTick(() => {
+        console.log("✅ currentAction updated to:", this.currentAction);
+      });
     },
 
     handleUndo() {
+      console.log("Undo button clicked! Current Action:", this.currentAction);
+
+      if (this.currentAction === "resize") {
+        this.$nextTick(() => {
+          console.log(
+            "🔄 After nextTick: Checking this.$refs.imageResizing:",
+            this.$refs.imageResizing
+          );
+
+          if (
+            this.$refs.imageResizing &&
+            typeof this.$refs.imageResizing.handleLocalUndo === "function"
+          ) {
+            console.log("Delegating undo to ImageResizing.vue");
+            this.$refs.imageResizing.handleLocalUndo();
+          } else {
+            console.error("ERROR: this.$refs.imageResizing is NULL!");
+          }
+        });
+        return;
+      }
+
       if (this.imageHistory.length > 0) {
+        console.log("Undoing in ImageEdit.vue");
+
         this.redoHistory.push(this.imageData); // Save current state to redo
         this.imageData = this.imageHistory.pop(); // Go back to previous state
         this.isCropped = false; // Reset cropped state
       }
     },
     handleRedo() {
+      if (this.currentAction === "resize" && this.$refs.imageResizing) {
+        console.log("Delegating redo to ImageResizing.vue");
+        this.$refs.imageResizing.handleLocalRedo();
+        return;
+      }
+
       if (this.redoHistory.length > 0) {
+        console.log("Redoing in ImageEdit.vue");
+
         this.imageHistory.push(this.imageData); // Save current state to undo
         this.imageData = this.redoHistory.pop(); // Restore last undone state
         this.isCropped = false; // Reset cropped state
       }
     },
     handleReset() {
-      this.imageHistory.push(this.imageData); // Save for undo
-      this.redoHistory = []; // Clear redo history
-      this.imageData = this.originalImage;
-      this.isCropped = false; // Reset cropped state
+      if (this.currentAction === "resize" && this.$refs.imageResizing) {
+        console.log("Delegating Revert to Original to ImageResizing.vue");
+        this.$refs.imageResizing.handleLocalReset();
+      } else {
+        console.log("Reverting to original in ImageEdit.vue");
+
+        this.imageHistory.push(this.imageData); // Save for undo
+        this.redoHistory = []; // Clear redo history
+        this.imageData = this.originalImage;
+        this.isCropped = false; // Reset cropped state
+      }
     },
 
     // After crop complete
@@ -261,6 +309,17 @@ export default {
         this.imageHistory.push(this.imageData);
       }
       this.imageData = resizedImage;
+    },
+
+    // update parent's history with history from resize page
+    updateImageHistory(history) {
+      console.log("📜 Updating image history from ImageResizing.vue");
+      this.imageHistory = history;
+    },
+
+    updateRedoHistory(history) {
+      console.log("📜 Updating redo history from ImageResizing.vue");
+      this.redoHistory = history;
     },
 
     // After process complete
