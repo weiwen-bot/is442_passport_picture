@@ -99,6 +99,8 @@ export default {
     }
 
     this.baseImage = this.imageData;
+
+    console.log("ImageResizing mounted - ready to handle undo/redo");
   },
 
   computed: {
@@ -245,10 +247,27 @@ export default {
     },
 
     handleLocalUndo() {
+      console.log(
+        "📜 localImageHistory length:",
+        this.localImageHistory.length
+      );
       if (this.localImageHistory.length > 0) {
         console.log("↩️ Local Undo in ImageResizing.vue");
-        this.localRedoHistory.push(this.baseImage);
-        this.baseImage = this.localImageHistory.pop();
+
+        // Store current image in redo history **only if it's different**
+        if (
+          this.baseImage !==
+          this.localImageHistory[this.localImageHistory.length - 1]
+        ) {
+          this.localRedoHistory.push(this.baseImage);
+        }
+
+        this.baseImage = "";
+        this.$nextTick(() => {
+          this.baseImage = this.localImageHistory.pop();
+          this.resizedImage = this.baseImage; // Also update resizedImage
+          this.$emit("update:imageData", this.baseImage); // ✅ Notify parent!
+        });
       }
     },
 
@@ -256,7 +275,13 @@ export default {
       if (this.localRedoHistory.length > 0) {
         console.log("↪️ Local Redo in ImageResizing.vue");
         this.localImageHistory.push(this.baseImage);
-        this.baseImage = this.localRedoHistory.pop();
+        // Restore the last undone image
+        this.baseImage = "";
+        this.$nextTick(() => {
+          this.baseImage = this.localRedoHistory.pop();
+          this.resizedImage = this.baseImage; // Also update resizedImage
+          this.$emit("update:imageData", this.baseImage); // Emit to update parent
+        });
       }
     },
 

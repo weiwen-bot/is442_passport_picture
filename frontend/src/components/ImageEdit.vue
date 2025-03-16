@@ -219,13 +219,36 @@ export default {
         // If user clicks "Crop" again, allow re-cropping the already cropped image
         this.isCropped = false;
       }
+
+      this.$nextTick(() => {
+        console.log("✅ currentAction updated to:", this.currentAction);
+      });
     },
 
     handleUndo() {
-      if (this.currentAction === "resize" && this.$refs.ImageResizing) {
-        console.log("Delegating undo to ImageResizing.vue");
-        this.$refs.ImageResizing.handleLocalUndo();
-      } else if (this.imageHistory.length > 0) {
+      console.log("Undo button clicked! Current Action:", this.currentAction);
+
+      if (this.currentAction === "resize") {
+        this.$nextTick(() => {
+          console.log(
+            "🔄 After nextTick: Checking this.$refs.imageResizing:",
+            this.$refs.imageResizing
+          );
+
+          if (
+            this.$refs.imageResizing &&
+            typeof this.$refs.imageResizing.handleLocalUndo === "function"
+          ) {
+            console.log("Delegating undo to ImageResizing.vue");
+            this.$refs.imageResizing.handleLocalUndo();
+          } else {
+            console.error("ERROR: this.$refs.imageResizing is NULL!");
+          }
+        });
+        return;
+      }
+
+      if (this.imageHistory.length > 0) {
         console.log("Undoing in ImageEdit.vue");
 
         this.redoHistory.push(this.imageData); // Save current state to redo
@@ -236,8 +259,11 @@ export default {
     handleRedo() {
       if (this.currentAction === "resize" && this.$refs.ImageResizing) {
         console.log("Delegating redo to ImageResizing.vue");
-        this.$refs.ImageResizing.handleLocalRedo();
-      } else if (this.redoHistory.length > 0) {
+        this.$refs.imageResizing.handleLocalRedo();
+        return;
+      }
+
+      if (this.redoHistory.length > 0) {
         console.log("Redoing in ImageEdit.vue");
 
         this.imageHistory.push(this.imageData); // Save current state to undo
