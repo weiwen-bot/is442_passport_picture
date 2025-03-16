@@ -1,11 +1,9 @@
 package com.passportphoto.dto;
 
 public class ImageResizeResponse {
-    private String status;
-    private String message;
-    private String image;
-
-    public ImageResizeResponse() {}
+    private final String status;
+    private final String message;
+    private final String image;
 
     public ImageResizeResponse(String status, String message, String image) {
         this.status = status;
