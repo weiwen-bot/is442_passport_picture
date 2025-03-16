@@ -15,18 +15,20 @@
       v-model:imageData="imageData"
       @crop-complete="handleCropComplete"
     />
-
+    
     <!-- Show Cropped Image when cropping is done -->
     <div
       v-if="currentAction === 'crop' && isCropped"
-      class="col-span-4 shadow-lg"
+      class="col-span-12 flex flex-col items-center justify-center h-screen"
     >
-      <h2 class="text-lg font-semibold mb-2">Your Cropped Image</h2>
-      <img
-        :src="imageData"
-        class="h-full w-auto max-w-full object-contain"
-        alt="Cropped Image"
-      />
+      <h2 class="text-lg font-semibold mb-4">Your Cropped Image</h2>
+      <div class="flex justify-center items-center w-full">
+        <img
+          :src="imageData"
+          class="h-auto max-w-full object-contain max-h-[70vh]"
+          alt="Cropped Image"
+        />
+      </div>
     </div>
 
     <!-- Show BackgroundRemover Component when "Background Remover" is selected -->
