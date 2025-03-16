@@ -1,40 +1,40 @@
 <template>
   <!-- Left side: Country Selection -->
-  <div
-    class="col-span-4 flex flex-col bg-white border rounded-lg shadow-lg p-4 space-y-4 text-black"
-  >
+  <h2 class="col-span-12 font-bold p-4 text-2xl">Image</h2>
+  <div class="col-span-4 bg-white border rounded-lg shadow-lg p-4 space-y-2 text-black">
     <h2 class="font-bold text-lg">Resize Your Image</h2>
-
-    <label for="country" class="font-semibold">Select a Country</label>
-    <select
-      v-model="selectedCountry"
-      @change="saveSelectedCountry"
-      id="country"
-      class="border border-gray-300 rounded p-2 w-full text-black bg-white"
-    >
-      <option value="">-- Select Country --</option>
-      <option
-        v-for="country in countryList"
-        :key="country.code"
-        :value="country.code"
-      >
-        {{ country.name }}
-      </option>
-    </select>
-
-    <button
-      @click="handleResize"
-      :class="resizeButtonClass"
-      :disabled="!baseImage || !selectedCountry || isLoading"
-    >
-      Resize
-    </button>
+    <div class="max-w-sm space-y-3 pt-2">
+      <div>
+        <label for="country" class="block font-medium mb-2 font-semibold text-left">Select a Country</label>
+        <select
+          v-model="selectedCountry"
+          @change="saveSelectedCountry"
+          id="country"
+          class="sm:py-3 ps-3 pe-10 block w-full rounded-lg border border-gray-300">
+          <option value="">-- Select Country --</option>
+          <option
+            v-for="country in countryList"
+            :key="country.code"
+            :value="country.code">
+            {{ country.name }}
+          </option>
+        </select>
+      </div>
+    </div>
+    <div class="max-w-sm space-y-4 pt-3">
+      <button
+        @click="handleResize"
+        :class="resizeButtonClass"
+        :disabled="!baseImage || !selectedCountry || isLoading"
+        class="sm:py-3 ps-3 pe-10 block w-full rounded-lg text-black">
+        Resize
+      </button>
+    </div>
+    
   </div>
 
   <!-- Right side: Image Display -->
-  <div class="col-span-8 flex flex-col items-center space-y-4">
-    <h3 class="font-semibold">Image</h3>
-
+  <div class="col-span-8 shadow-lg flex justify-center items-center">
     <img
       v-if="resizedImage"
       :src="resizedImage"
@@ -46,7 +46,7 @@
       v-else-if="baseImage"
       :src="baseImage"
       alt="Original"
-      class="max-w-full max-h-[500px] w-auto h-auto object-contain border rounded shadow-md opacity-70"
+      class="h-full w-auto max-w-full object-contain border rounded shadow-md"
     />
 
     <div v-else class="text-gray-500 text-center">
@@ -237,7 +237,7 @@ export default {
 <style scoped>
 /* Ensure button styling is not overridden */
 button {
-  all: unset; /* Reset inherited styles */
+  /* all: unset; /* Reset inherited styles */
   display: inline-block; /* Keeps button visible */
   padding: 0.5rem 1rem; /* Maintain padding */
   border-radius: 0.375rem; /* Keep rounded corners */
@@ -245,7 +245,8 @@ button {
   text-align: center; /* Ensure text stays centered */
   font-family: inherit; /* Keep the same font as the rest of the app */
   border: 1px solid transparent; /* Prevent shifting when enabling/disabling */
-}
+  color: black;
+} 
 
 /* Default disabled button (light gray but visible) */
 .bg-gray-400 {
