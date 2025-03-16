@@ -45,6 +45,13 @@
       v-model:imageData="imageData"
       @resize-complete="handleResizeComplete"
     />
+    <!-- Show ImageEnhancement Component when "Enhance" is selected -->
+    <ImageEnhancement
+      v-if="currentAction === 'enhance' && imageData"
+      :key="imageData"
+      v-model:imageData="imageData"
+      @enhance-complete="handleEnhanceComplete"
+    />
 
     <div class="bg-black fixed bottom-0 left-0 w-full p-2 z-10">
       <div class="flex justify-end">
@@ -145,6 +152,8 @@ import ImageCropping from "./ImageCropping.vue";
 import SidebarWrapper from "./SidebarWrapper.vue";
 import BackgroundRemover from "./BackgroundRemover.vue";
 import ImageResizing from "./ImageResizing.vue";
+import ImageEnhancement from "./ImageEnhancement.vue";
+
 
 export default {
   components: {
@@ -152,6 +161,7 @@ export default {
     SidebarWrapper,
     BackgroundRemover,
     ImageResizing,
+    ImageEnhancement,
   },
   data() {
     return {
@@ -257,6 +267,14 @@ export default {
         this.imageHistory.push(this.imageData); // Save current state before replacing it
       }
       this.imageData = processedImage;
+    },
+
+    // After enhancement complete
+    handleEnhanceComplete(enhancedImage) {
+      if (this.imageData) {
+        this.imageHistory.push(this.imageData); // Save current state before replacing it
+      }
+      this.imageData = enhancedImage;
     },
 
     toggleDropdown() {

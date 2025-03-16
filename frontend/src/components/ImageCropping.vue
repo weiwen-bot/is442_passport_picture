@@ -41,7 +41,7 @@
    </div>
     <div class="max-w-sm space-y-4 pt-3">
       <button
-        class="sm:py-3 ps-3 pe-10 block w-full rounded-lg bg-gray-800 text-white"
+        class="sm:py-3 ps-3 pe-10 block w-full rounded-lg bg-green-500 text-white"
         @click="cropImage">
         Crop
       </button>
@@ -215,8 +215,8 @@ methods: {
 </script>
 
 <style>
-.bg-gray-800 {
-  background-color: #2d3748 !important;
+.bg-green-500 {
+  background-color: #48bb78 !important; 
 }
 
 /* .cropper {

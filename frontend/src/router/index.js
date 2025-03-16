@@ -4,6 +4,7 @@ import ImageUpload from "../components/ImageUpload.vue";
 import ImageEdit from "../components/ImageEdit.vue";
 import BackgroundRemover from "../components/BackgroundRemover.vue";
 import ImageResizing from "../components/ImageResizing.vue";
+import ImageEnhancement from "../components/ImageEnhancement.vue";
 
 const routes = [
   // {
@@ -37,6 +38,12 @@ const routes = [
     path: "/background-remover",
     name: "BackgroundRemover",
     component: BackgroundRemover,
+  },
+  //add Enhancement route
+  {
+    path: "/enhancement",
+    name: "ImageEnhancement",
+    component: ImageEnhancement,
   },
 ];
 
