@@ -42,10 +42,14 @@
     <!-- Show ImageResizing Component when "Resize" is selected -->
     <ImageResizing
       v-if="currentAction === 'resize' && imageData"
+      ref="imageResizing"
       :key="imageData"
       :reset-counter="resetCounter"
       v-model:imageData="imageData"
+      :original-image="originalImage"
       @resize-complete="handleResizeComplete"
+      @update:imageHistory="updateImageHistory"
+      @update:redoHistory="updateRedoHistory"
     />
     <!-- Show ImageEnhancement Component when "Enhance" is selected -->
     <ImageEnhancement
@@ -186,7 +190,10 @@ export default {
   },
   async mounted() {
     this.imageData = localStorage.getItem("imageData") || null;
-    this.originalImage = localStorage.getItem("imageData") || null;
+    // Store the first uploaded image only ONCE
+    if (!this.originalImage) {
+      this.originalImage = this.imageData;
+    }
     await this.loadScript(
       "https://accounts.google.com/gsi/client",
       this.gisLoaded
@@ -215,46 +222,41 @@ export default {
     },
 
     handleUndo() {
-      if (this.imageHistory.length > 0) {
-        console.log("Undo triggered, BEFORE: ", this.imageData);
+      if (this.currentAction === "resize" && this.$refs.ImageResizing) {
+        console.log("Delegating undo to ImageResizing.vue");
+        this.$refs.ImageResizing.handleLocalUndo();
+      } else if (this.imageHistory.length > 0) {
+        console.log("Undoing in ImageEdit.vue");
 
         this.redoHistory.push(this.imageData); // Save current state to redo
         this.imageData = this.imageHistory.pop(); // Go back to previous state
-        console.log("Undo AFTER: ", this.imageData);
         this.isCropped = false; // Reset cropped state
-
-        this.$emit("update:imageData", this.imageData); // Notify child components
-        this.$forceUpdate();
-      } else {
-        console.log("No previous state to undo.");
       }
     },
     handleRedo() {
-      if (this.redoHistory.length > 0) {
-        console.log("Redo triggered, BEFORE: ", this.imageData);
+      if (this.currentAction === "resize" && this.$refs.ImageResizing) {
+        console.log("Delegating redo to ImageResizing.vue");
+        this.$refs.ImageResizing.handleLocalRedo();
+      } else if (this.redoHistory.length > 0) {
+        console.log("Redoing in ImageEdit.vue");
 
         this.imageHistory.push(this.imageData); // Save current state to undo
         this.imageData = this.redoHistory.pop(); // Restore last undone state
-        console.log("Redo AFTER: ", this.imageData);
         this.isCropped = false; // Reset cropped state
-
-        this.$emit("update:imageData", this.imageData); // Notify child components
-        this.$forceUpdate();
-      } else {
-        console.log("No redo available.");
       }
     },
     handleReset() {
-      console.log("Reverting to original, BEFORE: ", this.imageData);
+      if (this.currentAction === "resize" && this.$refs.imageResizing) {
+        console.log("Delegating Revert to Original to ImageResizing.vue");
+        this.$refs.imageResizing.handleLocalReset();
+      } else {
+        console.log("Reverting to original in ImageEdit.vue");
 
-      this.imageHistory.push(this.imageData); // Save for undo
-      this.redoHistory = []; // Clear redo history
-      this.imageData = this.originalImage;
-      console.log("Reverting to original, AFTER: ", this.imageData);
-      this.isCropped = false; // Reset cropped state
-
-      this.$emit("update:imageData", this.originalImage); // Notify child components
-      this.$forceUpdate();
+        this.imageHistory.push(this.imageData); // Save for undo
+        this.redoHistory = []; // Clear redo history
+        this.imageData = this.originalImage;
+        this.isCropped = false; // Reset cropped state
+      }
     },
 
     // After crop complete
@@ -281,6 +283,17 @@ export default {
         this.imageHistory.push(this.imageData);
       }
       this.imageData = resizedImage;
+    },
+
+    // update parent's history with history from resize page
+    updateImageHistory(history) {
+      console.log("📜 Updating image history from ImageResizing.vue");
+      this.imageHistory = history;
+    },
+
+    updateRedoHistory(history) {
+      console.log("📜 Updating redo history from ImageResizing.vue");
+      this.redoHistory = history;
     },
 
     // After process complete

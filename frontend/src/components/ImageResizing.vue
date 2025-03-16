@@ -71,16 +71,25 @@ export default {
       type: Number,
       default: 0,
     },
+    originalImage: String, // Receive the first uploaded image from the parent
   },
-  emits: ["resize-complete", "update:imageData"],
+  emits: [
+    "resize-complete",
+    "update:imageData",
+    "update:imageHistory",
+    "update:redoHistory",
+  ],
   data() {
     return {
-      originalImage: null, // Always stores the uploaded image (NEVER CHANGES)
       baseImage: null, // Stores the working image (resets when needed)
       resizedImage: null, // Stores resized image
       selectedCountry: "",
       countryList: [],
       isLoading: false,
+
+      // Local history for undo/redo within Image Resizing page
+      localImageHistory: [],
+      localRedoHistory: [],
     };
   },
   mounted() {
@@ -130,6 +139,8 @@ export default {
     if (this.resizedImage && this.resizedImage !== this.originalImage) {
       console.log("Leaving - passing resized image to parent");
       this.$emit("update:imageData", this.resizedImage);
+      this.$emit("update:imageHistory", this.localImageHistory);
+      this.$emit("update:redoHistory", this.localRedoHistory);
     }
   },
 
@@ -148,8 +159,11 @@ export default {
     imageData(newImage, oldImage) {
       if (newImage !== oldImage) {
         console.log("🖼 imageData updated in ImageResizing.vue:", newImage);
-        this.baseImage = newImage;
-        this.resizedImage = null;
+        this.baseImage = ""; // Temporarily clear to force reactivity
+        this.$nextTick(() => {
+          this.baseImage = newImage; // Set correct image after reactivity updates
+          this.resizedImage = null;
+        });
       }
     },
   },
@@ -157,6 +171,7 @@ export default {
   methods: {
     handleReset() {
       console.log("🔄 Resetting ImageResizing.vue to the uploaded image!");
+      this.localImageHistory.push(this.baseImage);
       this.baseImage = this.originalImage; // Reset displayed image
       this.resizedImage = null; // Clear resized image
       this.$emit("update:imageData", this.originalImage); // Notify parent of reset
@@ -180,7 +195,7 @@ export default {
       console.log("✅ Selected country saved:", this.selectedCountry);
     },
     async handleResize() {
-      if (!this.originalImage || !this.selectedCountry) {
+      if (!this.imageData || !this.selectedCountry) {
         alert("Please select a country first.");
         return;
       }
@@ -188,10 +203,7 @@ export default {
       this.isLoading = true;
       try {
         // Convert base64 to Blob
-        const file = this.base64ToFile(
-          this.originalImage,
-          "uploaded-image.jpg"
-        );
+        const file = this.base64ToFile(this.imageData, "uploaded-image.jpg");
 
         // Create FormData
         const formData = new FormData();
@@ -216,10 +228,13 @@ export default {
             result.image ? result.image.substring(0, 50) + "..." : "NULL"
           );
 
+          this.localImageHistory.push(this.baseImage);
+          this.localRedoHistory = [];
+
           // Set the resized image
           this.resizedImage = result.image;
-          // Reset the baseImage to original
-          this.baseImage = this.originalImage;
+
+          this.baseImage = result.image;
         }
       } catch (error) {
         console.error("Error resizing image:", error);
@@ -227,6 +242,30 @@ export default {
       } finally {
         this.isLoading = false;
       }
+    },
+
+    handleLocalUndo() {
+      if (this.localImageHistory.length > 0) {
+        console.log("↩️ Local Undo in ImageResizing.vue");
+        this.localRedoHistory.push(this.baseImage);
+        this.baseImage = this.localImageHistory.pop();
+      }
+    },
+
+    handleLocalRedo() {
+      if (this.localRedoHistory.length > 0) {
+        console.log("↪️ Local Redo in ImageResizing.vue");
+        this.localImageHistory.push(this.baseImage);
+        this.baseImage = this.localRedoHistory.pop();
+      }
+    },
+
+    handleLocalReset() {
+      console.log("🔄 Local Reset in ImageResizing.vue");
+      this.localImageHistory.push(this.baseImage);
+      this.baseImage = this.originalImage;
+      this.resizedImage = null;
+      this.$emit("update:imageData", this.originalImage);
     },
 
     base64ToFile(base64String, fileName) {
