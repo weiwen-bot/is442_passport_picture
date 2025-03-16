@@ -257,7 +257,7 @@ export default {
       }
     },
     handleRedo() {
-      if (this.currentAction === "resize" && this.$refs.ImageResizing) {
+      if (this.currentAction === "resize" && this.$refs.imageResizing) {
         console.log("Delegating redo to ImageResizing.vue");
         this.$refs.imageResizing.handleLocalRedo();
         return;
