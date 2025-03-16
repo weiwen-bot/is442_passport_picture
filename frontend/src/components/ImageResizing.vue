@@ -73,6 +73,7 @@ export default {
     },
     originalImage: String, // Receive the first uploaded image from the parent
   },
+  expose: ["handleLocalUndo", "handleLocalRedo", "handleLocalReset"],
   emits: [
     "resize-complete",
     "update:imageData",
@@ -93,6 +94,10 @@ export default {
     };
   },
   mounted() {
+    if (this.imageData && this.localImageHistory.length === 0) {
+      this.localImageHistory = [this.imageData];
+    }
+
     // Store the uploaded image only when first mounting
     if (!this.originalImage) {
       this.originalImage = this.imageData;
@@ -100,7 +105,11 @@ export default {
 
     this.baseImage = this.imageData;
 
-    console.log("ImageResizing mounted - ready to handle undo/redo");
+    console.log(
+      "ImageResizing mounted with history:",
+      this.localImageHistory.length,
+      "items"
+    );
   },
 
   computed: {
@@ -141,9 +150,10 @@ export default {
     if (this.resizedImage && this.resizedImage !== this.originalImage) {
       console.log("Leaving - passing resized image to parent");
       this.$emit("update:imageData", this.resizedImage);
-      this.$emit("update:imageHistory", this.localImageHistory);
-      this.$emit("update:redoHistory", this.localRedoHistory);
     }
+
+    this.$emit("update:imageHistory", this.localImageHistory);
+    this.$emit("update:redoHistory", this.localRedoHistory);
   },
 
   watch: {
@@ -161,24 +171,25 @@ export default {
     imageData(newImage, oldImage) {
       if (newImage !== oldImage) {
         console.log("🖼 imageData updated in ImageResizing.vue:", newImage);
+
+        // Save previous state in history for undo
+        if (oldImage) {
+          this.localImageHistory.push(oldImage);
+        }
+
         this.baseImage = ""; // Temporarily clear to force reactivity
         this.$nextTick(() => {
           this.baseImage = newImage; // Set correct image after reactivity updates
           this.resizedImage = null;
         });
+
+        // Clear redo history when a new change is made
+        this.localRedoHistory = [];
       }
     },
   },
 
   methods: {
-    handleReset() {
-      console.log("🔄 Resetting ImageResizing.vue to the uploaded image!");
-      this.localImageHistory.push(this.baseImage);
-      this.baseImage = this.originalImage; // Reset displayed image
-      this.resizedImage = null; // Clear resized image
-      this.$emit("update:imageData", this.originalImage); // Notify parent of reset
-    },
-
     async fetchCountryList() {
       try {
         const response = await fetch("http://localhost:8080/image/countries");
@@ -235,7 +246,6 @@ export default {
 
           // Set the resized image
           this.resizedImage = result.image;
-
           this.baseImage = result.image;
         }
       } catch (error) {
@@ -252,22 +262,14 @@ export default {
         this.localImageHistory.length
       );
       if (this.localImageHistory.length > 0) {
-        console.log("↩️ Local Undo in ImageResizing.vue");
+        this.localRedoHistory.push(this.baseImage);
+        this.baseImage = this.localImageHistory.pop();
+        this.resizedImage = this.baseImage;
 
-        // Store current image in redo history **only if it's different**
-        if (
-          this.baseImage !==
-          this.localImageHistory[this.localImageHistory.length - 1]
-        ) {
-          this.localRedoHistory.push(this.baseImage);
-        }
-
-        this.baseImage = "";
-        this.$nextTick(() => {
-          this.baseImage = this.localImageHistory.pop();
-          this.resizedImage = this.baseImage; // Also update resizedImage
-          this.$emit("update:imageData", this.baseImage); // ✅ Notify parent!
-        });
+        // Emit updated history to parent
+        this.$emit("update:imageHistory", this.localImageHistory);
+        this.$emit("update:redoHistory", this.localRedoHistory);
+        this.$emit("update:imageData", this.baseImage);
       }
     },
 
@@ -275,22 +277,31 @@ export default {
       if (this.localRedoHistory.length > 0) {
         console.log("↪️ Local Redo in ImageResizing.vue");
         this.localImageHistory.push(this.baseImage);
-        // Restore the last undone image
-        this.baseImage = "";
-        this.$nextTick(() => {
-          this.baseImage = this.localRedoHistory.pop();
-          this.resizedImage = this.baseImage; // Also update resizedImage
-          this.$emit("update:imageData", this.baseImage); // Emit to update parent
-        });
+        this.baseImage = this.localRedoHistory.pop();
+        this.resizedImage = this.baseImage;
+
+        // Emit updated history to parent
+        this.$emit("update:imageHistory", this.localImageHistory);
+        this.$emit("update:redoHistory", this.localRedoHistory);
+        this.$emit("update:imageData", this.baseImage);
       }
     },
 
     handleLocalReset() {
       console.log("🔄 Local Reset in ImageResizing.vue");
-      this.localImageHistory.push(this.baseImage);
+      if (this.baseImage !== this.originalImage) {
+        this.localImageHistory.push(this.baseImage);
+        this.localRedoHistory = []; // Reset redo history
+      }
+
+      // Reset image to original
       this.baseImage = this.originalImage;
       this.resizedImage = null;
+
+      // Emit reset event
       this.$emit("update:imageData", this.originalImage);
+      this.$emit("update:imageHistory", this.localImageHistory);
+      this.$emit("update:redoHistory", this.localRedoHistory);
     },
 
     base64ToFile(base64String, fileName) {
