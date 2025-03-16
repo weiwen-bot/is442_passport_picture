@@ -1,21 +1,29 @@
 <template>
   <!-- Left side: Country Selection -->
   <h2 class="col-span-12 font-bold p-4 text-2xl">Image</h2>
-  <div class="col-span-4 bg-white border rounded-lg shadow-lg p-4 space-y-2 text-black">
+  <div
+    class="col-span-4 bg-white border rounded-lg shadow-lg p-4 space-y-2 text-black"
+  >
     <h2 class="font-bold text-lg">Resize Your Image</h2>
     <div class="max-w-sm space-y-3 pt-2">
       <div>
-        <label for="country" class="block font-medium mb-2 font-semibold text-left">Select a Country</label>
+        <label
+          for="country"
+          class="block font-medium mb-2 font-semibold text-left"
+          >Select a Country</label
+        >
         <select
           v-model="selectedCountry"
           @change="saveSelectedCountry"
           id="country"
-          class="sm:py-3 ps-3 pe-10 block w-full rounded-lg border border-gray-300">
+          class="sm:py-3 ps-3 pe-10 block w-full rounded-lg border border-gray-300"
+        >
           <option value="">-- Select Country --</option>
           <option
             v-for="country in countryList"
             :key="country.code"
-            :value="country.code">
+            :value="country.code"
+          >
             {{ country.name }}
           </option>
         </select>
@@ -26,11 +34,11 @@
         @click="handleResize"
         :class="resizeButtonClass"
         :disabled="!baseImage || !selectedCountry || isLoading"
-        class="sm:py-3 ps-3 pe-10 block w-full rounded-lg text-black">
+        class="sm:py-3 ps-3 pe-10 block w-full rounded-lg text-black"
+      >
         Resize
       </button>
     </div>
-    
   </div>
 
   <!-- Right side: Image Display -->
@@ -119,7 +127,7 @@ export default {
   },
   beforeUnmount() {
     // Only update parent with resized image if it exists
-    if (this.resizedImage && this.resizedImage !== this.originalUploadedImage) {
+    if (this.resizedImage && this.resizedImage !== this.originalImage) {
       console.log("Leaving - passing resized image to parent");
       this.$emit("update:imageData", this.resizedImage);
     }
@@ -140,7 +148,8 @@ export default {
     imageData(newImage, oldImage) {
       if (newImage !== oldImage) {
         console.log("🖼 imageData updated in ImageResizing.vue:", newImage);
-        this.handleReset(); // Reset component state when parent updates imageData
+        this.baseImage = newImage;
+        this.resizedImage = null;
       }
     },
   },
@@ -150,6 +159,7 @@ export default {
       console.log("🔄 Resetting ImageResizing.vue to the uploaded image!");
       this.baseImage = this.originalImage; // Reset displayed image
       this.resizedImage = null; // Clear resized image
+      this.$emit("update:imageData", this.originalImage); // Notify parent of reset
     },
 
     async fetchCountryList() {
@@ -246,7 +256,7 @@ button {
   font-family: inherit; /* Keep the same font as the rest of the app */
   border: 1px solid transparent; /* Prevent shifting when enabling/disabling */
   color: black;
-} 
+}
 
 /* Default disabled button (light gray but visible) */
 .bg-gray-400 {
