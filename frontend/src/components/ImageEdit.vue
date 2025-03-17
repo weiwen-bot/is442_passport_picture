@@ -1,29 +1,34 @@
 <template>
   <!-- Main Image Edit (Parent Component) -->
   <!-- Sidebar -->
-  <SidebarWrapper @update-action="handleAction" :sidebar-width="sidebarWidth" @reset-data="resetData"/>
+  <SidebarWrapper
+    @update-action="handleAction"
+    :sidebar-width="sidebarWidth"
+    @reset-data="resetData"
+  />
 
-  <div class="p-1 grid grid-cols-5 gap-2 ml-[180px] mr-0">
+  <div class="p-1 grid grid-cols-12 gap-2 ml-[180px] mr-0">
     <!-- Show ImageCropping Component when "Crop" is selected -->
     <ImageCropping
       v-if="currentAction === 'crop' && imageData && !isCropped"
       :key="imageData"
       v-model:imageData="imageData"
       @crop-complete="handleCropComplete"
-      @discard-crop="handleDiscard"
     />
 
     <!-- Show Cropped Image when cropping is done -->
     <div
       v-if="currentAction === 'crop' && isCropped"
-      class="col-span-4 shadow-lg"
+      class="col-span-12 flex flex-col items-center justify-center h-screen"
     >
-      <h2 class="text-lg font-semibold mb-2">Your Cropped Image</h2>
-      <img
-        :src="imageData"
-        class="h-full w-auto max-w-full object-contain"
-        alt="Cropped Image"
-      />
+      <h2 class="text-lg font-semibold mb-4">Your Cropped Image</h2>
+      <div class="flex justify-center items-center w-full">
+        <img
+          :src="imageData"
+          class="h-auto max-w-full object-contain max-h-[70vh]"
+          alt="Cropped Image"
+        />
+      </div>
     </div>
 
     <!-- Show BackgroundRemover Component when "Background Remover" is selected -->
@@ -32,33 +37,54 @@
       :key="imageData"
       v-model:imageData="imageData"
       @remove-background="handleRemoveBackground"
-      @discard-background="handleDiscard"
     />
 
     <!-- Show ImageResizing Component when "Resize" is selected -->
     <ImageResizing
       v-if="currentAction === 'resize' && imageData"
+      ref="imageResizing"
+      :key="imageData"
+      :reset-counter="resetCounter"
+      v-model:imageData="imageData"
+      :original-image="originalImage"
+      @resize-complete="handleResizeComplete"
+      @update:imageHistory="updateImageHistory"
+      @update:redoHistory="updateRedoHistory"
+    />
+    <!-- Show ImageEnhancement Component when "Enhance" is selected -->
+    <ImageEnhancement
+      v-if="currentAction === 'enhance' && imageData"
       :key="imageData"
       v-model:imageData="imageData"
-      @resize-complete="handleResizeComplete"
-      @discard-resize="handleDiscard"
+      @enhance-complete="handleEnhanceComplete"
     />
 
     <div class="bg-black fixed bottom-0 left-0 w-full p-2 z-10">
       <div class="flex justify-end">
-        <!-- Discard Button -->
+        <!-- Reset Button -->
         <button
-          class="text-white bg-gray-800 p-2 rounded mr-3"
+          class="text-white bg-gray-800 p-2 rounded mr-3 flex items-center"
           @click="handleReset"
         >
-          Reset Original Image
+          <i class="fas fa-eraser mr-2"></i> Revert to Original
         </button>
+
+        <!-- Undo Button -->
         <button
           :disabled="imageHistory.length === 0"
-          class="text-white bg-gray-800 p-2 rounded mr-3"
+          class="text-white bg-gray-800 p-2 rounded mr-3 flex items-center"
           @click="handleUndo"
         >
-          Undo Previous Action
+          <i class="fas fa-undo mr-2"></i> Undo
+        </button>
+
+        <!-- Redo Button -->
+        <button
+          :disabled="redoHistory.length === 0"
+          class="text-white bg-gray-800 p-2 rounded mr-3 flex items-center"
+          @click="handleRedo"
+        >
+          <i class="fas fa-redo mr-2"></i> Redo
         </button>
 
         <!-- Download Button -->
@@ -69,10 +95,29 @@
           Download
         </button> -->
         <div class="relative">
-          <button @click="toggleDropdown" class="text-white bg-gray-800 p-2 rounded">Download</button>
-          <div v-if="showDropdown" class="absolute bottom-12 right-0 bg-gray-800 shadow-md rounded p-3 space-y-2 w-48">
-            <button @click="downloadImage" class="block w-full text-left p-2 hover:bg-gray-200">Download Image</button>
-            <button @click="handleGoogleDownload" class="block w-full text-left p-2 hover:bg-gray-200">Upload to Google Drive</button>
+          <button
+            @click="toggleDropdown"
+            class="text-white bg-gray-800 p-2 rounded"
+          >
+            <i class="fa-solid fa-download"></i> Download
+          </button>
+          <div
+            v-if="showDropdown"
+            class="absolute bottom-12 right-0 bg-gray-800 shadow-md rounded p-3 space-y-2 w-48"
+          >
+            <button
+              @click="downloadImage"
+              class="block w-full text-left p-2 hover:bg-gray-200"
+            >
+              Download Image
+            </button>
+            <button
+              @click="handleGoogleDownload"
+              class="block w-full text-left p-2 hover:bg-gray-200"
+            >
+              <i class="fa-solid fa-cloud-arrow-down"></i> Upload to Google
+              Drive
+            </button>
           </div>
         </div>
       </div>
@@ -80,19 +125,28 @@
   </div>
 
   <!-- Confirmation Modal for Reset (Overlay on top of content)-->
-  <div v-if="showResetModal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+  <div
+    v-if="showResetModal"
+    class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50"
+  >
     <div class="bg-white p-6 rounded shadow-lg w-120">
       <h3 class="text-xl font-semibold text-gray-900 mb-10">
-        Are you sure you want to reset? <br/>
+        Are you sure you want to reset? <br />
         This will discard your photo and all changes.
       </h3>
       <div class="flex justify-end space-x-4">
         <!-- Cancel Button (Same as Discard) -->
-        <button @click="cancelReset" class="bg-gray-800 text-white px-4 py-2 rounded">
+        <button
+          @click="cancelReset"
+          class="bg-gray-800 text-white px-4 py-2 rounded"
+        >
           Cancel
         </button>
         <!-- Confirm Button (Dark Red) -->
-        <button @click="confirmReset" class="bg-red-800 text-white px-4 py-2 rounded">
+        <button
+          @click="confirmReset"
+          class="bg-red-800 text-white px-4 py-2 rounded"
+        >
           Confirm
         </button>
       </div>
@@ -105,7 +159,7 @@ import ImageCropping from "./ImageCropping.vue";
 import SidebarWrapper from "./SidebarWrapper.vue";
 import BackgroundRemover from "./BackgroundRemover.vue";
 import ImageResizing from "./ImageResizing.vue";
-
+import ImageEnhancement from "./ImageEnhancement.vue";
 
 export default {
   components: {
@@ -113,12 +167,14 @@ export default {
     SidebarWrapper,
     BackgroundRemover,
     ImageResizing,
+    ImageEnhancement,
   },
   data() {
     return {
       imageData: null, // Image data that will be passed to child and updated after crop
       originalImage: null, // Store the original image
-      imageHistory: [], // Stack to Store Previous Image States
+      imageHistory: [], // Stack for undo
+      redoHistory: [], // Stack for redo
       currentAction: "crop", // Start with crop selected
       sidebarWidth: "240px", // Default width for expanded sidebar
       isCropped: false, // Track cropped state in the parent
@@ -127,14 +183,21 @@ export default {
       accessToken: null, // Stores access token for Google authentication
       gisInited: false,
       tokenClient: null,
-      SCOPES: 'https://www.googleapis.com/auth/drive.file',
+      SCOPES: "https://www.googleapis.com/auth/drive.file",
       CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+      resetCounter: 0,
     };
   },
   async mounted() {
     this.imageData = localStorage.getItem("imageData") || null;
-    this.originalImage = localStorage.getItem("imageData") || null;
-    await this.loadScript('https://accounts.google.com/gsi/client', this.gisLoaded);
+    // Store the first uploaded image only ONCE
+    if (!this.originalImage) {
+      this.originalImage = this.imageData;
+    }
+    await this.loadScript(
+      "https://accounts.google.com/gsi/client",
+      this.gisLoaded
+    );
   },
   watch: {
     imageData(newImageData) {
@@ -157,7 +220,69 @@ export default {
         this.isCropped = false;
       }
 
-      this.currentAction = action;
+      this.$nextTick(() => {
+        console.log("✅ currentAction updated to:", this.currentAction);
+      });
+    },
+
+    handleUndo() {
+      console.log("Undo button clicked! Current Action:", this.currentAction);
+
+      if (this.currentAction === "resize") {
+        this.$nextTick(() => {
+          console.log(
+            "🔄 After nextTick: Checking this.$refs.imageResizing:",
+            this.$refs.imageResizing
+          );
+
+          if (
+            this.$refs.imageResizing &&
+            typeof this.$refs.imageResizing.handleLocalUndo === "function"
+          ) {
+            console.log("Delegating undo to ImageResizing.vue");
+            this.$refs.imageResizing.handleLocalUndo();
+          } else {
+            console.error("ERROR: this.$refs.imageResizing is NULL!");
+          }
+        });
+        return;
+      }
+
+      if (this.imageHistory.length > 0) {
+        console.log("Undoing in ImageEdit.vue");
+
+        this.redoHistory.push(this.imageData); // Save current state to redo
+        this.imageData = this.imageHistory.pop(); // Go back to previous state
+        this.isCropped = false; // Reset cropped state
+      }
+    },
+    handleRedo() {
+      if (this.currentAction === "resize" && this.$refs.imageResizing) {
+        console.log("Delegating redo to ImageResizing.vue");
+        this.$refs.imageResizing.handleLocalRedo();
+        return;
+      }
+
+      if (this.redoHistory.length > 0) {
+        console.log("Redoing in ImageEdit.vue");
+
+        this.imageHistory.push(this.imageData); // Save current state to undo
+        this.imageData = this.redoHistory.pop(); // Restore last undone state
+        this.isCropped = false; // Reset cropped state
+      }
+    },
+    handleReset() {
+      if (this.currentAction === "resize" && this.$refs.imageResizing) {
+        console.log("Delegating Revert to Original to ImageResizing.vue");
+        this.$refs.imageResizing.handleLocalReset();
+      } else {
+        console.log("Reverting to original in ImageEdit.vue");
+
+        this.imageHistory.push(this.imageData); // Save for undo
+        this.redoHistory = []; // Clear redo history
+        this.imageData = this.originalImage;
+        this.isCropped = false; // Reset cropped state
+      }
     },
 
     // After crop complete
@@ -167,11 +292,6 @@ export default {
       }
       this.imageData = croppedImage; // Update the imageData with the new cropped image
       this.isCropped = true; // Set the flag to true
-    },
-    // Reset Original Image
-    handleReset() {
-      this.imageData = this.originalImage;
-      this.isCropped = false; // Reset the cropped state
     },
 
     // Method to toggle sidebar width (collapsed or expanded)
@@ -191,6 +311,17 @@ export default {
       this.imageData = resizedImage;
     },
 
+    // update parent's history with history from resize page
+    updateImageHistory(history) {
+      console.log("📜 Updating image history from ImageResizing.vue");
+      this.imageHistory = history;
+    },
+
+    updateRedoHistory(history) {
+      console.log("📜 Updating redo history from ImageResizing.vue");
+      this.redoHistory = history;
+    },
+
     // After process complete
     handleProcessComplete(processedImage) {
       if (this.imageData) {
@@ -199,14 +330,12 @@ export default {
       this.imageData = processedImage;
     },
 
-    handleUndo() {
-      if (this.imageHistory.length > 0) {
-        this.imageData = this.imageHistory.pop(); // Go back to previous state
-      } else {
-        this.imageData = this.originalImage; // If no history, revert to original
+    // After enhancement complete
+    handleEnhanceComplete(enhancedImage) {
+      if (this.imageData) {
+        this.imageHistory.push(this.imageData); // Save current state before replacing it
       }
-
-      this.isCropped = false; // Reset cropped state
+      this.imageData = enhancedImage;
     },
 
     toggleDropdown() {
@@ -252,7 +381,7 @@ export default {
       }
     },
 
-    // Show the reset modal 
+    // Show the reset modal
     resetData() {
       this.showResetModal = true;
     },
@@ -264,7 +393,7 @@ export default {
 
     // Reset data and image state
     confirmReset() {
-      localStorage.removeItem('imageData');
+      localStorage.removeItem("imageData");
       this.imageData = null;
       this.isCropped = false;
       this.imageHistory = [];
@@ -272,8 +401,8 @@ export default {
       // Close the modal
       this.showResetModal = false;
 
-      // Navigate to the 'image-upload' page 
-      this.$router.push({ name: 'ImageUpload' });
+      // Navigate to the 'image-upload' page
+      this.$router.push({ name: "ImageUpload" });
     },
 
     // Convert base64 image to Blob
@@ -298,7 +427,7 @@ export default {
           resolve();
           return;
         }
-        const script = document.createElement('script');
+        const script = document.createElement("script");
         script.src = src;
         script.async = true;
         script.defer = true;
@@ -320,7 +449,7 @@ export default {
       this.tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: this.CLIENT_ID,
         scope: this.SCOPES,
-        callback: '',
+        callback: "",
       });
       this.gisInited = true;
     },
@@ -336,9 +465,9 @@ export default {
       };
 
       if (this.accessToken === null) {
-        this.tokenClient.requestAccessToken({ prompt: 'consent' });
+        this.tokenClient.requestAccessToken({ prompt: "consent" });
       } else {
-        this.tokenClient.requestAccessToken({ prompt: '' });
+        this.tokenClient.requestAccessToken({ prompt: "" });
       }
     },
 
@@ -358,7 +487,9 @@ export default {
         mimeType: "image/png",
       };
 
-      const metadataBlob = new Blob([JSON.stringify(metadata)], { type: "application/json" });
+      const metadataBlob = new Blob([JSON.stringify(metadata)], {
+        type: "application/json",
+      });
 
       const formData = new FormData();
       formData.append("metadata", metadataBlob);
@@ -380,7 +511,7 @@ export default {
 
         if (uploadResponse.ok) {
           console.log("Image uploaded successfully!");
-          console.log(`https://drive.google.com/file/d/${result.id}/view`)
+          console.log(`https://drive.google.com/file/d/${result.id}/view`);
         } else {
           console.error("Upload failed:", result.error);
         }
@@ -388,7 +519,6 @@ export default {
         console.error("Error during upload:", error);
       }
     },
-
   },
 };
 </script>

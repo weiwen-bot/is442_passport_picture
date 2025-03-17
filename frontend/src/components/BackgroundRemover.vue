@@ -1,158 +1,229 @@
 <template>
-  <div class="col-span-4 flex flex-col rounded-lg shadow-lg p-2 space-y-2 text-black">
-  <h2 class="text-2xl font-semibold mb-6">Remove Background</h2>
+  <!-- Right side: Image Display -->
+  <div class="col-span-6 flex items-center justify-center bg-gray-100 shadow-lg">
+    <img v-if="displayedImage" :src="displayedImage" alt="Displayed Image" class="max-h-full max-w-full object-contain" />
+  </div>
 
-  <!-- Image Display center -->
-  <div class="flex flex-col items-center space-y-4">
+  <!-- Left side: Background Change Controls -->
+  <div class="col-span-6 flex flex-col bg-white rounded-lg shadow-lg p-4 space-y-4 text-black">
+    <h2 class="font-bold text-lg">Change Background</h2>
 
-    <div v-if="originalImage" class="relative">
-      <img :src="originalImage" alt="Original" class="w-full h-auto rounded-lg shadow-md border border-gray-300" />
+    <!-- Tabs -->
+    <div class="border-b border-gray-200">
+      <ul class="flex text-sm font-medium text-center" role="tablist">
+        <li class="flex-1">
+          <button @click="activeTab = 'color'" :class="tabClass('color')" role="tab">Change Color</button>
+        </li>
+        <li class="flex-1">
+          <button @click="activeTab = 'image'" :class="tabClass('image')" role="tab">Replace BG with Image</button>
+        </li>
+      </ul>
     </div>
-    <div v-else class="text-gray-500 text-sm">No image selected</div>
+
+    <!-- Tab Content -->
+    <div v-if="activeTab === 'color'" class="p-4">
+      <label class="block text-gray-700 font-medium mb-2">Select Background Color:</label>
+      <div class="flex items-center space-x-2">
+        <!-- Color Picker -->
+        <input type="color" v-model="color" @input="applyColor" class="w-12 h-12 border rounded-lg cursor-pointer">
+
+        <!-- Common Colors -->
+        <div class="flex space-x-2">
+          <div v-for="c in commonColors" :key="c" 
+               :style="{ backgroundColor: c }" 
+               @click="applyColor(c)" 
+               class="w-10 h-10 rounded-lg border cursor-pointer hover:opacity-80"></div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="activeTab === 'image'" class="p-4">
+      <label class="block text-gray-700 font-medium mb-2">Select Background Image:</label>
+      <div class="grid grid-cols-3 gap-2">
+        <!-- Upload Button -->
+        <div class="relative w-16 h-16 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer">
+          <span class="text-2xl font-bold">+</span>
+          <!-- Invisible Upload Button -->
+          <UploadImageButton class="absolute inset-0 opacity-0 cursor-pointer" @image-uploaded="applyBackground" />
+        </div>
+
+        <!-- Sample Backgrounds -->
+        <div 
+          v-for="bg in sampleBackgrounds" 
+          :key="bg.name" 
+          class="w-16 h-16 bg-cover bg-center rounded-lg cursor-pointer border border-gray-300"
+          :style="{ backgroundImage: `url(${bg.url})` }"
+          @click="applyBackground(bg.url)"
+        ></div>
+      </div>
+
+      <!-- Hidden UploadImageButton -->
+      <UploadImageButton ref="uploadButton" @image-uploaded="applyBackground" class="hidden" />
+    </div>
+
+    <!-- Loading Indicator -->
+    <div v-if="isProcessing" class="text-gray-600 text-sm animate-pulse">Processing image, please wait...</div>
+
+    <!-- Error Message -->
+    <div v-if="errorMessage" class="text-red-500 text-sm">{{ errorMessage }}</div>
   </div>
-
-  <!-- Processing Status -->
-  <div v-if="isProcessing" class="text-gray-600 text-sm animate-pulse mb-4">Processing image, please wait...</div>
-
-  <!-- Error Message -->
-  <div v-if="errorMessage" class="mt-4 text-red-500 text-sm">{{ errorMessage }}</div>
-
-  <!-- Remove Background Button -->
-  <button
-    v-if="originalImage && !processedImage"
-    @click="processImage"
-    :disabled="isProcessing || processedImage"
-    class="mt-6 px-6 py-3 bg-blue-500 hover:bg-blue-600 font-semibold rounded-lg shadow-md transition duration-300 transform hover:scale-105"
-  >
-    Remove Background
-  </button>
-
-  <label for="favcolor">Select your favorite color:</label>
-      <input type="color" id="favcolor" name="favcolor" v-model="color">
-      <ImagePreview :image="backgroundImage" />
-      <UploadImageButton @image-uploaded="updateImage" />
-
-  <!-- Processed Image Display -->
-  <div v-if="processedImage" class="w-3/4 max-w-md mt-6">
-    <h3 class="text-lg font-semibold mb-4">Processed Image</h3>
-    <img :src="processedImage" alt="Processed" class="w-full h-auto rounded-lg shadow-md border border-gray-300" />
-  </div>
-</div>
 </template>
 
 <script>
 import UploadImageButton from "./UploadImageButton.vue";
-import ImagePreview from "./ImagePreview.vue"
+
 export default {
-props: {
-  imageData: String, // Receive imageData as a prop from ImageEdit.vue
-},
-  components:{
-  UploadImageButton,
-  ImagePreview,
+  props: {
+    imageData: String, // Receive image updates from parent
   },
-data() {
-  return {
-    originalImage: null, // Base64 image from parent/localStorage
-    processedImage: null, // Processed image from backend
-    isProcessing: false,
-    errorMessage: "", // Error message handling
-    uploadImage: null,
-      backgroundImage: null,
+  components: {
+    UploadImageButton,
+  },
+  data() {
+    return {
+      originalImage: this.imageData || localStorage.getItem("imageData"), // Keep the original
+      displayedImage: this.imageData || localStorage.getItem("imageData"), // Shown to user
+      isProcessing: false,
+      errorMessage: "",
       color: "#FFFFFF",
-      payload :{}
-  };
-},
-created() {
-  // Load image from props (from ImageEdit.vue) or localStorage
-  this.originalImage = this.imageData || localStorage.getItem("imageData");
-},
-methods: {
-  async processImage() {
-    if (!this.originalImage) {
-      this.errorMessage = "No image available for processing.";
-      return;
-    }
-
-    this.isProcessing = true;
-    this.errorMessage = "";
-
-    try {
-      const finalBase64 = await this.resizeToClosestMultipleOf32(this.originalImage);
-
-      const category = "";
-        if (this.backgroundImage == null){
-          this.payload = { image: finalBase64, category: "color", colorString: this.color };
-        } else {
-          this.payload = { image: finalBase64, category: "background", backgroundString: this.backgroundImage };
-        }
-
-
-      const response = await fetch("http://localhost:8080/bg/removebg", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(this.payload),
-      });
-
-      if (!response.ok) throw new Error("Processing failed");
-
-      const result = await response.json();
-      if (result.processedImage) {
-        this.processedImage = result.processedImage;
-        // Save processed image to props (from ImageEdit.vue) or localStorage
-        this.$emit("update:imageData", this.processedImage);
-        localStorage.setItem("imageData", this.processedImage);
-      } else {
-        throw new Error("No processed image received from backend.");
+      backgroundImage: null,
+      activeTab: "color",
+      commonColors: ["#FFFFFF", "#FF0000", "#0000FF", "#FFFF00", "#000000"],
+      sampleBackgrounds: [
+        { name: "Office", url: "/office.jpeg" },
+        { name: "Beach", url: "/beach.jpeg" },
+        { name: "Forest", url: "/forest.jpeg" },
+      ],
+    };
+  },
+  watch: {
+    imageData(newImage) {
+      if (!this.originalImage) { // Set only if not set before
+        this.originalImage = newImage;
       }
-    } catch (error) {
-      console.error("Error processing image:", error);
-      this.errorMessage = "Error processing image.";
-    } finally {
-      this.isProcessing = false;
-    }
+      this.displayedImage = newImage; // Only update display, not original
+    },
   },
 
-  async resizeToClosestMultipleOf32(base64) {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.src = base64;
-      img.onload = () => {
-        const originalWidth = img.width;
-        const originalHeight = img.height;
+  methods: {
+    async applyBackground(image) {
+      if (typeof image === "string") {
+        this.backgroundImage = image;
+        try {
+          const base64Image = await this.convertImageToBase64(image);
+          this.processImage({ category: "background", backgroundString: base64Image, image: this.originalImage });
+        } catch (error) {
+          console.error("Error converting image:", error);
+          this.errorMessage = "Failed to load background image.";
+        }
+      } else if (image instanceof File || image instanceof Blob) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          this.backgroundImage = e.target.result;
+          this.processImage({ category: "background", backgroundString: this.backgroundImage, image: this.originalImage });
+        };
+        reader.readAsDataURL(image);
+      }
+    },
 
-        const newWidth = this.roundToNearestMultiple(originalWidth, 32);
-        const newHeight = this.roundToNearestMultiple(originalHeight, 32);
 
-        const canvas = document.createElement("canvas");
-        canvas.width = newWidth;
-        canvas.height = newHeight;
-        const ctx = canvas.getContext("2d");
+    async convertImageToBase64(imageUrl) {
+      return new Promise((resolve, reject) => {
+        fetch(imageUrl)
+          .then((response) => response.blob())
+          .then((blob) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          })
+          .catch(reject);
+      });
+    },
 
-        ctx.drawImage(img, 0, 0, newWidth, newHeight);
+    tabClass(tab) {
+      return `w-full py-2 border-b-2 ${
+        this.activeTab === tab ? "border-blue-500 text-blue-500 font-semibold" : "border-transparent text-gray-500"
+      } hover:text-gray-700`;
+    },
 
-        const resizedBase64 = canvas.toDataURL("image/png");
-        resolve(resizedBase64);
-      };
-      img.onerror = () => reject(new Error("Failed to load image"));
-    });
+    triggerUpload() {
+      this.$refs.uploadButton.$el.click();
+    },
+
+    applyColor(eventOrColor) {
+      const color = typeof eventOrColor === "string" ? eventOrColor : eventOrColor.target.value;
+      this.color = color;
+      this.processImage({ category: "color", colorString: color, image: this.originalImage });
+    },
+
+
+
+    async processImage(payload) {
+      if (!this.originalImage) { // Ensure we always use the original
+        this.errorMessage = "No image available for processing.";
+        return;
+      }
+
+      this.isProcessing = true;
+      this.errorMessage = "";
+
+      try {
+        // Always resize originalImage, not the modified one
+        const finalBase64 = await this.resizeToClosestMultipleOf32(this.originalImage); 
+        payload.image = finalBase64;
+
+        const response = await fetch("http://localhost:8080/image/process", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) throw new Error("Processing failed");
+
+        const result = await response.json();
+        if (result.processedImage) {
+          this.displayedImage = result.processedImage; // Update only the display
+          localStorage.setItem("imageData", result.processedImage);
+
+          this.$emit("update:imageData", result.processedImage);
+        } else {
+          throw new Error("No processed image received from backend.");
+        }
+      } catch (error) {
+        console.error("Error processing image:", error);
+        this.errorMessage = "Error processing image.";
+      } finally {
+        this.isProcessing = false;
+      }
+    },
+
+
+
+    async resizeToClosestMultipleOf32(base64) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.src = base64;
+        img.onload = () => {
+          const newWidth = this.roundToNearestMultiple(img.width, 32);
+          const newHeight = this.roundToNearestMultiple(img.height, 32);
+
+          const canvas = document.createElement("canvas");
+          canvas.width = newWidth;
+          canvas.height = newHeight;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, newWidth, newHeight);
+
+          resolve(canvas.toDataURL("image/png"));
+        };
+        img.onerror = () => reject(new Error("Failed to load image"));
+      });
+    },
+
+    roundToNearestMultiple(value, m) {
+      const remainder = value % m;
+      return remainder <= m / 2 ? value - remainder : value + (m - remainder);
+    },
   },
-
-  roundToNearestMultiple(value, m) {
-    const remainder = value % m;
-    const down = value - remainder;
-    const up = down + m;
-
-    if (remainder <= m / 2) {
-      return down;
-    } else {
-      return up;
-    }
-  },
-},
 };
 </script>
-
-<style scoped>
-/* Add additional styling here if needed */
-</style>
