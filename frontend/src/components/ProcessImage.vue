@@ -84,7 +84,7 @@ export default {
         // const finalBase64 = await this.cropToSquareMultipleOf32(this.originalImage);
         const finalBase64 = await this.resizeToClosestMultipleOf32(this.originalImage);
 
-        console.log(this.backgroundImage)
+        console.log(this.backgroundImage,"HEELLO")
         const category = "";
         if (this.backgroundImage == null){
           this.payload = { image: finalBase64, category: "color", colorString: this.color };
@@ -94,7 +94,8 @@ export default {
 
         
 
-        const response = await fetch("http://localhost:8080/image/process", {
+        const response = await fetch("http://localhost:8080/bg/removebg", {
+          // const response = await fetch("http://localhost:8080/image/process", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(this.payload),
