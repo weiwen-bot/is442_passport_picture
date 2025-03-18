@@ -8,7 +8,7 @@
       :collapsed="false"
     >
     <template v-slot:footer>
-      <button class="bg-red-800 text-white px-4 py-2 m-2 rounded text-center items-center" @click="resetData" ><i class="fas fa-sync-alt mr-2"></i>Reset</button>
+      <button class="bg-red-800 text-white px-4 py-2 m-2 rounded text-center items-center" @click="resetData" ><i class="fa-solid fa-upload mr-2"></i>Upload New Image</button>
     </template>
 
     </SidebarMenu>
