@@ -20,11 +20,11 @@ public class ImageResizingController {
 
     private static final String COUNTRY_LIST_JSON = """
     [
-        {"code":"jpn", "name":"Japan"},
-        {"code":"usa", "name":"United States"},
-        {"code":"sgp", "name":"Singapore"},
-        {"code":"chn", "name":"China"},
-        {"code":"mas", "name":"Malaysia"}
+        {"code":"jpn", "name":"Japan", "dimensions":"413x531"},
+        {"code":"usa", "name":"United States", "dimensions":"602x602"},
+        {"code":"sgp", "name":"Singapore", "dimensions":"413x531"},
+        {"code":"chn", "name":"China", "dimensions":"390x567"},
+        {"code":"mas", "name":"Malaysia", "dimensions":"413x591"}
     ]
     """;
 
