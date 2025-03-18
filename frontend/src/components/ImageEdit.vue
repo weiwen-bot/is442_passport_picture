@@ -99,13 +99,6 @@
           <i class="fas fa-redo mr-2"></i> Redo
         </button>
 
-        <!-- Download Button -->
-        <!-- <button
-          @click="downloadImage"
-          class="text-white bg-gray-800 p-2 rounded"
-        >
-          Download
-        </button> -->
         <div class="relative">
           <button
             @click="toggleDropdown"
@@ -115,13 +108,18 @@
           </button>
           <div
             v-if="showDropdown"
-            class="absolute bottom-12 right-0 bg-gray-800 shadow-md rounded p-3 space-y-2 w-48"
+            class="absolute bottom-12 right-0 bg-gray-800 shadow-md rounded p-3 space-y-2 w-52"
           >
             <button
               @click="downloadImage"
               class="block w-full text-left p-2 hover:bg-gray-200"
             >
               Download Image
+            </button>
+            <button 
+              @click="openLayoutPopup" 
+              class="block w-full text-left p-2 hover:bg-gray-200">
+              <i class="fa-solid fa-th-large"></i> Multiple Layouts
             </button>
             <button
               @click="handleGoogleDownload"
@@ -133,6 +131,70 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Layout Selection Modal -->
+  <div v-if="showLayoutPopup" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded shadow-lg w-96">
+      <h2 class="text-xl font-semibold text-gray-900 mb-6">Select Layout</h2>
+      <button @click="downloadWithLayout(2,2)" class="block w-full text-left p-2 bg-gray-100 hover:bg-gray-200 rounded mb-2">
+        2x2 Layout (4 images)
+      </button>
+      <button @click="downloadWithLayout(4,6)" class="block w-full text-left p-2 bg-gray-100 hover:bg-gray-200 rounded mb-2">
+        4x6 Layout (24 images)
+      </button>
+      
+      <!-- Custom Layout -->
+      <h3 class="text-md font-bold mt-4 text-gray-900">Custom Layout</h3>
+      <div class="flex space-x-4 pt-2">
+        <!-- Columns Input (X) -->
+        <div class="w-1/2">
+          <label for="columns" class="block font-medium mb-2 font-semibold text-left text-gray-900">
+            Columns:
+          </label>
+          <div class="relative">
+            <input 
+              type="number" id="columns" 
+              name="columns" 
+              class="sm:py-3 ps-3 pe-3 block w-full rounded-lg border border-gray-300 text-gray-900"
+              v-model.number="columns"
+              placeholder="Enter columns"
+              step="1"
+              min="1"
+            >
+          </div>
+        </div>
+
+        <!-- Rows Input (Y) -->
+        <div class="w-1/2">
+          <label for="rows" class="block font-medium mb-2 font-semibold text-left text-gray-900">
+            Rows:
+          </label>
+          <div class="relative">
+            <input 
+              type="number" id="rows" 
+              name="rows" 
+              class="sm:py-3 ps-3 pe-3 block w-full rounded-lg border border-gray-300 text-gray-900"
+              v-model.number="rows"
+              placeholder="Enter rows"
+              step="1"
+              min="1"
+            >
+          </div>
+        </div>
+      </div>
+
+      <button 
+        @click="downloadWithLayout(columns, rows)" 
+        class="mt-2 block w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
+      >
+        Download Custom Layout
+      </button>
+
+      <button @click="closeLayoutPopup" class="mt-4 block w-full bg-gray-800 text-white p-2 rounded">
+        Cancel
+      </button>
     </div>
   </div>
 
@@ -198,6 +260,10 @@ export default {
       SCOPES: "https://www.googleapis.com/auth/drive.file",
       CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID,
       resetCounter: 0,
+      showLayoutPopup: false,
+      columns: 2,
+      rows: 2,
+      padding: 20,
     };
   },
   async mounted() {
@@ -391,6 +457,102 @@ export default {
       } catch (error) {
         console.error("Error downloading the image:", error);
       }
+    },
+
+    // Multiple layout
+    openLayoutPopup() {
+      this.showLayoutPopup = true;
+    },
+    closeLayoutPopup() {
+      this.showLayoutPopup = false;
+    },
+    async downloadWithLayout(cols, rows) {
+      if (!this.imageData) {
+        alert("No image available!");
+        return;
+      }
+
+      // console.log(`Generating layout: ${cols}x${rows}`);
+
+      const blob = await this.generateCompositeImage(cols, rows);
+      if (blob) {
+        this.triggerDownload(blob, `${cols}x${rows}_layout.png`);
+      } else {
+        console.error("Failed to generate image.");
+      }
+      this.closeLayoutPopup();
+    },
+    async generateCompositeImage(cols, rows) {
+      return new Promise((resolve) => {
+        if (!this.imageData) {
+          console.error("No image data found!");
+          resolve(null);
+          return;
+        }
+
+        const img = new Image();
+        img.onload = () => {
+          // console.log("Image loaded successfully.");
+
+          const originalWidth = img.width;
+          const originalHeight = img.height;
+          const aspectRatio = originalWidth / originalHeight;
+
+          // Calculate new image size based on original resolution
+          const imgWidth = Math.floor(originalWidth / 2); // Reduce slightly to fit layout
+          const imgHeight = Math.floor(imgWidth / aspectRatio);
+
+          // Canvas size: (cols * image width) + padding
+          const canvasWidth = cols * imgWidth + (cols + 1) * this.padding;
+          const canvasHeight = rows * imgHeight + (rows + 1) * this.padding;
+
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+
+          // Set high resolution for better quality
+          canvas.width = canvasWidth;
+          canvas.height = canvasHeight;
+          ctx.fillStyle = "white";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          // Draw images in the grid
+          for (let i = 0; i < rows; i++) {
+            for (let j = 0; j < cols; j++) {
+              const x = this.padding + j * (imgWidth + this.padding);
+              const y = this.padding + i * (imgHeight + this.padding);
+              ctx.drawImage(img, x, y, imgWidth, imgHeight);
+            }
+          }
+
+          // console.log("Canvas image created successfully.");
+          canvas.toBlob((blob) => {
+            resolve(blob);
+          }, "image/png");
+        };
+
+        img.onerror = () => {
+          console.error("Error loading image.");
+          alert("Error loading the image. Please try again.");
+          resolve(null);
+        };
+
+        img.src = this.imageData; // Ensure this is set **after** onload
+      });
+    },
+    triggerDownload(blob, filename) {
+      if (!blob) {
+        console.error("No blob data for download.");
+        return;
+      }
+
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // console.log(`Download triggered for: ${filename}`);
     },
 
     // Show the reset modal
