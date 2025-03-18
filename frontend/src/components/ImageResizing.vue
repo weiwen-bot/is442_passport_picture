@@ -5,39 +5,91 @@
     class="col-span-4 bg-white border rounded-lg shadow-lg p-4 space-y-2 text-black"
   >
     <h2 class="font-bold text-lg">Resize Your Image</h2>
+
     <div class="max-w-sm space-y-3 pt-2">
-      <div>
-        <label
-          for="country"
-          class="block font-medium mb-2 font-semibold text-left"
-          >Select a Country</label
-        >
-        <select
-          v-model="selectedCountry"
-          @change="saveSelectedCountry"
-          id="country"
-          class="sm:py-3 ps-3 pe-10 block w-full rounded-lg border border-gray-300"
-        >
-          <option value="">-- Select Country --</option>
-          <option
-            v-for="country in countryList"
-            :key="country.code"
-            :value="country.code"
-          >
-            {{ country.name }}
-          </option>
-        </select>
-      </div>
-    </div>
-    <div class="max-w-sm space-y-4 pt-3">
-      <button
-        @click="handleResize"
-        :class="resizeButtonClass"
-        :disabled="!baseImage || !selectedCountry || isLoading"
-        class="sm:py-3 ps-3 pe-10 block w-full rounded-lg text-black"
+      <label
+        for="country"
+        class="block font-medium mb-2 font-semibold text-left"
+        >Select a Country
+      </label>
+      <select
+        v-model="selectedCountry"
+        @change="handleResize"
+        id="country"
+        class="sm:py-3 ps-3 pe-10 block w-full rounded-lg border border-gray-300"
+        :disabled="hasResized || isSelectionLocked('country')"
       >
-        Resize
-      </button>
+        <option value="">-- Select Country --</option>
+        <option
+          v-for="country in countryList"
+          :key="country.code"
+          :value="country.code"
+        >
+          {{ country.name }} ({{ country.dimensions }})
+        </option>
+      </select>
+    </div>
+
+    <div class="max-w-sm space-y-3 pt-2">
+      <label
+        for="template"
+        class="block font-medium mb-2 font-semibold text-left"
+        >Or Choose a Template
+      </label>
+      <select
+        v-model="selectedTemplate"
+        @change="handleResize"
+        id="template"
+        class="sm:py-3 ps-3 pe-10 block w-full rounded-lg border border-gray-300"
+        :disabled="hasResized || isSelectionLocked('template')"
+      >
+        <option value="">-- Select Template --</option>
+        <option
+          v-for="template in templateList"
+          :key="template.label"
+          :value="template.size"
+        >
+          {{ template.label }} ({{ template.size }})
+        </option>
+      </select>
+    </div>
+
+    <div class="max-w-sm space-y-3 pt-2">
+      <label class="block font-medium mb-2 font-semibold text-left">
+        Custom Size (Aspect Ratio Locked)
+      </label>
+      <div class="flex items-center space-x-2">
+        <!-- Width Input -->
+        <div class="flex items-center space-x-1">
+          <input
+            type="number"
+            v-model.number="customWidth"
+            @input="updateHeight"
+            @change="handleResize"
+            class="resize-input"
+            :placeholder="originalWidth ? originalWidth + ' px' : 'Width'"
+            :disabled="hasResized || isSelectionLocked('custom')"
+          />
+          <span class="text-gray-600 text-sm px-label">px</span>
+        </div>
+
+        <!-- "×" Symbol -->
+        <span class="text-gray-700 font-semibold text-lg">×</span>
+
+        <!-- Height Input -->
+        <div class="flex items-center space-x-1">
+          <input
+            type="number"
+            v-model.number="customHeight"
+            @input="updateWidth"
+            @change="handleResize"
+            class="resize-input"
+            :placeholder="originalHeight ? originalHeight + ' px' : 'Height'"
+            :disabled="hasResized || isSelectionLocked('custom')"
+          />
+          <span class="text-gray-600 text-sm px-label">px</span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -46,6 +98,7 @@
     <img
       v-if="resizedImage"
       :src="resizedImage"
+      :key="'resized-' + Date.now()"
       alt="Resized"
       class="max-w-full max-h-[500px] w-auto h-auto object-contain border rounded shadow-md"
     />
@@ -53,6 +106,7 @@
     <img
       v-else-if="baseImage"
       :src="baseImage"
+      :key="'base-' + Date.now()"
       alt="Original"
       class="h-full w-auto max-w-full object-contain border rounded shadow-md"
     />
@@ -67,128 +121,90 @@
 export default {
   props: {
     imageData: String, // Parent passes the original image
-    resetCounter: {
-      type: Number,
-      default: 0,
-    },
-    originalImage: String, // Receive the first uploaded image from the parent
   },
-  expose: ["handleLocalUndo", "handleLocalRedo", "handleLocalReset"],
   emits: [
-    "resize-complete",
     "update:imageData",
-    "update:imageHistory",
-    "update:redoHistory",
+    "resize-complete",
+    "request-undo",
+    "request-revert",
+    "request-redo",
   ],
   data() {
     return {
-      baseImage: null, // Stores the working image (resets when needed)
+      baseImage: this.imageData,
+      originalImage: this.imageData,
       resizedImage: null, // Stores resized image
       selectedCountry: "",
+      selectedTemplate: "",
       countryList: [],
-      isLoading: false,
-
-      // Local history for undo/redo within Image Resizing page
-      localImageHistory: [],
-      localRedoHistory: [],
+      templateList: [],
+      hasResized: false,
+      aspectRatio: 1,
+      customWidth: null,
+      customHeight: null,
+      userSelection: null, // Tracks which option the user selected first!
     };
   },
-  mounted() {
-    if (this.imageData && this.localImageHistory.length === 0) {
-      this.localImageHistory = [this.imageData];
-    }
-
-    // Store the uploaded image only when first mounting
-    if (!this.originalImage) {
-      this.originalImage = this.imageData;
-    }
-
-    this.baseImage = this.imageData;
-
-    console.log(
-      "ImageResizing mounted with history:",
-      this.localImageHistory.length,
-      "items"
-    );
-  },
-
-  computed: {
-    resizeButtonClass() {
-      if (!this.originalImage || this.isLoading) {
-        return "bg-gray-400 text-white font-bold py-2 px-4 rounded opacity-50 cursor-not-allowed border border-gray-500"; // Disabled (gray but still a button)
-      }
-      if (this.selectedCountry) {
-        return "bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded border border-green-600"; // Green when country selected
-      }
-      return "bg-gray-400 text-white font-bold py-2 px-4 rounded opacity-50 cursor-not-allowed border border-gray-500"; // Default gray
-    },
-  },
-  created() {
-    console.log("Component created with imageData:", this.imageData);
-
-    this.resizedImage = null;
-
-    const storedCountry = localStorage.getItem("selectedCountry");
-
-    // Fetch the country list first
-    this.fetchCountryList().then(() => {
-      // After countries are loaded, validate the stored country
-      if (
-        storedCountry &&
-        this.countryList.some((country) => country.code === storedCountry)
-      ) {
-        this.selectedCountry = storedCountry;
-        console.log("Restored saved country:", this.selectedCountry);
-      } else {
-        this.selectedCountry = ""; // Default to "-- Select Country --"
-        console.log("Saved country not found or invalid, using default");
-      }
-    });
-  },
-  beforeUnmount() {
-    // Only update parent with resized image if it exists
-    if (this.resizedImage && this.resizedImage !== this.originalImage) {
-      console.log("Leaving - passing resized image to parent");
-      this.$emit("update:imageData", this.resizedImage);
-    }
-
-    this.$emit("update:imageHistory", this.localImageHistory);
-    this.$emit("update:redoHistory", this.localRedoHistory);
-  },
-
   watch: {
-    resetCounter(newVal, oldVal) {
-      if (newVal !== oldVal) {
-        console.log(`resetCounter changed: ${oldVal} → ${newVal}`);
-        this.baseImage = null; // Temporarily set to null
+    async imageData(newImage, oldImage) {
+      console.log("🧐 watch: imageData triggered");
+      if (!newImage || newImage === oldImage) return;
+
+      // Extract dimensions from the new image
+      await this.extractImageDimensions(newImage);
+
+      this.baseImage = newImage;
+
+      // Check if we're reverting to original (can be a deep comparison if needed)
+      const isRevertToOriginal =
+        !this.hasResized ||
+        (this.originalImage && newImage === this.originalImage);
+
+      if (isRevertToOriginal) {
+        // 🚀 Case: Reverting to the original uploaded image
+        console.log("Reverting UI state to original.");
+
+        this.resizedImage = null;
+        this.hasResized = false; // Unlock the UI
+        this.selectedCountry = ""; // Reset country selection
+        this.selectedTemplate = ""; // Reset template selection
+        this.userSelection = null; // Clear user selection mode
+
+        // Reset input fields to original image dimensions
         this.$nextTick(() => {
-          this.baseImage = this.originalImage; // Ensure Vue detects a full update
-          this.resizedImage = null; // Clear resized image
+          this.customWidth = this.extractedWidth;
+          this.customHeight = this.extractedHeight;
         });
-      }
-    },
-
-    imageData(newImage, oldImage) {
-      if (newImage !== oldImage) {
-        console.log("🖼 imageData updated in ImageResizing.vue:", newImage);
-
-        // Save previous state in history for undo
-        if (oldImage) {
-          this.localImageHistory.push(oldImage);
-        }
-
-        this.baseImage = ""; // Temporarily clear to force reactivity
+      } else if (this.hasResized) {
+        // 🚀 Case: After resizing, update fields but keep them disabled
+        console.log(
+          "Updating fields with resized dimensions:",
+          this.extractedWidth,
+          this.extractedHeight
+        );
         this.$nextTick(() => {
-          this.baseImage = newImage; // Set correct image after reactivity updates
-          this.resizedImage = null;
+          this.customWidth = this.extractedWidth;
+          this.customHeight = this.extractedHeight;
         });
-
-        // Clear redo history when a new change is made
-        this.localRedoHistory = [];
+      } else {
+        // 🚀 Case: Undo operation (go back one step)
+        this.resizedImage = null;
+        this.hasResized = false;
+        this.$nextTick(() => {
+          this.customWidth = this.originalWidth;
+          this.customHeight = this.originalHeight;
+        });
       }
     },
   },
-
+  mounted() {
+    this.fetchCountryList();
+    this.fetchTemplateList();
+    if (this.imageData) {
+      this.originalImage = this.imageData; // Store original image
+      this.extractImageDimensions(this.imageData); // Extract dimensions
+    }
+  },
   methods: {
     async fetchCountryList() {
       try {
@@ -203,105 +219,210 @@ export default {
         return [];
       }
     },
-    saveSelectedCountry() {
-      localStorage.setItem("selectedCountry", this.selectedCountry);
-      console.log("✅ Selected country saved:", this.selectedCountry);
+    async fetchTemplateList() {
+      try {
+        const response = await fetch("http://localhost:8080/image/templates");
+        if (!response.ok) throw new Error("Failed to fetch template list");
+        this.templateList = await response.json();
+      } catch (error) {
+        console.error("Error fetching template list:", error);
+      }
+    },
+    extractImageDimensions(imageSrc) {
+      if (!imageSrc) return Promise.resolve;
+
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          this.originalWidth = img.width;
+          this.originalHeight = img.height;
+          this.aspectRatio = img.width / img.height;
+
+          // Store extracted values in separate variables
+          this.extractedWidth = img.width;
+          this.extractedHeight = img.height;
+
+          console.log(
+            `Image dimensions extracted: ${this.extractedWidth}x${this.extractedHeight}`
+          );
+          // Use $nextTick to ensure Vue updates fields properly
+          this.$nextTick(() => {
+            this.customWidth = this.extractedWidth;
+            this.customHeight = this.extractedHeight;
+            console.log(
+              `Input fields updated: ${this.customWidth}x${this.customHeight}`
+            );
+            resolve(); // Resolve the Promise after dimensions are updated
+          });
+        };
+        img.src = imageSrc;
+      });
+    },
+    // New methods for handling selection
+    countrySelected() {
+      if (this.selectedCountry) {
+        this.userSelection = "country";
+        this.handleResize();
+      }
+    },
+
+    templateSelected() {
+      if (this.selectedTemplate) {
+        this.userSelection = "template";
+        this.handleResize();
+      }
+    },
+
+    customSizeChanged() {
+      if (
+        (this.customWidth && this.customWidth !== this.originalWidth) ||
+        (this.customHeight && this.customHeight !== this.originalHeight)
+      ) {
+        this.userSelection = "custom";
+        // Don't resize immediately with custom size - wait for user to finish typing
+      }
+    },
+    isSelectionLocked(type) {
+      // If the image has been resized, lock everything
+      if (this.hasResized) {
+        return true;
+      }
+      // Otherwise, only lock fields that weren't the first selected
+      return this.userSelection !== null && this.userSelection !== type;
     },
     async handleResize() {
-      if (!this.imageData || !this.selectedCountry) {
-        alert("Please select a country first.");
+      console.log("handleResize() triggered!");
+
+      // Store selections before resizing (so they are not reset)
+      const prevSelection = {
+        country: this.selectedCountry,
+        template: this.selectedTemplate,
+        customWidth: this.customWidth,
+        customHeight: this.customHeight,
+      };
+
+      // Determine which option was selected
+      if (!this.userSelection) {
+        if (this.selectedCountry) {
+          this.userSelection = "country";
+        } else if (this.selectedTemplate) {
+          this.userSelection = "template";
+        } else if (
+          this.customWidth !== this.originalWidth ||
+          this.customHeight !== this.originalHeight
+        ) {
+          this.userSelection = "custom";
+        }
+      }
+
+      if (this.hasResized) {
+        console.log("⚠️ Image already resized, skipping request.");
         return;
       }
 
-      this.isLoading = true;
+      // Ensure dimensions are updated based on selection
+      let newWidth = this.customWidth;
+      let newHeight = this.customHeight;
+
+      if (this.selectedCountry) {
+        // Find the country's passport size from the country list
+        const countryObj = this.countryList.find(
+          (c) => c.code === this.selectedCountry
+        );
+        if (countryObj) {
+          const [w, h] = countryObj.dimensions.split("x").map(Number);
+          newWidth = w;
+          newHeight = h;
+        }
+      } else if (this.selectedTemplate) {
+        // Find template dimensions if selected
+        const templateObj = this.templateList.find(
+          (t) => t.size === this.selectedTemplate
+        );
+        if (templateObj) {
+          const [w, h] = templateObj.size.split("x").map(Number);
+          newWidth = w;
+          newHeight = h;
+        }
+      }
+
+      let resizeParams = {
+        country: this.selectedCountry || null,
+        template: this.selectedTemplate || null,
+        customWidth: newWidth || null,
+        customHeight: newHeight || null,
+      };
+
+      console.log("Resize Parameters:", resizeParams);
+
       try {
-        // Convert base64 to Blob
-        const file = this.base64ToFile(this.imageData, "uploaded-image.jpg");
-
-        // Create FormData
         const formData = new FormData();
-        formData.append("image", file);
-        formData.append("country", this.selectedCountry);
+        formData.append(
+          "image",
+          this.base64ToFile(this.imageData, "uploaded-image.jpg")
+        );
+        for (const [key, value] of Object.entries(resizeParams)) {
+          if (value !== null) formData.append(key, value);
+        }
 
-        // API Call
         const response = await fetch("http://localhost:8080/image/resize", {
           method: "POST",
           body: formData,
         });
 
-        if (!response.ok) {
-          throw new Error("Image resizing failed");
-        }
-
+        if (!response.ok) throw new Error("Image resizing failed");
         const result = await response.json();
+        console.log("✅ Resize API Response:", result);
 
-        if (result.status === "success" && result.image) {
-          console.log(
-            "Received resized image:",
-            result.image ? result.image.substring(0, 50) + "..." : "NULL"
-          );
-
-          this.localImageHistory.push(this.baseImage);
-          this.localRedoHistory = [];
-
-          // Set the resized image
+        if (result.status === "success") {
           this.resizedImage = result.image;
-          this.baseImage = result.image;
+
+          this.$emit("resize-complete", result.image);
+          console.log("🎉 Image updated successfully!");
+
+          // Restore selections after resizing (instead of resetting them)
+          this.selectedCountry = prevSelection.country;
+          this.selectedTemplate = prevSelection.template;
+          this.customWidth = resizeParams.customWidth;
+          this.customHeight = resizeParams.customHeight;
+
+          // Set hasResized after successful resize
+          this.hasResized = true;
+        } else {
+          console.error("Resize response did not contain a valid image.");
         }
       } catch (error) {
         console.error("Error resizing image:", error);
-        alert("Error resizing image: " + error.message);
-      } finally {
-        this.isLoading = false;
       }
     },
+    updateHeight() {
+      if (this.customWidth) {
+        this.customHeight = Math.round(this.customWidth / this.aspectRatio);
+      }
+    },
+    updateWidth() {
+      if (this.customHeight) {
+        this.customWidth = Math.round(this.customHeight * this.aspectRatio);
+      }
+    },
+    requestUndo() {
+      console.log("Undo button clicked! Emitting event to parent.");
+      this.resizedImage = null; // Clear the resized image
+      this.$emit("request-undo");
+    },
 
-    handleLocalUndo() {
+    requestRevert() {
       console.log(
-        "📜 localImageHistory length:",
-        this.localImageHistory.length
+        "Revert to Original button clicked! Emitting event to parent."
       );
-      if (this.localImageHistory.length > 0) {
-        this.localRedoHistory.push(this.baseImage);
-        this.baseImage = this.localImageHistory.pop();
-        this.resizedImage = this.baseImage;
-
-        // Emit updated history to parent
-        this.$emit("update:imageHistory", this.localImageHistory);
-        this.$emit("update:redoHistory", this.localRedoHistory);
-        this.$emit("update:imageData", this.baseImage);
-      }
+      this.resizedImage = null; // Clear the resized image
+      this.hasResized = false;
+      this.$emit("request-revert");
     },
 
-    handleLocalRedo() {
-      if (this.localRedoHistory.length > 0) {
-        console.log("↪️ Local Redo in ImageResizing.vue");
-        this.localImageHistory.push(this.baseImage);
-        this.baseImage = this.localRedoHistory.pop();
-        this.resizedImage = this.baseImage;
-
-        // Emit updated history to parent
-        this.$emit("update:imageHistory", this.localImageHistory);
-        this.$emit("update:redoHistory", this.localRedoHistory);
-        this.$emit("update:imageData", this.baseImage);
-      }
-    },
-
-    handleLocalReset() {
-      console.log("🔄 Local Reset in ImageResizing.vue");
-      if (this.baseImage !== this.originalImage) {
-        this.localImageHistory.push(this.baseImage);
-        this.localRedoHistory = []; // Reset redo history
-      }
-
-      // Reset image to original
-      this.baseImage = this.originalImage;
-      this.resizedImage = null;
-
-      // Emit reset event
-      this.$emit("update:imageData", this.originalImage);
-      this.$emit("update:imageHistory", this.localImageHistory);
-      this.$emit("update:redoHistory", this.localRedoHistory);
+    requestRedo() {
+      console.log("Redo button clicked! Emitting event to parent.");
+      this.$emit("request-redo");
     },
 
     base64ToFile(base64String, fileName) {
@@ -320,41 +441,34 @@ export default {
 </script>
 
 <style scoped>
-/* Ensure button styling is not overridden */
-button {
-  /* all: unset; /* Reset inherited styles */
-  display: inline-block; /* Keeps button visible */
-  padding: 0.5rem 1rem; /* Maintain padding */
-  border-radius: 0.375rem; /* Keep rounded corners */
-  font-weight: bold; /* Maintain bold text */
-  text-align: center; /* Ensure text stays centered */
-  font-family: inherit; /* Keep the same font as the rest of the app */
-  border: 1px solid transparent; /* Prevent shifting when enabling/disabling */
-  color: black;
+select:disabled,
+input:disabled {
+  background-color: #f0f0f0;
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
-/* Default disabled button (light gray but visible) */
-.bg-gray-400 {
-  background-color: #a0aec0 !important; /* Light gray but visible */
-  border: 1px solid #718096 !important; /* Adds a border to make it look clickable */
+.px-label {
+  display: flex;
+  align-items: center;
+  height: 100%;
 }
 
-/* Active button (Green) */
-.bg-green-500 {
-  background-color: #48bb78 !important; /* Green */
+.text-gray-700 {
+  display: flex;
+  align-items: center;
 }
 
-.bg-green-600 {
-  background-color: #38a169 !important; /* Darker Green */
-}
-
-/* Fix disabled button issue */
-.disabled-button {
-  background-color: #a0aec0 !important; /* Light gray */
-  color: white !important;
-  cursor: not-allowed !important;
-  opacity: 0.6;
-  border: 1px solid #718096; /* Ensure it still looks like a button */
+.resize-input {
+  width: 80px; /* Set a fixed width to ensure consistency */
+  min-width: 80px;
+  max-width: 80px;
+  padding: 6px;
+  text-align: center;
+  box-sizing: border-box; /* Ensures padding doesn't affect width */
+  border: 1px solid #ccc; /* ✅ Explicitly define the border */
+  border-radius: 6px; /* ✅ Keeps the rounded edges consistent */
+  background-color: white; /* ✅ Ensures no transparency issues */
 }
 
 /* Loading spinner styling */

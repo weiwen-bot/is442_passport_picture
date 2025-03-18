@@ -32,16 +32,16 @@
     </div> -->
     <!-- Show Cropped Image when cropping is done -->
     <div
-       v-if="currentAction === 'crop' && isCropped"
-       class="col-span-4 shadow-lg"
-     >
-       <h2 class="text-lg font-semibold mb-2">Your Cropped Image</h2>
-       <img
-         :src="imageData"
-         class="h-full w-auto max-w-full object-contain"
-         alt="Cropped Image"
-       />
-     </div>
+      v-if="currentAction === 'crop' && isCropped"
+      class="col-span-4 shadow-lg"
+    >
+      <h2 class="text-lg font-semibold mb-2">Your Cropped Image</h2>
+      <img
+        :src="imageData"
+        class="h-full w-auto max-w-full object-contain"
+        alt="Cropped Image"
+      />
+    </div>
 
     <!-- Show BackgroundRemover Component when "Background Remover" is selected -->
     <BackgroundRemover
@@ -54,14 +54,11 @@
     <!-- Show ImageResizing Component when "Resize" is selected -->
     <ImageResizing
       v-if="currentAction === 'resize' && imageData"
-      ref="imageResizing"
-      :key="imageData"
-      :reset-counter="resetCounter"
-      v-model:imageData="imageData"
-      :original-image="originalImage"
+      :imageData="imageData"
       @resize-complete="handleResizeComplete"
-      @update:imageHistory="updateImageHistory"
-      @update:redoHistory="updateRedoHistory"
+      @request-undo="handleUndo"
+      @request-revert="handleReset"
+      @request-redo="handleRedo"
     />
     <!-- Show ImageEnhancement Component when "Enhance" is selected -->
     <ImageEnhancement
@@ -116,9 +113,10 @@
             >
               Download Image
             </button>
-            <button 
-              @click="openLayoutPopup" 
-              class="block w-full text-left p-2 hover:bg-gray-200">
+            <button
+              @click="openLayoutPopup"
+              class="block w-full text-left p-2 hover:bg-gray-200"
+            >
               <i class="fa-solid fa-th-large"></i> Multiple Layouts
             </button>
             <button
@@ -135,64 +133,84 @@
   </div>
 
   <!-- Layout Selection Modal -->
-  <div v-if="showLayoutPopup" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+  <div
+    v-if="showLayoutPopup"
+    class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50"
+  >
     <div class="bg-white p-6 rounded shadow-lg w-96">
       <h2 class="text-xl font-semibold text-gray-900 mb-6">Select Layout</h2>
-      <button @click="downloadWithLayout(2,2)" class="block w-full text-left p-2 bg-gray-100 hover:bg-gray-200 rounded mb-2">
+      <button
+        @click="downloadWithLayout(2, 2)"
+        class="block w-full text-left p-2 bg-gray-100 hover:bg-gray-200 rounded mb-2"
+      >
         2x2 Layout (4 images)
       </button>
-      <button @click="downloadWithLayout(4,6)" class="block w-full text-left p-2 bg-gray-100 hover:bg-gray-200 rounded mb-2">
+      <button
+        @click="downloadWithLayout(4, 6)"
+        class="block w-full text-left p-2 bg-gray-100 hover:bg-gray-200 rounded mb-2"
+      >
         4x6 Layout (24 images)
       </button>
-      
+
       <!-- Custom Layout -->
       <h3 class="text-md font-bold mt-4 text-gray-900">Custom Layout</h3>
       <div class="flex space-x-4 pt-2">
         <!-- Columns Input (X) -->
         <div class="w-1/2">
-          <label for="columns" class="block font-medium mb-2 font-semibold text-left text-gray-900">
+          <label
+            for="columns"
+            class="block font-medium mb-2 font-semibold text-left text-gray-900"
+          >
             Columns:
           </label>
           <div class="relative">
-            <input 
-              type="number" id="columns" 
-              name="columns" 
+            <input
+              type="number"
+              id="columns"
+              name="columns"
               class="sm:py-3 ps-3 pe-3 block w-full rounded-lg border border-gray-300 text-gray-900"
               v-model.number="columns"
               placeholder="Enter columns"
               step="1"
               min="1"
-            >
+            />
           </div>
         </div>
 
         <!-- Rows Input (Y) -->
         <div class="w-1/2">
-          <label for="rows" class="block font-medium mb-2 font-semibold text-left text-gray-900">
+          <label
+            for="rows"
+            class="block font-medium mb-2 font-semibold text-left text-gray-900"
+          >
             Rows:
           </label>
           <div class="relative">
-            <input 
-              type="number" id="rows" 
-              name="rows" 
+            <input
+              type="number"
+              id="rows"
+              name="rows"
               class="sm:py-3 ps-3 pe-3 block w-full rounded-lg border border-gray-300 text-gray-900"
               v-model.number="rows"
               placeholder="Enter rows"
               step="1"
               min="1"
-            >
+            />
           </div>
         </div>
       </div>
 
-      <button 
-        @click="downloadWithLayout(columns, rows)" 
+      <button
+        @click="downloadWithLayout(columns, rows)"
         class="mt-2 block w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
       >
         Download Custom Layout
       </button>
 
-      <button @click="closeLayoutPopup" class="mt-4 block w-full bg-gray-800 text-white p-2 rounded">
+      <button
+        @click="closeLayoutPopup"
+        class="mt-4 block w-full bg-gray-800 text-white p-2 rounded"
+      >
         Cancel
       </button>
     </div>
@@ -246,7 +264,7 @@ export default {
   data() {
     return {
       imageData: null, // Image data that will be passed to child and updated after crop
-      fileType: null, 
+      fileType: null,
       originalImage: null, // Store the original image
       imageHistory: [], // Stack for undo
       redoHistory: [], // Stack for redo
@@ -307,27 +325,6 @@ export default {
 
     handleUndo() {
       console.log("Undo button clicked! Current Action:", this.currentAction);
-
-      if (this.currentAction === "resize") {
-        this.$nextTick(() => {
-          console.log(
-            "🔄 After nextTick: Checking this.$refs.imageResizing:",
-            this.$refs.imageResizing
-          );
-
-          if (
-            this.$refs.imageResizing &&
-            typeof this.$refs.imageResizing.handleLocalUndo === "function"
-          ) {
-            console.log("Delegating undo to ImageResizing.vue");
-            this.$refs.imageResizing.handleLocalUndo();
-          } else {
-            console.error("ERROR: this.$refs.imageResizing is NULL!");
-          }
-        });
-        return;
-      }
-
       if (this.imageHistory.length > 0) {
         console.log("Undoing in ImageEdit.vue");
 
@@ -337,12 +334,6 @@ export default {
       }
     },
     handleRedo() {
-      if (this.currentAction === "resize" && this.$refs.imageResizing) {
-        console.log("Delegating redo to ImageResizing.vue");
-        this.$refs.imageResizing.handleLocalRedo();
-        return;
-      }
-
       if (this.redoHistory.length > 0) {
         console.log("Redoing in ImageEdit.vue");
 
@@ -352,17 +343,12 @@ export default {
       }
     },
     handleReset() {
-      if (this.currentAction === "resize" && this.$refs.imageResizing) {
-        console.log("Delegating Revert to Original to ImageResizing.vue");
-        this.$refs.imageResizing.handleLocalReset();
-      } else {
-        console.log("Reverting to original in ImageEdit.vue");
+      console.log("Reverting to original in ImageEdit.vue");
 
-        this.imageHistory.push(this.imageData); // Save for undo
-        this.redoHistory = []; // Clear redo history
-        this.imageData = this.originalImage;
-        this.isCropped = false; // Reset cropped state
-      }
+      this.imageHistory.push(this.imageData); // Save for undo
+      this.redoHistory = []; // Clear redo history
+      this.imageData = this.originalImage;
+      this.isCropped = false; // Reset cropped state
     },
 
     // After crop complete
@@ -389,17 +375,6 @@ export default {
         this.imageHistory.push(this.imageData);
       }
       this.imageData = resizedImage;
-    },
-
-    // update parent's history with history from resize page
-    updateImageHistory(history) {
-      console.log("📜 Updating image history from ImageResizing.vue");
-      this.imageHistory = history;
-    },
-
-    updateRedoHistory(history) {
-      console.log("📜 Updating redo history from ImageResizing.vue");
-      this.redoHistory = history;
     },
 
     // After process complete
@@ -435,7 +410,7 @@ export default {
         // File handling
         if (window.showSaveFilePicker) {
           const fileHandle = await window.showSaveFilePicker({
-            suggestedName: `edited_image.${this.fileType.split('/').pop()}`,
+            suggestedName: `edited_image.${this.fileType.split("/").pop()}`,
             types: [
               {
                 description: "Images",
@@ -451,7 +426,7 @@ export default {
           // Fallback method
           const link = document.createElement("a");
           link.href = URL.createObjectURL(blob);
-          link.download = `edited_image.${this.fileType.split('/').pop()}`;
+          link.download = `edited_image.${this.fileType.split("/").pop()}`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
@@ -478,7 +453,10 @@ export default {
 
       const blob = await this.generateCompositeImage(cols, rows);
       if (blob) {
-        this.triggerDownload(blob, `${cols}x${rows}_layout.${this.fileType.split('/').pop()}`);
+        this.triggerDownload(
+          blob,
+          `${cols}x${rows}_layout.${this.fileType.split("/").pop()}`
+        );
       } else {
         console.error("Failed to generate image.");
       }
@@ -659,7 +637,7 @@ export default {
 
       // Define metadata
       const metadata = {
-        name: `edited_image.${this.fileType.split('/').pop()}`,
+        name: `edited_image.${this.fileType.split("/").pop()}`,
         mimeType: this.fileType,
       };
 

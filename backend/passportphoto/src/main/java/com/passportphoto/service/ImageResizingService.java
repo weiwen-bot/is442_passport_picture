@@ -11,6 +11,8 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class ImageResizingService {
@@ -23,7 +25,7 @@ public class ImageResizingService {
         }
     }
 
-    public ImageResizeResponse resizeImage(MultipartFile file, String country) {
+    public ImageResizeResponse resizeImage(MultipartFile file, String country, String template, Integer customWidth, Integer customHeight) {
         try {
             // 1. Convert uploaded image to BufferedImage
             BufferedImage originalImage = ImageIO.read(file.getInputStream());
@@ -34,10 +36,22 @@ public class ImageResizingService {
             // 3. Convert to Mat (BGR or BGRA)
             Mat imageMat = hasAlpha? bufferedImageToMatRGBA(originalImage): bufferedImageToMatBGR(originalImage);
 
-            // 4. Get target passport size
-            int[] dimensions = getPassportPhotoDimensions(country);
-            int targetWidth = dimensions[0];
-            int targetHeight = dimensions[1];
+            // 4. Determine target dimensions
+            int targetWidth = 0, targetHeight = 0;
+            if (country != null && !country.isEmpty()) {
+                int[] dimensions = getPassportPhotoDimensions(country);
+                targetWidth = dimensions[0];
+                targetHeight = dimensions[1];
+            } else if (template != null && !template.isEmpty()) {
+                int[] dimensions = getTemplateDimensions(template);
+                targetWidth = dimensions[0];
+                targetHeight = dimensions[1];
+            } else if (customWidth != null && customHeight != null) {
+                targetWidth = customWidth;
+                targetHeight = customHeight;
+            } else {
+                throw new IllegalArgumentException("Invalid resize request: No valid country, template, or custom size provided.");
+            }
 
             // 5. Resize the image to fit the target dimensions
             Mat resized;
@@ -525,5 +539,16 @@ public class ImageResizingService {
                 System.out.println("Country not found, defaulting to 413x531");
                 return new int[]{413, 531}; // Default to JPN/SGP size
         }
+    }
+
+    // Method to get standard template dimensions based on template name
+    private int[] getTemplateDimensions(String template) {
+        Map<String, int[]> templateMap = new HashMap<>();
+        templateMap.put("SMU Student ID", new int[]{354, 472});
+        templateMap.put("NUS Student ID", new int[]{340, 453});
+        templateMap.put("NTU Student ID", new int[]{354, 472});
+        templateMap.put("LinkedIn Profile", new int[]{400, 400});
+        templateMap.put("2R", new int[]{600, 900});
+        return templateMap.getOrDefault(template, new int[]{600, 900}); // Default to 2R size
     }
 }
