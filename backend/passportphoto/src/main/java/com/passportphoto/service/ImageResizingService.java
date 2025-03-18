@@ -547,6 +547,7 @@ public class ImageResizingService {
         templateMap.put("SMU Student ID", new int[]{354, 472});
         templateMap.put("NUS Student ID", new int[]{340, 453});
         templateMap.put("NTU Student ID", new int[]{354, 472});
+        templateMap.put("LinkedIn Profile", new int[]{400, 400});
         templateMap.put("2R", new int[]{600, 900});
         return templateMap.getOrDefault(template, new int[]{600, 900}); // Default to 2R size
     }

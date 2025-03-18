@@ -30,15 +30,11 @@ public class ImageResizingController {
 
     private static final String TEMPLATE_LIST_JSON = """
     [
+        {"label":"SMU Student ID", "size":"354x472"},
+        {"label":"NUS Student ID", "size":"340, 453"},
+        {"label":"NTU Student ID", "size":"354x472"},
+        {"label":"LinkedIn Profile", "size":"400x400"},
         {"label":"2R", "size":"600x900"},
-        {"label":"3R", "size":"1050x1500"},
-        {"label":"4R", "size":"1200x1800"},
-        {"label":"Instagram Post", "size":"1080x1080"},
-        {"label":"Instagram Story", "size":"1080x1920"},
-        {"label":"YouTube Thumbnail", "size":"1280x720"},
-        {"label":"HD Wallpaper", "size":"1920x1080"},
-        {"label":"4K Wallpaper", "size":"3840x2160"}
-    ]
     """;
 
     @GetMapping("/countries")
