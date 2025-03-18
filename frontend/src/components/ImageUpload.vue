@@ -51,7 +51,7 @@ export default {
       imageData: null, // Stores the image data URL
       showCloudOptions: false, // Flag to toggle cloud upload options
 
-      SCOPES: "https://www.googleapis.com/auth/drive.metadata.readonly",
+      SCOPES: "https://www.googleapis.com/auth/drive.readonly",
       CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID,
       API_KEY: import.meta.env.VITE_GOOGLE_API_KEY,
       accessToken: null,
