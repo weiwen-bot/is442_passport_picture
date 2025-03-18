@@ -544,15 +544,10 @@ public class ImageResizingService {
     // Method to get standard template dimensions based on template name
     private int[] getTemplateDimensions(String template) {
         Map<String, int[]> templateMap = new HashMap<>();
+        templateMap.put("SMU Student ID", new int[]{354, 472});
+        templateMap.put("NUS Student ID", new int[]{340, 453});
+        templateMap.put("NTU Student ID", new int[]{354, 472});
         templateMap.put("2R", new int[]{600, 900});
-        templateMap.put("3R", new int[]{1050, 1500});
-        templateMap.put("4R", new int[]{1200, 1800});
-        templateMap.put("Instagram Post", new int[]{1080, 1080});
-        templateMap.put("Instagram Story", new int[]{1080, 1920});
-        templateMap.put("YouTube Thumbnail", new int[]{1280, 720});
-        templateMap.put("HD Wallpaper", new int[]{1920, 1080});
-        templateMap.put("4K Wallpaper", new int[]{3840, 2160});
-
         return templateMap.getOrDefault(template, new int[]{600, 900}); // Default to 2R size
     }
 }
