@@ -34,7 +34,7 @@ public class ImageResizingController {
         {"label":"NUS Student ID", "size":"340x453"},
         {"label":"NTU Student ID", "size":"354x472"},
         {"label":"LinkedIn Profile", "size":"400x400"},
-        {"label":"2R", "size":"600x900"},
+        {"label":"2R", "size":"600x900"}
     ]
     """;
 
