@@ -96,6 +96,7 @@
     <img
       v-if="resizedImage"
       :src="resizedImage"
+      :key="'resized-' + Date.now()"
       alt="Resized"
       class="max-w-full max-h-[500px] w-auto h-auto object-contain border rounded shadow-md"
     />
@@ -103,6 +104,7 @@
     <img
       v-else-if="baseImage"
       :src="baseImage"
+      :key="'base-' + Date.now()"
       alt="Original"
       class="h-full w-auto max-w-full object-contain border rounded shadow-md"
     />
@@ -123,10 +125,12 @@ export default {
     "resize-complete",
     "request-undo",
     "request-revert",
+    "request-redo",
   ],
   data() {
     return {
       baseImage: this.imageData,
+      originalImage: this.imageData,
       resizedImage: null, // Stores resized image
       selectedCountry: "",
       selectedTemplate: "",
@@ -147,10 +151,18 @@ export default {
       // Extract dimensions from the new image
       await this.extractImageDimensions(newImage);
 
-      if (newImage === this.originalImage) {
-        // 🚀 Case: Reverting to the original uploaded image
-        console.log("Reverting UI state to allow new selections.");
+      this.baseImage = newImage;
 
+      // Check if we're reverting to original (can be a deep comparison if needed)
+      const isRevertToOriginal =
+        !this.hasResized ||
+        (this.originalImage && newImage === this.originalImage);
+
+      if (isRevertToOriginal) {
+        // 🚀 Case: Reverting to the original uploaded image
+        console.log("Reverting UI state to original.");
+
+        this.resizedImage = null;
         this.hasResized = false; // Unlock the UI
         this.selectedCountry = ""; // Reset country selection
         this.selectedTemplate = ""; // Reset template selection
@@ -158,8 +170,8 @@ export default {
 
         // Reset input fields to original image dimensions
         this.$nextTick(() => {
-          this.customWidth = this.originalWidth;
-          this.customHeight = this.originalHeight;
+          this.customWidth = this.extractedWidth;
+          this.customHeight = this.extractedHeight;
         });
       } else if (this.hasResized) {
         // 🚀 Case: After resizing, update fields but keep them disabled
@@ -174,6 +186,8 @@ export default {
         });
       } else {
         // 🚀 Case: Undo operation (go back one step)
+        this.resizedImage = null;
+        this.hasResized = false;
         this.$nextTick(() => {
           this.customWidth = this.originalWidth;
           this.customHeight = this.originalHeight;
@@ -185,6 +199,7 @@ export default {
     this.fetchCountryList();
     this.fetchTemplateList();
     if (this.imageData) {
+      this.originalImage = this.imageData; // Store original image
       this.extractImageDimensions(this.imageData); // Extract dimensions
     }
   },
@@ -359,6 +374,7 @@ export default {
 
         if (result.status === "success") {
           this.resizedImage = result.image;
+
           this.$emit("resize-complete", result.image);
           console.log("🎉 Image updated successfully!");
 
@@ -389,6 +405,7 @@ export default {
     },
     requestUndo() {
       console.log("Undo button clicked! Emitting event to parent.");
+      this.resizedImage = null; // Clear the resized image
       this.$emit("request-undo");
     },
 
@@ -396,7 +413,14 @@ export default {
       console.log(
         "Revert to Original button clicked! Emitting event to parent."
       );
+      this.resizedImage = null; // Clear the resized image
+      this.hasResized = false;
       this.$emit("request-revert");
+    },
+
+    requestRedo() {
+      console.log("Redo button clicked! Emitting event to parent.");
+      this.$emit("request-redo");
     },
 
     base64ToFile(base64String, fileName) {

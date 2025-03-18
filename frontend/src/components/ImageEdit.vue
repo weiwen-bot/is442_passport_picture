@@ -58,6 +58,7 @@
       @resize-complete="handleResizeComplete"
       @request-undo="handleUndo"
       @request-revert="handleReset"
+      @request-redo="handleRedo"
     />
     <!-- Show ImageEnhancement Component when "Enhance" is selected -->
     <ImageEnhancement
