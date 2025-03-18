@@ -17,6 +17,7 @@
         @change="handleResize"
         id="country"
         class="sm:py-3 ps-3 pe-10 block w-full rounded-lg border border-gray-300"
+        :disabled="hasResized || isSelectionLocked('country')"
       >
         <option value="">-- Select Country --</option>
         <option
@@ -33,14 +34,14 @@
       <label
         for="template"
         class="block font-medium mb-2 font-semibold text-left"
-        >Or Choose a Popular Size
+        >Or Choose a Template
       </label>
       <select
         v-model="selectedTemplate"
         @change="handleResize"
         id="template"
         class="sm:py-3 ps-3 pe-10 block w-full rounded-lg border border-gray-300"
-        :disabled="hasResized"
+        :disabled="hasResized || isSelectionLocked('template')"
       >
         <option value="">-- Select Template --</option>
         <option
@@ -48,7 +49,7 @@
           :key="template.label"
           :value="template.size"
         >
-          {{ template.label }} {{ template.size }}
+          {{ template.label }} ({{ template.size }})
         </option>
       </select>
     </div>
@@ -63,10 +64,10 @@
           <input
             type="number"
             v-model.number="customWidth"
-            @input="updateHeight"
+            @input="updateWidth"
             class="resize-input"
             :placeholder="originalWidth ? originalWidth + ' px' : 'Width'"
-            :disabled="hasResized"
+            :disabled="hasResized || isSelectionLocked('custom')"
           />
           <span class="text-gray-600 text-sm px-label">px</span>
         </div>
@@ -79,10 +80,10 @@
           <input
             type="number"
             v-model.number="customHeight"
-            @input="updateWidth"
+            @input="updateHeight"
             class="resize-input"
             :placeholder="originalHeight ? originalHeight + ' px' : 'Height'"
-            :disabled="hasResized"
+            :disabled="hasResized || isSelectionLocked('custom')"
           />
           <span class="text-gray-600 text-sm px-label">px</span>
         </div>
@@ -116,9 +117,13 @@
 export default {
   props: {
     imageData: String, // Parent passes the original image
-    resetCounter: Number,
   },
-  emits: ["resize-complete", "update:imageData"],
+  emits: [
+    "update:imageData",
+    "resize-complete",
+    "request-undo",
+    "request-revert",
+  ],
   data() {
     return {
       baseImage: this.imageData,
@@ -126,35 +131,61 @@ export default {
       selectedCountry: "",
       selectedTemplate: "",
       countryList: [],
-      templateList: [
-        { label: "Instagram Post", size: "1080x1080" },
-        { label: "Thumbnail", size: "150x150" },
-        { label: "HD Wallpaper", size: "1920x1080" },
-      ],
+      templateList: [],
       hasResized: false,
       aspectRatio: 1,
-      originalWidth: null, // Stores the actual width of the image
-      originalHeight: null, // Stores the actual height of the image
       customWidth: null,
       customHeight: null,
+      userSelection: null, // Tracks which option the user selected first!
     };
   },
   watch: {
-    resetCounter() {
-      this.resetResize();
-    },
+    async imageData(newImage, oldImage) {
+      console.log("🧐 watch: imageData triggered");
+      if (!newImage || newImage === oldImage) return;
 
-    imageData(newImage) {
-      if (newImage) {
-        this.extractImageDimensions(newImage);
+      // Extract dimensions from the new image
+      await this.extractImageDimensions(newImage);
+
+      if (newImage === this.originalImage) {
+        // 🚀 Case: Reverting to the original uploaded image
+        console.log("Reverting UI state to allow new selections.");
+
+        this.hasResized = false; // Unlock the UI
+        this.selectedCountry = ""; // Reset country selection
+        this.selectedTemplate = ""; // Reset template selection
+        this.userSelection = null; // Clear user selection mode
+
+        // Reset input fields to original image dimensions
+        this.$nextTick(() => {
+          this.customWidth = this.originalWidth;
+          this.customHeight = this.originalHeight;
+        });
+      } else if (this.hasResized) {
+        // 🚀 Case: After resizing, update fields but keep them disabled
+        console.log(
+          "Updating fields with resized dimensions:",
+          this.extractedWidth,
+          this.extractedHeight
+        );
+        this.$nextTick(() => {
+          this.customWidth = this.extractedWidth;
+          this.customHeight = this.extractedHeight;
+        });
+      } else {
+        // 🚀 Case: Undo operation (go back one step)
+        this.$nextTick(() => {
+          this.customWidth = this.originalWidth;
+          this.customHeight = this.originalHeight;
+        });
       }
     },
   },
   mounted() {
     this.fetchCountryList();
-
+    this.fetchTemplateList();
     if (this.imageData) {
-      this.extractImageDimensions(this.imageData); // Ensures dimensions are fetched immediately
+      this.extractImageDimensions(this.imageData); // Extract dimensions
     }
   },
   methods: {
@@ -171,55 +202,180 @@ export default {
         return [];
       }
     },
+    async fetchTemplateList() {
+      try {
+        const response = await fetch("http://localhost:8080/image/templates");
+        if (!response.ok) throw new Error("Failed to fetch template list");
+        this.templateList = await response.json();
+      } catch (error) {
+        console.error("Error fetching template list:", error);
+      }
+    },
     extractImageDimensions(imageSrc) {
-      if (!imageSrc) return;
+      if (!imageSrc) return Promise.resolve;
 
-      const img = new Image();
-      img.onload = () => {
-        this.originalWidth = img.width;
-        this.originalHeight = img.height;
-        this.aspectRatio = img.width / img.height;
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          this.originalWidth = img.width;
+          this.originalHeight = img.height;
+          this.aspectRatio = img.width / img.height;
 
-        this.customWidth = this.originalWidth;
-        this.customHeight = this.originalHeight;
+          // Store extracted values in separate variables
+          this.extractedWidth = img.width;
+          this.extractedHeight = img.height;
 
-        console.log(
-          `Image dimensions extracted: ${this.originalWidth}x${this.originalHeight}`
-        );
-      };
-      img.src = imageSrc;
+          console.log(
+            `Image dimensions extracted: ${this.extractedWidth}x${this.extractedHeight}`
+          );
+          // Use $nextTick to ensure Vue updates fields properly
+          this.$nextTick(() => {
+            this.customWidth = this.extractedWidth;
+            this.customHeight = this.extractedHeight;
+            console.log(
+              `Input fields updated: ${this.customWidth}x${this.customHeight}`
+            );
+            resolve(); // Resolve the Promise after dimensions are updated
+          });
+        };
+        img.src = imageSrc;
+      });
+    },
+    // New methods for handling selection
+    countrySelected() {
+      if (this.selectedCountry) {
+        this.userSelection = "country";
+        this.handleResize();
+      }
+    },
+
+    templateSelected() {
+      if (this.selectedTemplate) {
+        this.userSelection = "template";
+        this.handleResize();
+      }
+    },
+
+    customSizeChanged() {
+      if (
+        (this.customWidth && this.customWidth !== this.originalWidth) ||
+        (this.customHeight && this.customHeight !== this.originalHeight)
+      ) {
+        this.userSelection = "custom";
+        // Don't resize immediately with custom size - wait for user to finish typing
+      }
+    },
+    isSelectionLocked(type) {
+      // If the image has been resized, lock everything
+      if (this.hasResized) {
+        return true;
+      }
+      // Otherwise, only lock fields that weren't the first selected
+      return this.userSelection !== null && this.userSelection !== type;
     },
     async handleResize() {
-      if (this.hasResized) return;
+      console.log("handleResize() triggered!");
 
-      const size =
-        this.selectedCountry || `${this.customWidth}x${this.customHeight}`;
-      if (!size) return;
+      // Store selections before resizing (so they are not reset)
+      const prevSelection = {
+        country: this.selectedCountry,
+        template: this.selectedTemplate,
+        customWidth: this.customWidth,
+        customHeight: this.customHeight,
+      };
 
-      this.hasResized = true;
+      // Determine which option was selected
+      if (!this.userSelection) {
+        if (this.selectedCountry) {
+          this.userSelection = "country";
+        } else if (this.selectedTemplate) {
+          this.userSelection = "template";
+        } else if (
+          this.customWidth !== this.originalWidth ||
+          this.customHeight !== this.originalHeight
+        ) {
+          this.userSelection = "custom";
+        }
+      }
+
+      if (this.hasResized) {
+        console.log("⚠️ Image already resized, skipping request.");
+        return;
+      }
+
+      // Ensure dimensions are updated based on selection
+      let newWidth = this.customWidth;
+      let newHeight = this.customHeight;
+
+      if (this.selectedCountry) {
+        // Find the country's passport size from the country list
+        const countryObj = this.countryList.find(
+          (c) => c.code === this.selectedCountry
+        );
+        if (countryObj) {
+          const [w, h] = countryObj.dimensions.split("x").map(Number);
+          newWidth = w;
+          newHeight = h;
+        }
+      } else if (this.selectedTemplate) {
+        // Find template dimensions if selected
+        const templateObj = this.templateList.find(
+          (t) => t.size === this.selectedTemplate
+        );
+        if (templateObj) {
+          const [w, h] = templateObj.size.split("x").map(Number);
+          newWidth = w;
+          newHeight = h;
+        }
+      }
+
+      let resizeParams = {
+        country: this.selectedCountry || null,
+        template: this.selectedTemplate || null,
+        customWidth: newWidth || null,
+        customHeight: newHeight || null,
+      };
+
+      console.log("Resize Parameters:", resizeParams);
+
       try {
+        const formData = new FormData();
+        formData.append(
+          "image",
+          this.base64ToFile(this.imageData, "uploaded-image.jpg")
+        );
+        for (const [key, value] of Object.entries(resizeParams)) {
+          if (value !== null) formData.append(key, value);
+        }
+
         const response = await fetch("http://localhost:8080/image/resize", {
           method: "POST",
-          body: JSON.stringify({ image: this.imageData, size }),
-          headers: { "Content-Type": "application/json" },
+          body: formData,
         });
+
+        if (!response.ok) throw new Error("Image resizing failed");
         const result = await response.json();
+        console.log("✅ Resize API Response:", result);
+
         if (result.status === "success") {
           this.resizedImage = result.image;
-          this.$emit("update:imageData", this.resizedImage);
+          this.$emit("resize-complete", result.image);
+          console.log("🎉 Image updated successfully!");
+
+          // Restore selections after resizing (instead of resetting them)
+          this.selectedCountry = prevSelection.country;
+          this.selectedTemplate = prevSelection.template;
+          this.customWidth = resizeParams.customWidth;
+          this.customHeight = resizeParams.customHeight;
+
+          // Set hasResized after successful resize
+          this.hasResized = true;
+        } else {
+          console.error("Resize response did not contain a valid image.");
         }
       } catch (error) {
         console.error("Error resizing image:", error);
       }
-    },
-    resetResize() {
-      this.baseImage = this.imageData;
-      this.resizedImage = null;
-      this.hasResized = false;
-      this.selectedCountry = "";
-      this.selectedTemplate = "";
-      this.customWidth = this.originalWidth;
-      this.customHeight = this.originalHeight;
     },
     updateHeight() {
       if (this.customWidth) {
@@ -230,6 +386,29 @@ export default {
       if (this.customHeight) {
         this.customWidth = Math.round(this.customHeight * this.aspectRatio);
       }
+    },
+    requestUndo() {
+      console.log("Undo button clicked! Emitting event to parent.");
+      this.$emit("request-undo");
+    },
+
+    requestRevert() {
+      console.log(
+        "Revert to Original button clicked! Emitting event to parent."
+      );
+      this.$emit("request-revert");
+    },
+
+    base64ToFile(base64String, fileName) {
+      const arr = base64String.split(",");
+      const mime = arr[0].match(/:(.*?);/)[1];
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      return new File([u8arr], fileName, { type: mime });
     },
   },
 };
