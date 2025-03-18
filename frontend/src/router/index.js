@@ -5,6 +5,7 @@ import ImageEdit from "../components/ImageEdit.vue";
 import BackgroundRemover from "../components/BackgroundRemover.vue";
 import ImageResizing from "../components/ImageResizing.vue";
 import BackgroundRemover2 from "../components/BackgroundRemover2.vue";
+import test from "../components/test.vue";
 
 const routes = [
   // {
@@ -44,6 +45,12 @@ const routes = [
     name: "BackgroundRemover2",
     component: BackgroundRemover2,
   },
+  {
+    path: "/test",
+    name: "test",
+    component: test,
+  },
+
 ];
 
 const router = createRouter({
