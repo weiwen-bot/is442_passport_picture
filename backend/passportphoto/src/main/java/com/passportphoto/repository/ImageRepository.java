@@ -7,5 +7,5 @@ import com.passportphoto.dto.ImgDTO;
 
 @Repository
 public interface ImageRepository {
-    byte[] extractFace(ImgDTO imgDTO);
+    
 }
