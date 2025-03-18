@@ -32,16 +32,16 @@
     </div> -->
     <!-- Show Cropped Image when cropping is done -->
     <div
-       v-if="currentAction === 'crop' && isCropped"
-       class="col-span-4 shadow-lg"
-     >
-       <h2 class="text-lg font-semibold mb-2">Your Cropped Image</h2>
-       <img
-         :src="imageData"
-         class="h-full w-auto max-w-full object-contain"
-         alt="Cropped Image"
-       />
-     </div>
+      v-if="currentAction === 'crop' && isCropped"
+      class="col-span-4 shadow-lg"
+    >
+      <h2 class="text-lg font-semibold mb-2">Your Cropped Image</h2>
+      <img
+        :src="imageData"
+        class="h-full w-auto max-w-full object-contain"
+        alt="Cropped Image"
+      />
+    </div>
 
     <!-- Show BackgroundRemover Component when "Background Remover" is selected -->
     <BackgroundRemover
@@ -60,8 +60,6 @@
       v-model:imageData="imageData"
       :original-image="originalImage"
       @resize-complete="handleResizeComplete"
-      @update:imageHistory="updateImageHistory"
-      @update:redoHistory="updateRedoHistory"
     />
     <!-- Show ImageEnhancement Component when "Enhance" is selected -->
     <ImageEnhancement
@@ -239,27 +237,6 @@ export default {
 
     handleUndo() {
       console.log("Undo button clicked! Current Action:", this.currentAction);
-
-      if (this.currentAction === "resize") {
-        this.$nextTick(() => {
-          console.log(
-            "🔄 After nextTick: Checking this.$refs.imageResizing:",
-            this.$refs.imageResizing
-          );
-
-          if (
-            this.$refs.imageResizing &&
-            typeof this.$refs.imageResizing.handleLocalUndo === "function"
-          ) {
-            console.log("Delegating undo to ImageResizing.vue");
-            this.$refs.imageResizing.handleLocalUndo();
-          } else {
-            console.error("ERROR: this.$refs.imageResizing is NULL!");
-          }
-        });
-        return;
-      }
-
       if (this.imageHistory.length > 0) {
         console.log("Undoing in ImageEdit.vue");
 
@@ -269,12 +246,6 @@ export default {
       }
     },
     handleRedo() {
-      if (this.currentAction === "resize" && this.$refs.imageResizing) {
-        console.log("Delegating redo to ImageResizing.vue");
-        this.$refs.imageResizing.handleLocalRedo();
-        return;
-      }
-
       if (this.redoHistory.length > 0) {
         console.log("Redoing in ImageEdit.vue");
 
@@ -284,17 +255,12 @@ export default {
       }
     },
     handleReset() {
-      if (this.currentAction === "resize" && this.$refs.imageResizing) {
-        console.log("Delegating Revert to Original to ImageResizing.vue");
-        this.$refs.imageResizing.handleLocalReset();
-      } else {
-        console.log("Reverting to original in ImageEdit.vue");
+      console.log("Reverting to original in ImageEdit.vue");
 
-        this.imageHistory.push(this.imageData); // Save for undo
-        this.redoHistory = []; // Clear redo history
-        this.imageData = this.originalImage;
-        this.isCropped = false; // Reset cropped state
-      }
+      this.imageHistory.push(this.imageData); // Save for undo
+      this.redoHistory = []; // Clear redo history
+      this.imageData = this.originalImage;
+      this.isCropped = false; // Reset cropped state
     },
 
     // After crop complete
@@ -321,17 +287,6 @@ export default {
         this.imageHistory.push(this.imageData);
       }
       this.imageData = resizedImage;
-    },
-
-    // update parent's history with history from resize page
-    updateImageHistory(history) {
-      console.log("📜 Updating image history from ImageResizing.vue");
-      this.imageHistory = history;
-    },
-
-    updateRedoHistory(history) {
-      console.log("📜 Updating redo history from ImageResizing.vue");
-      this.redoHistory = history;
     },
 
     // After process complete
