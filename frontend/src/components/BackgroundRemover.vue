@@ -173,7 +173,7 @@ export default {
         const finalBase64 = await this.resizeToClosestMultipleOf32(this.originalImage); 
         payload.image = finalBase64;
 
-        const response = await fetch("http://localhost:8080/image/process", {
+        const response = await fetch("http://localhost:8080/bg/removebg", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
