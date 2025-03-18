@@ -246,6 +246,7 @@ export default {
   data() {
     return {
       imageData: null, // Image data that will be passed to child and updated after crop
+      fileType: null, 
       originalImage: null, // Store the original image
       imageHistory: [], // Stack for undo
       redoHistory: [], // Stack for redo
@@ -268,6 +269,7 @@ export default {
   },
   async mounted() {
     this.imageData = localStorage.getItem("imageData") || null;
+    this.fileType = localStorage.getItem("fileType") || null;
     // Store the first uploaded image only ONCE
     if (!this.originalImage) {
       this.originalImage = this.imageData;
@@ -428,12 +430,12 @@ export default {
         }
 
         // Convert base64 to Blob
-        const blob = await this.base64ToBlob(this.imageData, "image/png");
+        const blob = await this.base64ToBlob(this.imageData, this.fileType);
 
         // File handling
         if (window.showSaveFilePicker) {
           const fileHandle = await window.showSaveFilePicker({
-            suggestedName: "edited_image.png",
+            suggestedName: `edited_image.${this.fileType.split('/').pop()}`,
             types: [
               {
                 description: "Images",
@@ -449,7 +451,7 @@ export default {
           // Fallback method
           const link = document.createElement("a");
           link.href = URL.createObjectURL(blob);
-          link.download = "edited_image.png";
+          link.download = `edited_image.${this.fileType.split('/').pop()}`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
@@ -476,7 +478,7 @@ export default {
 
       const blob = await this.generateCompositeImage(cols, rows);
       if (blob) {
-        this.triggerDownload(blob, `${cols}x${rows}_layout.png`);
+        this.triggerDownload(blob, `${cols}x${rows}_layout.${this.fileType.split('/').pop()}`);
       } else {
         console.error("Failed to generate image.");
       }
@@ -527,7 +529,7 @@ export default {
           // console.log("Canvas image created successfully.");
           canvas.toBlob((blob) => {
             resolve(blob);
-          }, "image/png");
+          }, this.fileType);
         };
 
         img.onerror = () => {
@@ -653,12 +655,12 @@ export default {
       }
 
       // Convert base64 image data to a Blob
-      const imageBlob = await this.base64ToBlob(this.imageData, "image/png");
+      const imageBlob = await this.base64ToBlob(this.imageData, this.fileType);
 
       // Define metadata
       const metadata = {
-        name: "uploaded_image.png",
-        mimeType: "image/png",
+        name: `edited_image.${this.fileType.split('/').pop()}`,
+        mimeType: this.fileType,
       };
 
       const metadataBlob = new Blob([JSON.stringify(metadata)], {

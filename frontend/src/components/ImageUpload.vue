@@ -49,6 +49,7 @@ export default {
   data() {
     return {
       imageData: null, // Stores the image data URL
+      fileType: null, // Stores the image file type
       showCloudOptions: false, // Flag to toggle cloud upload options
 
       SCOPES: "https://www.googleapis.com/auth/drive.readonly",
@@ -88,6 +89,7 @@ export default {
         // Update imageData with processed image from backend
         if (result.image) {
           this.imageData = result.image; // Set the processed image
+          this.fileType = file.type;
         } else {
           console.error("No image received from backend");
         }
@@ -272,6 +274,8 @@ export default {
       if (this.imageData) {
         // Navigate to the image cropping page, passing the image URL as a query parameter
         localStorage.setItem("imageData", this.imageData); // Save to localStorage
+        localStorage.setItem("fileType", this.fileType); // Save to localStorage
+
         this.$router.push({ name: "ImageEdit" });
       } else {
         alert("Please upload an image first.");
