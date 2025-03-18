@@ -54,12 +54,10 @@
     <!-- Show ImageResizing Component when "Resize" is selected -->
     <ImageResizing
       v-if="currentAction === 'resize' && imageData"
-      ref="imageResizing"
-      :key="imageData"
-      :reset-counter="resetCounter"
-      v-model:imageData="imageData"
-      :original-image="originalImage"
+      :imageData="imageData"
       @resize-complete="handleResizeComplete"
+      @request-undo="handleUndo"
+      @request-revert="handleReset"
     />
     <!-- Show ImageEnhancement Component when "Enhance" is selected -->
     <ImageEnhancement
@@ -195,7 +193,6 @@ export default {
       tokenClient: null,
       SCOPES: "https://www.googleapis.com/auth/drive.file",
       CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-      resetCounter: 0,
     };
   },
   async mounted() {
