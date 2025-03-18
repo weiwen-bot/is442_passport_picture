@@ -57,24 +57,35 @@
       <label class="block font-medium mb-2 font-semibold text-left">
         Custom Size (Aspect Ratio Locked)
       </label>
-      <div class="flex space-x-2">
-        <input
-          type="number"
-          v-model.number="customWidth"
-          @input="updateHeight"
-          class="sm:py-2 px-3 block w-1/2 rounded-lg border border-gray-300"
-          placeholder="Width"
-          :disabled="hasResized"
-        />
-        <span class="self-center"></span>
-        <input
-          type="number"
-          v-model.number="customHeight"
-          @input="updateWidth"
-          class="sm:py-2 px-3 block w-1/2 rounded-lg border border-gray-300"
-          placeholder="Height"
-          :disabled="hasResized"
-        />
+      <div class="flex items-center space-x-2">
+        <!-- Width Input -->
+        <div class="flex items-center space-x-1">
+          <input
+            type="number"
+            v-model.number="customWidth"
+            @input="updateHeight"
+            class="resize-input"
+            :placeholder="originalWidth ? originalWidth + ' px' : 'Width'"
+            :disabled="hasResized"
+          />
+          <span class="text-gray-600 text-sm px-label">px</span>
+        </div>
+
+        <!-- "×" Symbol -->
+        <span class="text-gray-700 font-semibold text-lg">×</span>
+
+        <!-- Height Input -->
+        <div class="flex items-center space-x-1">
+          <input
+            type="number"
+            v-model.number="customHeight"
+            @input="updateWidth"
+            class="resize-input"
+            :placeholder="originalHeight ? originalHeight + ' px' : 'Height'"
+            :disabled="hasResized"
+          />
+          <span class="text-gray-600 text-sm px-label">px</span>
+        </div>
       </div>
     </div>
   </div>
@@ -122,6 +133,8 @@ export default {
       ],
       hasResized: false,
       aspectRatio: 1,
+      originalWidth: null, // Stores the actual width of the image
+      originalHeight: null, // Stores the actual height of the image
       customWidth: null,
       customHeight: null,
     };
@@ -130,9 +143,19 @@ export default {
     resetCounter() {
       this.resetResize();
     },
+
+    imageData(newImage) {
+      if (newImage) {
+        this.extractImageDimensions(newImage);
+      }
+    },
   },
   mounted() {
     this.fetchCountryList();
+
+    if (this.imageData) {
+      this.extractImageDimensions(this.imageData); // Ensures dimensions are fetched immediately
+    }
   },
   methods: {
     async fetchCountryList() {
@@ -148,10 +171,29 @@ export default {
         return [];
       }
     },
+    extractImageDimensions(imageSrc) {
+      if (!imageSrc) return;
+
+      const img = new Image();
+      img.onload = () => {
+        this.originalWidth = img.width;
+        this.originalHeight = img.height;
+        this.aspectRatio = img.width / img.height;
+
+        this.customWidth = this.originalWidth;
+        this.customHeight = this.originalHeight;
+
+        console.log(
+          `Image dimensions extracted: ${this.originalWidth}x${this.originalHeight}`
+        );
+      };
+      img.src = imageSrc;
+    },
     async handleResize() {
       if (this.hasResized) return;
 
-      const size = this.selectedTemplate || this.selectedCountry;
+      const size =
+        this.selectedCountry || `${this.customWidth}x${this.customHeight}`;
       if (!size) return;
 
       this.hasResized = true;
@@ -176,8 +218,8 @@ export default {
       this.hasResized = false;
       this.selectedCountry = "";
       this.selectedTemplate = "";
-      this.customWidth = null;
-      this.customHeight = null;
+      this.customWidth = this.originalWidth;
+      this.customHeight = this.originalHeight;
     },
     updateHeight() {
       if (this.customWidth) {
@@ -194,41 +236,34 @@ export default {
 </script>
 
 <style scoped>
-/* Ensure button styling is not overridden */
-button {
-  /* all: unset; /* Reset inherited styles */
-  display: inline-block; /* Keeps button visible */
-  padding: 0.5rem 1rem; /* Maintain padding */
-  border-radius: 0.375rem; /* Keep rounded corners */
-  font-weight: bold; /* Maintain bold text */
-  text-align: center; /* Ensure text stays centered */
-  font-family: inherit; /* Keep the same font as the rest of the app */
-  border: 1px solid transparent; /* Prevent shifting when enabling/disabling */
-  color: black;
+select:disabled,
+input:disabled {
+  background-color: #f0f0f0;
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
-/* Default disabled button (light gray but visible) */
-.bg-gray-400 {
-  background-color: #a0aec0 !important; /* Light gray but visible */
-  border: 1px solid #718096 !important; /* Adds a border to make it look clickable */
+.px-label {
+  display: flex;
+  align-items: center;
+  height: 100%;
 }
 
-/* Active button (Green) */
-.bg-green-500 {
-  background-color: #48bb78 !important; /* Green */
+.text-gray-700 {
+  display: flex;
+  align-items: center;
 }
 
-.bg-green-600 {
-  background-color: #38a169 !important; /* Darker Green */
-}
-
-/* Fix disabled button issue */
-.disabled-button {
-  background-color: #a0aec0 !important; /* Light gray */
-  color: white !important;
-  cursor: not-allowed !important;
-  opacity: 0.6;
-  border: 1px solid #718096; /* Ensure it still looks like a button */
+.resize-input {
+  width: 80px; /* Set a fixed width to ensure consistency */
+  min-width: 80px;
+  max-width: 80px;
+  padding: 6px;
+  text-align: center;
+  box-sizing: border-box; /* Ensures padding doesn't affect width */
+  border: 1px solid #ccc; /* ✅ Explicitly define the border */
+  border-radius: 6px; /* ✅ Keeps the rounded edges consistent */
+  background-color: white; /* ✅ Ensures no transparency issues */
 }
 
 /* Loading spinner styling */
