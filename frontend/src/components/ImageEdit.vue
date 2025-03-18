@@ -141,10 +141,10 @@
     v-if="showResetModal"
     class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50"
   >
-    <div class="bg-white p-6 rounded shadow-lg w-120">
+    <div class="bg-white p-6 rounded shadow-lg w-140">
       <h3 class="text-xl font-semibold text-gray-900 mb-10">
-        Are you sure you want to reset? <br />
-        This will discard your photo and all changes.
+        Are you sure you want to upload new Image? <br />
+        This will discard your current photo and all changes.
       </h3>
       <div class="flex justify-end space-x-4">
         <!-- Cancel Button (Same as Discard) -->
