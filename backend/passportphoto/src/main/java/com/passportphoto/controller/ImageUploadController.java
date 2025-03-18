@@ -1,38 +1,39 @@
 package com.passportphoto.controller;
 
-import org.opencv.core.*;
-import org.opencv.imgcodecs.Imgcodecs;
-import org.opencv.imgproc.Imgproc;
-import org.springframework.beans.factory.annotation.Value;
+import com.passportphoto.service.ImageUploadService;
+import com.passportphoto.dto.ImageUploadResponse;
+
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/image")
 @CrossOrigin(origins = "http://localhost:5173") // Allow frontend origin
 public class ImageUploadController {
 
-    // 1. Upload Image Endpoint  
+    private final ImageUploadService imageUploadService;
+
+    public ImageUploadController(ImageUploadService imageUploadService) {
+        this.imageUploadService = imageUploadService;
+    }
+
     @PostMapping("/upload")
-    public String uploadImage(@RequestParam("image") MultipartFile file) {
+    public ResponseEntity<ImageUploadResponse> uploadImage(@RequestParam("image") MultipartFile file) {
         try {
-            // Convert MultipartFile to OpenCV Mat
-            Mat image = Imgcodecs.imdecode(new MatOfByte(file.getBytes()), Imgcodecs.IMREAD_COLOR);
+            if (file.isEmpty()) {
+                return ResponseEntity.badRequest().body(new ImageUploadResponse("error", "Image file is empty!", null));
+            }
 
-            // Convert Mat to byte array
-            MatOfByte matOfByte = new MatOfByte();
-            Imgcodecs.imencode(".jpg", image, matOfByte);
-            byte[] imageBytes = matOfByte.toArray();
+            String base64Image = imageUploadService.uploadImage(file);
+            return ResponseEntity.ok(new ImageUploadResponse("success", "Image uploaded successfully", base64Image));
 
-            // Convert to Base64
-            String base64Image = Base64.getEncoder().encodeToString(imageBytes);
-
-            return "{\"status\":\"success\", \"message\":\"Image uploaded successfully\", \"image\":\"data:image/jpeg;base64," + base64Image + "\"}";
         } catch (IOException e) {
-            return "{\"status\":\"error\", \"message\":\"Image processing failed: " + e.getMessage() + "\"}";
+            return ResponseEntity.internalServerError().body(new ImageUploadResponse("error", "Image processing failed: " + e.getMessage(), null));
         }
     }
 }

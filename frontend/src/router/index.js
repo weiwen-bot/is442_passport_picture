@@ -4,7 +4,7 @@ import ImageUpload from "../components/ImageUpload.vue";
 import ImageEdit from "../components/ImageEdit.vue";
 import BackgroundRemover from "../components/BackgroundRemover.vue";
 import ImageResizing from "../components/ImageResizing.vue";
-import BackgroundRemover2 from "../components/BackgroundRemover2.vue";
+import ImageEnhancement from "../components/ImageEnhancement.vue";
 import test from "../components/test.vue";
 
 const routes = [
@@ -40,17 +40,17 @@ const routes = [
     name: "BackgroundRemover",
     component: BackgroundRemover,
   },
+  //add Enhancement route
   {
-    path: "/background-remover2",
-    name: "BackgroundRemover2",
-    component: BackgroundRemover2,
+    path: "/enhancement",
+    name: "ImageEnhancement",
+    component: ImageEnhancement,
   },
   {
     path: "/test",
     name: "test",
     component: test,
   },
-
 ];
 
 const router = createRouter({

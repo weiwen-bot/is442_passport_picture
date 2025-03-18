@@ -8,7 +8,7 @@
       :collapsed="false"
     >
     <template v-slot:footer>
-      <button class="reset-button" @click="resetData">Reset</button>
+      <button class="bg-red-800 text-white px-4 py-2 m-2 rounded text-center items-center" @click="resetData" ><i class="fa-solid fa-upload mr-2"></i>Upload New Image</button>
     </template>
 
     </SidebarMenu>
@@ -42,11 +42,10 @@ export default {
           action: "background-remover",
         },
         {
-          title: "Background Remover2",
-          icon: "fa-solid fa-eraser",
-          action: "background-remover2",
+          title: "Enhance Photo",
+          icon: "fa-solid fa-wand-magic-sparkles",
+          action: "enhance",
         },
-
       ],
     };
   },
@@ -72,7 +71,7 @@ export default {
   font-size: 15px; /* Adjust the font size */
 }
 
-.reset-button {
+/* .reset-button {
   margin: 11px 20px; 
   padding: 10px 20px; 
   color: white; 
@@ -81,9 +80,9 @@ export default {
   cursor: pointer; 
   font-size: 14px; 
   transition: background-color 0.3s ease; 
-}
-
+} 
 .reset-button:hover {
   background-color: #b91d1d; 
-}
+}*/
+
 </style>
