@@ -1,20 +1,16 @@
 <template>
-  <!-- Right side: Image Display -->
-  <div class="col-span-6 flex items-center justify-center bg-gray-100 shadow-lg">
-    <img v-if="displayedImage" :src="displayedImage" alt="Displayed Image" class="max-h-full max-w-full object-contain" />
-  </div>
-
+  <h2 class="col-span-12 font-bold p-4 text-2xl">Image</h2>
   <!-- Left side: Background Change Controls -->
-  <div class="col-span-6 flex flex-col bg-white rounded-lg shadow-lg p-4 space-y-4 text-black">
+  <div class="col-span-4 bg-white border rounded-lg p-4 space-y-4 text-black">
     <h2 class="font-bold text-lg">Change Background</h2>
 
     <!-- Tabs -->
     <div class="border-b border-gray-200">
-      <ul class="flex text-sm font-medium text-center" role="tablist">
-        <li class="flex-1">
-          <button @click="activeTab = 'color'" :class="tabClass('color')" role="tab">Change Color</button>
+      <ul class="flex flex-col space-y-2 text-sm font-medium text-center" role="tablist">
+        <li>
+          <button @click="activeTab = 'color'" :class="tabClass('color')" role="tab">Replace BG with Color</button>
         </li>
-        <li class="flex-1">
+        <li>
           <button @click="activeTab = 'image'" :class="tabClass('image')" role="tab">Replace BG with Image</button>
         </li>
       </ul>
@@ -24,8 +20,6 @@
     <div v-if="activeTab === 'color'" class="p-4">
       <label class="block text-gray-700 font-medium mb-2">Select Background Color:</label>
       <div class="flex items-center space-x-2">
-        <!-- Color Picker -->
-        <input type="color" v-model="color" @input="applyColor" class="w-12 h-12 border rounded-lg cursor-pointer">
 
         <!-- Common Colors -->
         <div class="flex space-x-2">
@@ -34,6 +28,16 @@
                @click="applyColor(c)" 
                class="w-10 h-10 rounded-lg border cursor-pointer hover:opacity-80"></div>
         </div>
+      </div>
+
+      <div class="flex items-center justify-center space-x-2 mt-6 mb-2">
+        <label class="text-gray-700 font-medium">Color Selected:</label>
+        <!-- Color Picker -->
+        <input type="color" v-model="color" @input="applyColor" class="w-12 h-12 border rounded-lg cursor-pointer">
+      </div>
+
+      <div class="flex justify-center">
+        <label class="text-gray-700 text-xs mb-2">Click on the color box above to choose a custom color.</label>
       </div>
     </div>
 
@@ -67,6 +71,12 @@
     <!-- Error Message -->
     <div v-if="errorMessage" class="text-red-500 text-sm">{{ errorMessage }}</div>
   </div>
+
+  <!-- Right side: Image Display -->
+  <div class="col-span-8 shadow-lg flex justify-center items-center">
+    <img v-if="displayedImage" :src="displayedImage" alt="Displayed Image" class="max-h-full max-w-full object-contain" />
+  </div>
+
 </template>
 
 <script>
@@ -143,8 +153,10 @@ export default {
 
     tabClass(tab) {
       return `w-full py-2 border-b-2 ${
-        this.activeTab === tab ? "border-blue-500 text-blue-500 font-semibold" : "border-transparent text-gray-500"
-      } hover:text-gray-700`;
+        this.activeTab === tab
+          ? "!bg-white !border-gray-500 !text-gray-500 !font-semibold" // Selected tab
+          : "!bg-gray-600 !text-white !border-transparent  hover:!bg-gray-700 hover:!text-white" // Unselected tab
+      }`;
     },
 
     triggerUpload() {
