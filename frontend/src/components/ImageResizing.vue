@@ -5,39 +5,77 @@
     class="col-span-4 bg-white border rounded-lg shadow-lg p-4 space-y-2 text-black"
   >
     <h2 class="font-bold text-lg">Resize Your Image</h2>
+
     <div class="max-w-sm space-y-3 pt-2">
-      <div>
-        <label
-          for="country"
-          class="block font-medium mb-2 font-semibold text-left"
-          >Select a Country</label
-        >
-        <select
-          v-model="selectedCountry"
-          @change="saveSelectedCountry"
-          id="country"
-          class="sm:py-3 ps-3 pe-10 block w-full rounded-lg border border-gray-300"
-        >
-          <option value="">-- Select Country --</option>
-          <option
-            v-for="country in countryList"
-            :key="country.code"
-            :value="country.code"
-          >
-            {{ country.name }}
-          </option>
-        </select>
-      </div>
-    </div>
-    <div class="max-w-sm space-y-4 pt-3">
-      <button
-        @click="handleResize"
-        :class="resizeButtonClass"
-        :disabled="!baseImage || !selectedCountry || isLoading"
-        class="sm:py-3 ps-3 pe-10 block w-full rounded-lg text-black"
+      <label
+        for="country"
+        class="block font-medium mb-2 font-semibold text-left"
+        >Select a Country
+      </label>
+      <select
+        v-model="selectedCountry"
+        @change="handleResize"
+        id="country"
+        class="sm:py-3 ps-3 pe-10 block w-full rounded-lg border border-gray-300"
       >
-        Resize
-      </button>
+        <option value="">-- Select Country --</option>
+        <option
+          v-for="country in countryList"
+          :key="country.code"
+          :value="country.code"
+        >
+          {{ country.name }} ({{ country.dimensions }})
+        </option>
+      </select>
+    </div>
+
+    <div class="max-w-sm space-y-3 pt-2">
+      <label
+        for="template"
+        class="block font-medium mb-2 font-semibold text-left"
+        >Or Choose a Popular Size
+      </label>
+      <select
+        v-model="selectedTemplate"
+        @change="handleResize"
+        id="template"
+        class="sm:py-3 ps-3 pe-10 block w-full rounded-lg border border-gray-300"
+        :disabled="hasResized"
+      >
+        <option value="">-- Select Template --</option>
+        <option
+          v-for="template in templateList"
+          :key="template.label"
+          :value="template.size"
+        >
+          {{ template.label }} {{ template.size }}
+        </option>
+      </select>
+    </div>
+
+    <div class="max-w-sm space-y-3 pt-2">
+      <label class="block font-medium mb-2 font-semibold text-left">
+        Custom Size (Aspect Ratio Locked)
+      </label>
+      <div class="flex space-x-2">
+        <input
+          type="number"
+          v-model.number="customWidth"
+          @input="updateHeight"
+          class="sm:py-2 px-3 block w-1/2 rounded-lg border border-gray-300"
+          placeholder="Width"
+          :disabled="hasResized"
+        />
+        <span class="self-center"></span>
+        <input
+          type="number"
+          v-model.number="customHeight"
+          @input="updateWidth"
+          class="sm:py-2 px-3 block w-1/2 rounded-lg border border-gray-300"
+          placeholder="Height"
+          :disabled="hasResized"
+        />
+      </div>
     </div>
   </div>
 
@@ -67,128 +105,35 @@
 export default {
   props: {
     imageData: String, // Parent passes the original image
-    resetCounter: {
-      type: Number,
-      default: 0,
-    },
-    originalImage: String, // Receive the first uploaded image from the parent
+    resetCounter: Number,
   },
-  expose: ["handleLocalUndo", "handleLocalRedo", "handleLocalReset"],
-  emits: [
-    "resize-complete",
-    "update:imageData",
-    "update:imageHistory",
-    "update:redoHistory",
-  ],
+  emits: ["resize-complete", "update:imageData"],
   data() {
     return {
-      baseImage: null, // Stores the working image (resets when needed)
+      baseImage: this.imageData,
       resizedImage: null, // Stores resized image
       selectedCountry: "",
+      selectedTemplate: "",
       countryList: [],
-      isLoading: false,
-
-      // Local history for undo/redo within Image Resizing page
-      localImageHistory: [],
-      localRedoHistory: [],
+      templateList: [
+        { label: "Instagram Post", size: "1080x1080" },
+        { label: "Thumbnail", size: "150x150" },
+        { label: "HD Wallpaper", size: "1920x1080" },
+      ],
+      hasResized: false,
+      aspectRatio: 1,
+      customWidth: null,
+      customHeight: null,
     };
   },
-  mounted() {
-    if (this.imageData && this.localImageHistory.length === 0) {
-      this.localImageHistory = [this.imageData];
-    }
-
-    // Store the uploaded image only when first mounting
-    if (!this.originalImage) {
-      this.originalImage = this.imageData;
-    }
-
-    this.baseImage = this.imageData;
-
-    console.log(
-      "ImageResizing mounted with history:",
-      this.localImageHistory.length,
-      "items"
-    );
-  },
-
-  computed: {
-    resizeButtonClass() {
-      if (!this.originalImage || this.isLoading) {
-        return "bg-gray-400 text-white font-bold py-2 px-4 rounded opacity-50 cursor-not-allowed border border-gray-500"; // Disabled (gray but still a button)
-      }
-      if (this.selectedCountry) {
-        return "bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded border border-green-600"; // Green when country selected
-      }
-      return "bg-gray-400 text-white font-bold py-2 px-4 rounded opacity-50 cursor-not-allowed border border-gray-500"; // Default gray
-    },
-  },
-  created() {
-    console.log("Component created with imageData:", this.imageData);
-
-    this.resizedImage = null;
-
-    const storedCountry = localStorage.getItem("selectedCountry");
-
-    // Fetch the country list first
-    this.fetchCountryList().then(() => {
-      // After countries are loaded, validate the stored country
-      if (
-        storedCountry &&
-        this.countryList.some((country) => country.code === storedCountry)
-      ) {
-        this.selectedCountry = storedCountry;
-        console.log("Restored saved country:", this.selectedCountry);
-      } else {
-        this.selectedCountry = ""; // Default to "-- Select Country --"
-        console.log("Saved country not found or invalid, using default");
-      }
-    });
-  },
-  beforeUnmount() {
-    // Only update parent with resized image if it exists
-    if (this.resizedImage && this.resizedImage !== this.originalImage) {
-      console.log("Leaving - passing resized image to parent");
-      this.$emit("update:imageData", this.resizedImage);
-    }
-
-    this.$emit("update:imageHistory", this.localImageHistory);
-    this.$emit("update:redoHistory", this.localRedoHistory);
-  },
-
   watch: {
-    resetCounter(newVal, oldVal) {
-      if (newVal !== oldVal) {
-        console.log(`resetCounter changed: ${oldVal} → ${newVal}`);
-        this.baseImage = null; // Temporarily set to null
-        this.$nextTick(() => {
-          this.baseImage = this.originalImage; // Ensure Vue detects a full update
-          this.resizedImage = null; // Clear resized image
-        });
-      }
-    },
-
-    imageData(newImage, oldImage) {
-      if (newImage !== oldImage) {
-        console.log("🖼 imageData updated in ImageResizing.vue:", newImage);
-
-        // Save previous state in history for undo
-        if (oldImage) {
-          this.localImageHistory.push(oldImage);
-        }
-
-        this.baseImage = ""; // Temporarily clear to force reactivity
-        this.$nextTick(() => {
-          this.baseImage = newImage; // Set correct image after reactivity updates
-          this.resizedImage = null;
-        });
-
-        // Clear redo history when a new change is made
-        this.localRedoHistory = [];
-      }
+    resetCounter() {
+      this.resetResize();
     },
   },
-
+  mounted() {
+    this.fetchCountryList();
+  },
   methods: {
     async fetchCountryList() {
       try {
@@ -203,117 +148,46 @@ export default {
         return [];
       }
     },
-    saveSelectedCountry() {
-      localStorage.setItem("selectedCountry", this.selectedCountry);
-      console.log("✅ Selected country saved:", this.selectedCountry);
-    },
     async handleResize() {
-      if (!this.imageData || !this.selectedCountry) {
-        alert("Please select a country first.");
-        return;
-      }
+      if (this.hasResized) return;
 
-      this.isLoading = true;
+      const size = this.selectedTemplate || this.selectedCountry;
+      if (!size) return;
+
+      this.hasResized = true;
       try {
-        // Convert base64 to Blob
-        const file = this.base64ToFile(this.imageData, "uploaded-image.jpg");
-
-        // Create FormData
-        const formData = new FormData();
-        formData.append("image", file);
-        formData.append("country", this.selectedCountry);
-
-        // API Call
         const response = await fetch("http://localhost:8080/image/resize", {
           method: "POST",
-          body: formData,
+          body: JSON.stringify({ image: this.imageData, size }),
+          headers: { "Content-Type": "application/json" },
         });
-
-        if (!response.ok) {
-          throw new Error("Image resizing failed");
-        }
-
         const result = await response.json();
-
-        if (result.status === "success" && result.image) {
-          console.log(
-            "Received resized image:",
-            result.image ? result.image.substring(0, 50) + "..." : "NULL"
-          );
-
-          this.localImageHistory.push(this.baseImage);
-          this.localRedoHistory = [];
-
-          // Set the resized image
+        if (result.status === "success") {
           this.resizedImage = result.image;
-          this.baseImage = result.image;
+          this.$emit("update:imageData", this.resizedImage);
         }
       } catch (error) {
         console.error("Error resizing image:", error);
-        alert("Error resizing image: " + error.message);
-      } finally {
-        this.isLoading = false;
       }
     },
-
-    handleLocalUndo() {
-      console.log(
-        "📜 localImageHistory length:",
-        this.localImageHistory.length
-      );
-      if (this.localImageHistory.length > 0) {
-        this.localRedoHistory.push(this.baseImage);
-        this.baseImage = this.localImageHistory.pop();
-        this.resizedImage = this.baseImage;
-
-        // Emit updated history to parent
-        this.$emit("update:imageHistory", this.localImageHistory);
-        this.$emit("update:redoHistory", this.localRedoHistory);
-        this.$emit("update:imageData", this.baseImage);
-      }
-    },
-
-    handleLocalRedo() {
-      if (this.localRedoHistory.length > 0) {
-        console.log("↪️ Local Redo in ImageResizing.vue");
-        this.localImageHistory.push(this.baseImage);
-        this.baseImage = this.localRedoHistory.pop();
-        this.resizedImage = this.baseImage;
-
-        // Emit updated history to parent
-        this.$emit("update:imageHistory", this.localImageHistory);
-        this.$emit("update:redoHistory", this.localRedoHistory);
-        this.$emit("update:imageData", this.baseImage);
-      }
-    },
-
-    handleLocalReset() {
-      console.log("🔄 Local Reset in ImageResizing.vue");
-      if (this.baseImage !== this.originalImage) {
-        this.localImageHistory.push(this.baseImage);
-        this.localRedoHistory = []; // Reset redo history
-      }
-
-      // Reset image to original
-      this.baseImage = this.originalImage;
+    resetResize() {
+      this.baseImage = this.imageData;
       this.resizedImage = null;
-
-      // Emit reset event
-      this.$emit("update:imageData", this.originalImage);
-      this.$emit("update:imageHistory", this.localImageHistory);
-      this.$emit("update:redoHistory", this.localRedoHistory);
+      this.hasResized = false;
+      this.selectedCountry = "";
+      this.selectedTemplate = "";
+      this.customWidth = null;
+      this.customHeight = null;
     },
-
-    base64ToFile(base64String, fileName) {
-      const arr = base64String.split(",");
-      const mime = arr[0].match(/:(.*?);/)[1];
-      const bstr = atob(arr[1]);
-      let n = bstr.length;
-      const u8arr = new Uint8Array(n);
-      while (n--) {
-        u8arr[n] = bstr.charCodeAt(n);
+    updateHeight() {
+      if (this.customWidth) {
+        this.customHeight = Math.round(this.customWidth / this.aspectRatio);
       }
-      return new File([u8arr], fileName, { type: mime });
+    },
+    updateWidth() {
+      if (this.customHeight) {
+        this.customWidth = Math.round(this.customHeight * this.aspectRatio);
+      }
     },
   },
 };
