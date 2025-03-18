@@ -11,7 +11,13 @@ public class ImageUploadResponse {
         this.image = image;
     }
 
-    public String getStatus() { return status; }
-    public String getMessage() { return message; }
-    public String getImage() { return image; }
+    public String getStatus() { 
+        return status; 
+    }
+    public String getMessage() { 
+        return message; 
+    }
+    public String getImage() { 
+        return image; 
+    }
 }
