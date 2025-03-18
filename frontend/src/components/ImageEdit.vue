@@ -17,7 +17,7 @@
     />
 
     <!-- Show Cropped Image when cropping is done -->
-    <div
+    <!-- <div
       v-if="currentAction === 'crop' && isCropped"
       class="col-span-12 flex flex-col items-center justify-center h-screen"
     >
@@ -29,7 +29,19 @@
           alt="Cropped Image"
         />
       </div>
-    </div>
+    </div> -->
+    <!-- Show Cropped Image when cropping is done -->
+    <div
+       v-if="currentAction === 'crop' && isCropped"
+       class="col-span-4 shadow-lg"
+     >
+       <h2 class="text-lg font-semibold mb-2">Your Cropped Image</h2>
+       <img
+         :src="imageData"
+         class="h-full w-auto max-w-full object-contain"
+         alt="Cropped Image"
+       />
+     </div>
 
     <!-- Show BackgroundRemover Component when "Background Remover" is selected -->
     <BackgroundRemover
