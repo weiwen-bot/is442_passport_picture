@@ -64,7 +64,8 @@
           <input
             type="number"
             v-model.number="customWidth"
-            @input="updateWidth"
+            @input="updateHeight"
+            @change="handleResize"
             class="resize-input"
             :placeholder="originalWidth ? originalWidth + ' px' : 'Width'"
             :disabled="hasResized || isSelectionLocked('custom')"
@@ -80,7 +81,8 @@
           <input
             type="number"
             v-model.number="customHeight"
-            @input="updateHeight"
+            @input="updateWidth"
+            @change="handleResize"
             class="resize-input"
             :placeholder="originalHeight ? originalHeight + ' px' : 'Height'"
             :disabled="hasResized || isSelectionLocked('custom')"
