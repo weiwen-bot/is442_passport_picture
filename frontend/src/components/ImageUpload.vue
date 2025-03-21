@@ -1,5 +1,11 @@
 <template>
-  <div class="upload-container">
+  <div class="upload-container"
+    @dragover.prevent="handleDragOver" 
+    @dragenter.prevent="handleDragOver"
+    @dragleave="handleDragLeave"
+    @drop="handleDrop"
+  >
+  
     <h1>ID Photo Generator</h1>
 
     <p class="instruction">
@@ -50,8 +56,9 @@ export default {
     return {
       imageData: null, // Stores the image data URL
       fileType: null, // Stores the image file type
+      isDragging: false,
+      
       showCloudOptions: false, // Flag to toggle cloud upload options
-
       SCOPES: "https://www.googleapis.com/auth/drive.readonly",
       CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID,
       API_KEY: import.meta.env.VITE_GOOGLE_API_KEY,
@@ -67,6 +74,16 @@ export default {
       "https://accounts.google.com/gsi/client",
       this.gisLoaded
     );
+  },
+  watch: {
+    isDragging(newValue) {
+      const container = document.querySelector(".upload-container");
+      if (newValue) {
+        container.classList.add("drag-over");
+      } else {
+        container.classList.remove("drag-over");
+      }
+    }
   },
   methods: {
     // handle backend upload
@@ -124,6 +141,35 @@ export default {
       } else {
         alert("Please select a valid image file");
       }
+    },
+
+    handleDrop(event) {
+      event.preventDefault();
+      this.isDragging = false; // Reset state
+
+      const files = event.dataTransfer.files;
+      if (files.length > 0) {
+        const file = files[0];
+
+        if (file.size > 10 * 1024 * 1024) {
+          alert("File size exceeds 10MB. Please choose a smaller file.");
+          return;
+        }
+
+        if (file.type.startsWith("image")) {
+          this.uploadToBackend(file);
+        } else {
+          alert("Please select a valid image file");
+        }
+      }
+    },
+
+    handleDragOver() {
+      this.isDragging = true;
+    },
+
+    handleDragLeave() {
+      this.isDragging = false;
     },
 
     // Toggle the visibility of cloud options
@@ -298,6 +344,11 @@ export default {
   max-width: 500px;
   margin: auto;
   text-align: center;
+  transition: background-color 0.3s ease-in-out;
+}
+
+.upload-container.drag-over {
+  background-color: rgba(226, 226, 226, 0.887); /* Highlight when dragging */
 }
 
 h1 {
@@ -336,7 +387,7 @@ h1 {
   align-items: center;
   justify-content: center;
   width: 200px;
-  padding: 12px 24px;
+  padding: 12px 12px;
   background-color: #2d3748;
   color: white;
   font-size: 16px;
