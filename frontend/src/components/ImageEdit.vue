@@ -73,7 +73,7 @@
         <!-- Reset Button -->
         <button
           class="text-white bg-gray-800 p-2 rounded mr-3 flex items-center"
-          @click="handleReset"
+          @click="handleReset"  
         >
           <i class="fas fa-eraser mr-2"></i> Revert to Original
         </button>
@@ -128,6 +128,18 @@
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Revert Confirmation Modal -->
+  <div v-if="showRevertModal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded shadow-lg w-96">
+      <h3 class="text-xl font-semibold text-gray-900 mb-6">Revert to Original Image?</h3>
+      <p class="text-gray-700 mb-4">This will discard all changes. Are you sure?</p>
+      <div class="flex justify-end space-x-4">
+        <button @click="cancelRevert" class="bg-gray-800 text-white px-4 py-2 rounded">Cancel</button>
+        <button @click="confirmRevert" class="bg-red-600 text-white px-4 py-2 rounded">Confirm</button>
       </div>
     </div>
   </div>
@@ -343,12 +355,32 @@ export default {
       }
     },
     handleReset() {
+      if (this.imageData !== this.originalImage) {
+        console.log("Reverting to original in ImageEdit.vue");
+        this.showRevertModal = true;
+        this.imageHistory.push(this.imageData); // Save for undo
+        this.redoHistory = []; // Clear redo history
+        this.imageData = this.originalImage;
+        this.isCropped = false; // Reset cropped state
+      } else {
+        console.log("No changes detected, modal will not be shown.");
+      }
       console.log("Reverting to original in ImageEdit.vue");
+    },
 
-      this.imageHistory.push(this.imageData); // Save for undo
-      this.redoHistory = []; // Clear redo history
+    // Revert Modal
+    cancelRevert() {
+      this.showRevertModal = false;
+      this.$nextTick(() => {
+        console.log("Modal should be hidden now");
+      });
+      this.$forceUpdate(); 
+    }, 
+    confirmRevert() {
+      this.imageHistory.push(this.imageData);
+      this.redoHistory = [];
       this.imageData = this.originalImage;
-      this.isCropped = false; // Reset cropped state
+      this.showRevertModal = false;
     },
 
     // After crop complete
