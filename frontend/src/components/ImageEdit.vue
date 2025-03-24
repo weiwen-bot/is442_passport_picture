@@ -187,7 +187,7 @@
       <p class="text-gray-700 mb-4">This will discard all changes. Are you sure?</p>
       <div class="flex justify-end space-x-4">
         <button @click="cancelRevert" class="bg-gray-800 text-white px-4 py-2 rounded">Cancel</button>
-        <button @click="confirmRevert" class="bg-red-600 text-white px-4 py-2 rounded">Confirm</button>
+        <button @click="confirmRevert" class="bg-red-800 text-white px-4 py-2 rounded">Confirm</button>
       </div>
     </div>
   </div>
