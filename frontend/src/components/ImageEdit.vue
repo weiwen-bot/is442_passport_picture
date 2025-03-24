@@ -20,12 +20,12 @@
     />
     
     <!-- Show ImageCropping Component when "Crop" is selected -->
-    <ImageCropping
+    <!-- <ImageCropping
       v-if="currentAction === 'crop' && imageData && !isCropped"
       :key="imageData"
       v-model:imageData="imageData"
       @crop-complete="handleCropComplete"
-    />
+    /> -->
 
     <!-- Show Cropped Image when cropping is done -->
     <!-- <div
@@ -42,7 +42,7 @@
       </div>
     </div> -->
     <!-- Show Cropped Image when cropping is done -->
-    <div
+    <!-- <div
       v-if="currentAction === 'crop' && isCropped"
       class="col-span-4 shadow-lg"
     >
@@ -52,7 +52,44 @@
         class="h-full w-auto max-w-full object-contain"
         alt="Cropped Image"
       />
-    </div>
+    </div> -->
+
+    <!-- Crop feature: Either show cropping interface or recrop interface based on state -->
+    <template v-if="currentAction === 'crop' && imageData">
+      <!-- Show cropper when not cropped yet -->
+      <ImageCropping
+        v-if="!isCropped"
+        :key="imageData"
+        v-model:imageData="imageData"
+        @crop-complete="handleCropComplete"
+      />
+
+      <!-- Show recrop interface when already cropped -->
+      <div v-else class="col-span-12 grid grid-cols-12 gap-4 p-4">
+      <h2 class="col-span-12 font-bold p-4 text-2xl">Image</h2>
+        <!-- Left side: Recrop options -->
+        <div class="col-span-4 bg-white border rounded-lg shadow-lg p-4 space-y-2 text-black">
+          <h2 class="font-bold text-lg">Your Cropped Image</h2>
+          <div class="max-w-sm space-y-4 pt-3">
+            <button
+              class="sm:py-3 ps-3 pe-10 block w-full rounded-lg bg-green-500 text-white"
+              @click="handleRecrop">
+              Crop
+            </button>
+          </div>
+        </div>
+        
+        <!-- Right side: Cropped image display -->
+        <div class="col-span-8 shadow-lg flex justify-center items-center">
+          <img
+            :src="imageData"
+            class="max-h-full w-auto object-contain"
+            style="max-width: 100%; width: auto; height: auto;"
+            alt="Cropped Image"
+          />
+        </div>
+      </div>
+    </template>
 
     <!-- Show BackgroundRemover Component when "Background Remover" is selected -->
     <BackgroundRemover
@@ -308,6 +345,8 @@ export default {
       columns: 2,
       rows: 2,
       padding: 20,
+      showRevertModal: false,
+
     };
   },
   async mounted() {
@@ -334,14 +373,20 @@ export default {
     },
   },
   methods: {
+    // Add this new method to handle recropping
+    handleRecrop() {
+      // Reset the cropping state to show the cropper again
+      this.isCropped = false;
+    },
+
     handleAction(action) {
       console.log("Handling action:", action);
       this.currentAction = action;
 
-      if (action === "crop") {
-        // If user clicks "Crop" again, allow re-cropping the already cropped image
-        this.isCropped = false;
-      }
+      // if (action === "crop") {
+      //   // If user clicks "Crop" again, allow re-cropping the already cropped image
+      //   this.isCropped = false;
+      // }
 
       this.$nextTick(() => {
         console.log("✅ currentAction updated to:", this.currentAction);
