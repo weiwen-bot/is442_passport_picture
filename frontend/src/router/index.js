@@ -5,7 +5,7 @@ import ImageEdit from "../components/ImageEdit.vue";
 import BackgroundRemover from "../components/BackgroundRemover.vue";
 import ImageResizing from "../components/ImageResizing.vue";
 import ImageEnhancement from "../components/ImageEnhancement.vue";
-import test from "../components/test.vue";
+import test from "../components/test2.vue";
 
 const routes = [
   // {

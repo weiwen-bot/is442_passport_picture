@@ -49,10 +49,6 @@
             img.onload = resolve;
             img.onerror = () => reject(new Error("Failed to load image"));
           });
-  
-          const originalWidth = img.width;
-          const originalHeight = img.height;
-          console.log("Original dimensions:", originalWidth, "x", originalHeight);
 
   
           // Send to your backend
@@ -72,8 +68,7 @@
           if (!result.processedImage) {
             throw new Error("No processed image received from backend.");
           }
-  
-          // 3) Crop the returned image back to the original size
+          
           this.processedImage = result.processedImage;
   
           // Optionally store or emit the final image
