@@ -19,40 +19,6 @@
       @request-redo="handleRedo"
     />
     
-    <!-- Show ImageCropping Component when "Crop" is selected -->
-    <!-- <ImageCropping
-      v-if="currentAction === 'crop' && imageData && !isCropped"
-      :key="imageData"
-      v-model:imageData="imageData"
-      @crop-complete="handleCropComplete"
-    /> -->
-
-    <!-- Show Cropped Image when cropping is done -->
-    <!-- <div
-      v-if="currentAction === 'crop' && isCropped"
-      class="col-span-12 flex flex-col items-center justify-center h-screen"
-    >
-      <h2 class="text-lg font-semibold mb-4">Your Cropped Image</h2>
-      <div class="flex justify-center items-center w-full">
-        <img
-          :src="imageData"
-          class="h-auto max-w-full object-contain max-h-[70vh]"
-          alt="Cropped Image"
-        />
-      </div>
-    </div> -->
-    <!-- Show Cropped Image when cropping is done -->
-    <!-- <div
-      v-if="currentAction === 'crop' && isCropped"
-      class="col-span-4 shadow-lg"
-    >
-      <h2 class="text-lg font-semibold mb-2">Your Cropped Image</h2>
-      <img
-        :src="imageData"
-        class="h-full w-auto max-w-full object-contain"
-        alt="Cropped Image"
-      />
-    </div> -->
 
     <!-- Crop feature: Either show cropping interface or recrop interface based on state -->
     <template v-if="currentAction === 'crop' && imageData">
@@ -157,19 +123,19 @@
           >
             <button
               @click="downloadImage"
-              class="block w-full text-left p-2 hover:bg-gray-200"
+              class="block w-full text-left bg-gray-100 p-2 hover:bg-gray-200"
             >
               Download Image
             </button>
             <button
               @click="openLayoutPopup"
-              class="block w-full text-left p-2 hover:bg-gray-200"
+              class="block w-full text-left bg-gray-100  p-2 hover:bg-gray-200"
             >
               <i class="fa-solid fa-th-large"></i> Multiple Layouts
             </button>
             <button
               @click="handleGoogleDownload"
-              class="block w-full text-left p-2 hover:bg-gray-200"
+              class="block w-full text-left bg-gray-100  p-2 hover:bg-gray-200"
             >
               <i class="fa-solid fa-cloud-arrow-down"></i> Upload to Google
               Drive
@@ -201,13 +167,13 @@
       <h2 class="text-xl font-semibold text-gray-900 mb-6">Select Layout</h2>
       <button
         @click="downloadWithLayout(2, 2)"
-        class="block w-full text-left p-2 bg-gray-100 hover:bg-gray-200 rounded mb-2"
+        class="block w-full text-left p-2 bg-gray-800  text-white hover:bg-gray-200 rounded mb-2"
       >
         2x2 Layout (4 images)
       </button>
       <button
         @click="downloadWithLayout(4, 6)"
-        class="block w-full text-left p-2 bg-gray-100 hover:bg-gray-200 rounded mb-2"
+        class="block w-full text-left p-2 bg-gray-800 text-white hover:bg-gray-200 rounded mb-2"
       >
         4x6 Layout (24 images)
       </button>
@@ -262,7 +228,7 @@
 
       <button
         @click="downloadWithLayout(columns, rows)"
-        class="mt-2 block w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
+        class="mt-2 block w-full bg-green-500 text-white p-2 rounded hover:bg-blue-700"
       >
         Download Custom Layout
       </button>
@@ -773,5 +739,11 @@ export default {
 }
 .bg-red-800 {
   background-color: #c53030 !important; /* Dark Red */
+}
+.bg-green-500 {
+  background-color: #48bb78 !important; 
+}
+.bg-gray-100 {
+  background-color: #ffff !important;
 }
 </style>
