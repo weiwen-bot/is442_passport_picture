@@ -26,15 +26,21 @@
           <div v-for="c in commonColors" :key="c" 
                :style="{ backgroundColor: c }" 
                @click="applyColor(c)" 
-               class="w-10 h-10 rounded-lg border cursor-pointer hover:opacity-80"></div>
+               class="w-10 h-10 rounded-lg shadow-md cursor-pointer hover:opacity-80"></div>
         </div>
       </div>
 
       <div class="flex items-center justify-center space-x-2 mt-6 mb-2">
-        <label class="text-gray-700 font-medium">Color Selected:</label>
-        <!-- Color Picker -->
-        <input type="color" v-model="color" @input="applyColor" class="w-12 h-12 border rounded-lg cursor-pointer">
+        <label class="text-gray-700 font-medium">Or Choose A Custom Colour</label>
+
+        <!-- Color Picker Button with Custom Image -->
+        <label class="relative w-12 h-12  rounded-lg cursor-pointer flex items-center justify-center bg-white shadow-md">
+          <input type="color" v-model="color" @input="applyColor" class="absolute inset-0 opacity-0 cursor-pointer">
+          <img src="/color-wheel.png" alt="Color Picker" class="w-8 h-8">
+        </label>
       </div>
+
+
 
       <div class="flex justify-center">
         <label class="text-gray-700 text-xs mb-2">Click on the color box above to choose a custom color.</label>
@@ -101,8 +107,6 @@ export default {
       commonColors: ["#FFFFFF", "#FF0000", "#0000FF", "#FFFF00", "#000000"],
       sampleBackgrounds: [
         { name: "Office", url: "/office.jpeg" },
-        { name: "Beach", url: "/beach.jpeg" },
-        { name: "Forest", url: "/forest.jpeg" },
       ],
     };
   },
