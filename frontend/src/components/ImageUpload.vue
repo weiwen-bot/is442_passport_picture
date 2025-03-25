@@ -39,6 +39,11 @@
       </div>
     </div>
 
+    <!-- Error message for upload failure -->
+    <div v-if="uploadErrorMessage" class="error-message">
+      {{ uploadErrorMessage }}
+    </div>
+
     <!-- Preview the uploaded image -->
     <div v-if="imageData" class="preview-container">
       <h2 class="preview-heading">Image Preview:</h2>
@@ -57,7 +62,7 @@ export default {
       imageData: null, // Stores the image data URL
       fileType: null, // Stores the image file type
       isDragging: false,
-      
+      uploadErrorMessage: "", // Store error message
       showCloudOptions: false, // Flag to toggle cloud upload options
       SCOPES: "https://www.googleapis.com/auth/drive.readonly",
       CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID,
@@ -107,13 +112,16 @@ export default {
         if (result.image) {
           this.imageData = result.image; // Set the processed image
           this.fileType = file.type;
+          this.uploadErrorMessage = ""; // Clear error message if upload is successful
         } else {
           console.error("No image received from backend");
+          this.uploadErrorMessage = "An error occurred. Please try again.";
         }
 
         return result; // Return response if needed
       } catch (error) {
         console.error("Error uploading image:", error);
+        this.uploadErrorMessage = "An error occurred while uploading the image. Please try again.";
       }
     },
 
@@ -441,4 +449,13 @@ h1 {
 .proceed-btn:hover {
   background-color: #218838;
 }
+
+.error-message {
+  color: red;
+  font-size: 14px;
+  font-weight: bold;
+  margin-top: 10px;
+  text-align: center;
+}
+
 </style>
