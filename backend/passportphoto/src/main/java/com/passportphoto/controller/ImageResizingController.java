@@ -1,10 +1,20 @@
 package com.passportphoto.controller;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.passportphoto.dto.ImageResizeResponse;
 import com.passportphoto.service.ImageResizingService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.ResponseEntity;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/image")
@@ -18,34 +28,71 @@ public class ImageResizingController {
         this.imageResizingService = imageResizingService;
     }
 
-    private static final String COUNTRY_LIST_JSON = """
-    [
-        {"code":"jpn", "name":"Japan", "dimensions":"413x531"},
-        {"code":"usa", "name":"United States", "dimensions":"602x602"},
-        {"code":"sgp", "name":"Singapore", "dimensions":"413x531"},
-        {"code":"chn", "name":"China", "dimensions":"390x567"},
-        {"code":"mas", "name":"Malaysia", "dimensions":"413x591"}
-    ]
-    """;
-
-    private static final String TEMPLATE_LIST_JSON = """
-    [
-        {"label":"SMU Student ID", "size":"354x472"},
-        {"label":"NUS Student ID", "size":"340x453"},
-        {"label":"NTU Student ID", "size":"354x472"},
-        {"label":"LinkedIn Profile", "size":"400x400"},
-        {"label":"2R", "size":"600x900"}
-    ]
-    """;
-
     @GetMapping("/countries")
-    public ResponseEntity<String> getCountryList() {
-        return ResponseEntity.ok(COUNTRY_LIST_JSON);
+    public ResponseEntity<List<Map<String, String>>> getCountryList() {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, int[]> rawMap = mapper.readValue(
+                new ClassPathResource("dimensions/countries.json").getInputStream(),
+                new TypeReference<Map<String, int[]>>() {}
+            );
+
+            List<Map<String, String>> countryList = new ArrayList<>();
+
+            for (Map.Entry<String, int[]> entry : rawMap.entrySet()) {
+                String code = entry.getKey();
+                int[] dims = entry.getValue();
+
+                Map<String, String> item = new HashMap<>();
+                item.put("code", code);
+                item.put("name", getCountryNameFromCode(code));
+                item.put("dimensions", dims[0] + "x" + dims[1]);
+                countryList.add(item);
+            }
+
+            return ResponseEntity.ok(countryList);
+        } catch (IOException e) {
+            return ResponseEntity.status(500).body(Collections.emptyList());
+        }
+    }
+
+    private String getCountryNameFromCode(String code) {
+        return switch (code.toLowerCase()) {
+            case "jpn" -> "Japan";
+            case "usa" -> "United States";
+            case "sgp" -> "Singapore";
+            case "chn" -> "China";
+            case "mas" -> "Malaysia";
+            default -> code.toUpperCase();
+        };
     }
 
     @GetMapping("/templates")
-    public ResponseEntity<String> getTemplateList() {
-        return ResponseEntity.ok(TEMPLATE_LIST_JSON);
+    public ResponseEntity<List<Map<String, String>>> getTemplateList() {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, int[]> rawMap = mapper.readValue(
+                new ClassPathResource("dimensions/templates.json").getInputStream(),
+                new TypeReference<Map<String, int[]>>() {}
+            );
+
+            List<Map<String, String>> templateList = new ArrayList<>();
+
+            for (Map.Entry<String, int[]> entry : rawMap.entrySet()) {
+                String label = entry.getKey();
+                int[] dims = entry.getValue();
+
+                Map<String, String> item = new HashMap<>();
+                item.put("label", label);
+                item.put("size", dims[0] + "x" + dims[1]);
+                templateList.add(item);
+            }
+
+            return ResponseEntity.ok(templateList);
+
+        } catch (IOException e) {
+            return ResponseEntity.status(500).body(Collections.emptyList());
+        }
     }
 
     @PostMapping("/resize")
@@ -56,7 +103,8 @@ public class ImageResizingController {
         @RequestParam(value = "customWidth", required = false) Integer customWidth, 
         @RequestParam(value = "customHeight", required = false) Integer customHeight) {
         try {
-            return ResponseEntity.ok(imageResizingService.resizeImage(file, country, template, customWidth, customHeight));
+            String dataUrl = imageResizingService.resizeImage(file, country, template, customWidth, customHeight);
+            return ResponseEntity.ok(new ImageResizeResponse("success", "Image resized successfully", dataUrl));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(new ImageResizeResponse("error", "Image resize failed: " + e.getMessage(), null));
         }
