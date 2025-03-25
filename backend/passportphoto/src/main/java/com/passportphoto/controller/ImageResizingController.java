@@ -4,7 +4,11 @@ import com.passportphoto.dto.ImageResizeResponse;
 import com.passportphoto.service.ImageResizingService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.ResponseEntity;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 @RestController
 @RequestMapping("/image")
@@ -18,34 +22,30 @@ public class ImageResizingController {
         this.imageResizingService = imageResizingService;
     }
 
-    private static final String COUNTRY_LIST_JSON = """
-    [
-        {"code":"jpn", "name":"Japan", "dimensions":"413x531"},
-        {"code":"usa", "name":"United States", "dimensions":"602x602"},
-        {"code":"sgp", "name":"Singapore", "dimensions":"413x531"},
-        {"code":"chn", "name":"China", "dimensions":"390x567"},
-        {"code":"mas", "name":"Malaysia", "dimensions":"413x591"}
-    ]
-    """;
-
-    private static final String TEMPLATE_LIST_JSON = """
-    [
-        {"label":"SMU Student ID", "size":"354x472"},
-        {"label":"NUS Student ID", "size":"340x453"},
-        {"label":"NTU Student ID", "size":"354x472"},
-        {"label":"LinkedIn Profile", "size":"400x400"},
-        {"label":"2R", "size":"600x900"}
-    ]
-    """;
+    private String loadJsonFromClasspath(String path) throws IOException {
+        ClassPathResource resource = new ClassPathResource(path);
+        byte[] bytes = resource.getInputStream().readAllBytes();
+        return new String(bytes, StandardCharsets.UTF_8);
+    }
 
     @GetMapping("/countries")
     public ResponseEntity<String> getCountryList() {
-        return ResponseEntity.ok(COUNTRY_LIST_JSON);
+        try {
+            String json = loadJsonFromClasspath("dimensions/countries.json");
+            return ResponseEntity.ok(json);
+        } catch (IOException e) {
+            return ResponseEntity.status(500).body("{\"error\": \"Failed to load countries.json\"}");
+        }
     }
 
     @GetMapping("/templates")
     public ResponseEntity<String> getTemplateList() {
-        return ResponseEntity.ok(TEMPLATE_LIST_JSON);
+        try {
+            String json = loadJsonFromClasspath("dimensions/templates.json");
+            return ResponseEntity.ok(json);
+        } catch (IOException e) {
+            return ResponseEntity.status(500).body("{\"error\": \"Failed to load templates.json\"}");
+        }
     }
 
     @PostMapping("/resize")
@@ -56,7 +56,8 @@ public class ImageResizingController {
         @RequestParam(value = "customWidth", required = false) Integer customWidth, 
         @RequestParam(value = "customHeight", required = false) Integer customHeight) {
         try {
-            return ResponseEntity.ok(imageResizingService.resizeImage(file, country, template, customWidth, customHeight));
+            String dataUrl = imageResizingService.resizeImage(file, country, template, customWidth, customHeight);
+            return ResponseEntity.ok(new ImageResizeResponse("success", "Image resized successfully", dataUrl));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(new ImageResizeResponse("error", "Image resize failed: " + e.getMessage(), null));
         }
