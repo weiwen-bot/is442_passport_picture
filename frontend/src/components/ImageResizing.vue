@@ -359,16 +359,18 @@ export default {
         const formData = new FormData();
         formData.append(
           "image",
+          // this.imageData
+          // FLAGGGG CHANGED
           this.base64ToFile(this.imageData, "uploaded-image.jpg")
         );
         for (const [key, value] of Object.entries(resizeParams)) {
           if (value !== null) formData.append(key, value);
         }
-
         const response = await fetch("http://localhost:8080/image/resize", {
           method: "POST",
           body: formData,
         });
+        
 
         if (!response.ok) throw new Error("Image resizing failed");
         const result = await response.json();

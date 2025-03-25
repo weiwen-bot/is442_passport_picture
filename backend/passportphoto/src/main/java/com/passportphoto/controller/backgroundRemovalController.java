@@ -22,36 +22,45 @@ import com.passportphoto.exceptions.*;
 @RequestMapping("/bg")
 @CrossOrigin(origins = "http://localhost:5173")
 
-public class backgroundRemovalController {
+public class BackgroundRemovalController {
 
     private final BackgroundRemovalService backgroundRemovalService;
 
-    public backgroundRemovalController(BackgroundRemovalService backgroundRemovalService) {
+    public BackgroundRemovalController(BackgroundRemovalService backgroundRemovalService) {
         this.backgroundRemovalService = backgroundRemovalService;
     }
 
     // @PostMapping("/transform")
-    // public ResponseEntity<byte[]> transformImg(@RequestParam("file") MultipartFile file, @ModelAttribute ImgDTO imgDTO) {
-    //     try {
-    //         byte[] result = backgroundRemoval.extractFace(imgDTO, file); // Transform logic
-    //          HttpHeaders headers = new HttpHeaders();
-    //         headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=processed.png");
-    //         headers.add(HttpHeaders.CONTENT_TYPE, "image/png");
-    //         return new ResponseEntity<>(result, headers, HttpStatus.OK); // Return transformed image
-    //     } catch (Exception e) {
-    //         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
-    //     }
+    // public ResponseEntity<byte[]> transformImg(@RequestParam("file")
+    // MultipartFile file, @ModelAttribute ImgDTO imgDTO) {
+    // try {
+    // byte[] result = backgroundRemoval.extractFace(imgDTO, file); // Transform
+    // logic
+    // HttpHeaders headers = new HttpHeaders();
+    // headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment;
+    // filename=processed.png");
+    // headers.add(HttpHeaders.CONTENT_TYPE, "image/png");
+    // return new ResponseEntity<>(result, headers, HttpStatus.OK); // Return
+    // transformed image
+    // } catch (Exception e) {
+    // return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+    // }
     // }
 
     @PostMapping("/removebg")
-    public ResponseEntity<Map<String, String>> removalbg(@RequestBody Map<String, String> request) {
+    public ResponseEntity<Map<String, String>> removalbg(
+            @RequestParam(value = "image", required = false) MultipartFile file,
+            @RequestParam(value = "colorString", required = false) String colorString,
+            @RequestParam(value = "backgroundString", required = false) String backgroundString) {
         try {
-            String processedBase64 = backgroundRemovalService.processImage(request);
+            String processedBase64 = backgroundRemovalService.processImage(file, colorString, backgroundString);
             return ResponseEntity.ok(Collections.singletonMap("processedImage", processedBase64));
         } catch (ImageInvalidFormatException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Collections.singletonMap("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Collections.singletonMap("error", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Collections.singletonMap("error", "Image processing failed"));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", "Image processing failed"));
         }
     }
 

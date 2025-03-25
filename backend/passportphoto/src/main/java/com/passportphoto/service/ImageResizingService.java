@@ -1,11 +1,13 @@
 package com.passportphoto.service;
 
 import com.passportphoto.dto.ImageResizeResponse;
+
+// import com.passportphoto.service.ImageProcessingService;
+
 import org.opencv.core.*;
 import org.opencv.imgproc.Imgproc;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
@@ -16,19 +18,27 @@ import java.util.Map;
 
 @Service
 public class ImageResizingService {
-    static {
-        try {
-            System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-            System.out.println("OpenCV loaded successfully.");
-        } catch (UnsatisfiedLinkError e) {
-            System.err.println("Failed to load OpenCV: " + e.getMessage());
-        }
-    }
+    // static {
+    //     try {
+    //         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+    //         System.out.println("OpenCV loaded successfully.");
+    //     } catch (UnsatisfiedLinkError e) {
+    //         System.err.println("Failed to load OpenCV: " + e.getMessage());
+    //     }
+    // }
+
+    // private final ImageProcessingService imageProcessingService;
+
+    // public ImageResizingService (ImageProcessingService imageProcessingService){
+    //     this.imageProcessingService = imageProcessingService;
+
+    // }
 
     public ImageResizeResponse resizeImage(MultipartFile file, String country, String template, Integer customWidth, Integer customHeight) {
         try {
             // 1. Convert uploaded image to BufferedImage
             BufferedImage originalImage = ImageIO.read(file.getInputStream());
+            // BufferedImage originalImage = imageProcessingService.decodeBase64ToImage(file);
 
             // 2. Detect if input has alpha channel
             boolean hasAlpha = originalImage.getColorModel().hasAlpha();
