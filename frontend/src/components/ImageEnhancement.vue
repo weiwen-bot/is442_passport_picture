@@ -48,28 +48,26 @@
         @input="applyFilters"
       >
     </div>
-    
-    
-    <!-- Action Buttons -->
-    <div class="pt-3 flex space-x-2">
-      <!-- Reset Button -->
-      <button
-        class="sm:py-3 px-4 rounded-lg bg-gray-500 text-white"
-        @click="resetFilters"
-        :disabled="isLoading"
-      >
-        Reset Filters
-      </button>
-      
+  
+     <!-- Reset Button -->
+    <div class="max-w-sm space-y-4 pt-3">
+        <button
+          class="sm:py-3 ps-3 pe-10 block w-full rounded-lg bg-gray-500 text-white"
+          @click="resetFilters"
+          :disabled="isLoading">
+          Reset Filters
+        </button>
+      </div>
+
       <!-- Apply Button -->
-      <button
-        class="sm:py-3 px-4 rounded-lg bg-green-500 text-white flex-1"
-        @click="applyChanges"
-        :disabled="isLoading"
-      >
-        {{ isLoading ? 'Processing...' : 'Apply' }}
-      </button>
-    </div>
+      <div class="max-w-sm space-y-4 pt-2">
+        <button
+          class="sm:py-3 ps-3 pe-10 block w-full rounded-lg bg-green-500 text-white"
+          @click="applyChanges"
+          :disabled="isLoading">
+          {{ isLoading ? 'Processing...' : 'Apply' }}
+        </button>
+      </div>
   </div>
 
   <!-- Right side: Image Display -->

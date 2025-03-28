@@ -8,40 +8,54 @@
   />
 
   <div class="p-1 grid grid-cols-12 gap-2 ml-[180px] mr-0">
-    <!-- Show ImageCropping Component when "Crop" is selected -->
-    <ImageCropping
-      v-if="currentAction === 'crop' && imageData && !isCropped"
-      :key="imageData"
-      v-model:imageData="imageData"
-      @crop-complete="handleCropComplete"
+    
+    <!-- Show QuickGenerate Component when quick-generate is selected -->
+    <QuickGenerate
+      v-if="currentAction === 'quick-generate' && imageData"
+      :imageData="imageData"
+      @resize-complete="handleResizeComplete"
+      @request-undo="handleUndo"
+      @request-revert="handleReset"
+      @request-redo="handleRedo"
     />
+    
 
-    <!-- Show Cropped Image when cropping is done -->
-    <!-- <div
-      v-if="currentAction === 'crop' && isCropped"
-      class="col-span-12 flex flex-col items-center justify-center h-screen"
-    >
-      <h2 class="text-lg font-semibold mb-4">Your Cropped Image</h2>
-      <div class="flex justify-center items-center w-full">
-        <img
-          :src="imageData"
-          class="h-auto max-w-full object-contain max-h-[70vh]"
-          alt="Cropped Image"
-        />
+    <!-- Crop feature: Either show cropping interface or recrop interface based on state -->
+    <template v-if="currentAction === 'crop' && imageData">
+      <!-- Show cropper when not cropped yet -->
+      <ImageCropping
+        v-if="!isCropped"
+        :key="imageData"
+        v-model:imageData="imageData"
+        @crop-complete="handleCropComplete"
+      />
+
+      <!-- Show recrop interface when already cropped -->
+      <div v-else class="col-span-12 grid grid-cols-12 gap-4 p-4">
+      <h2 class="col-span-12 font-bold p-4 text-2xl">Image</h2>
+        <!-- Left side: Recrop options -->
+        <div class="col-span-4 bg-white border rounded-lg shadow-lg p-4 space-y-2 text-black">
+          <h2 class="font-bold text-lg">Your Cropped Image</h2>
+          <div class="max-w-sm space-y-4 pt-3">
+            <button
+              class="sm:py-3 ps-3 pe-10 block w-full rounded-lg bg-green-500 text-white"
+              @click="handleRecrop">
+              Crop
+            </button>
+          </div>
+        </div>
+        
+        <!-- Right side: Cropped image display -->
+        <div class="col-span-8 shadow-lg flex justify-center items-center">
+          <img
+            :src="imageData"
+            class="max-h-full w-auto object-contain"
+            style="max-width: 100%; width: auto; height: auto;"
+            alt="Cropped Image"
+          />
+        </div>
       </div>
-    </div> -->
-    <!-- Show Cropped Image when cropping is done -->
-    <div
-       v-if="currentAction === 'crop' && isCropped"
-       class="col-span-4 shadow-lg"
-     >
-       <h2 class="text-lg font-semibold mb-2">Your Cropped Image</h2>
-       <img
-         :src="imageData"
-         class="h-full w-auto max-w-full object-contain"
-         alt="Cropped Image"
-       />
-     </div>
+    </template>
 
     <!-- Show BackgroundRemover Component when "Background Remover" is selected -->
     <BackgroundRemover
@@ -54,14 +68,11 @@
     <!-- Show ImageResizing Component when "Resize" is selected -->
     <ImageResizing
       v-if="currentAction === 'resize' && imageData"
-      ref="imageResizing"
-      :key="imageData"
-      :reset-counter="resetCounter"
-      v-model:imageData="imageData"
-      :original-image="originalImage"
+      :imageData="imageData"
       @resize-complete="handleResizeComplete"
-      @update:imageHistory="updateImageHistory"
-      @update:redoHistory="updateRedoHistory"
+      @request-undo="handleUndo"
+      @request-revert="handleReset"
+      @request-redo="handleRedo"
     />
     <!-- Show ImageEnhancement Component when "Enhance" is selected -->
     <ImageEnhancement
@@ -76,7 +87,7 @@
         <!-- Reset Button -->
         <button
           class="text-white bg-gray-800 p-2 rounded mr-3 flex items-center"
-          @click="handleReset"
+          @click="handleReset"  
         >
           <i class="fas fa-eraser mr-2"></i> Revert to Original
         </button>
@@ -99,13 +110,6 @@
           <i class="fas fa-redo mr-2"></i> Redo
         </button>
 
-        <!-- Download Button -->
-        <!-- <button
-          @click="downloadImage"
-          class="text-white bg-gray-800 p-2 rounded"
-        >
-          Download
-        </button> -->
         <div class="relative">
           <button
             @click="toggleDropdown"
@@ -115,17 +119,23 @@
           </button>
           <div
             v-if="showDropdown"
-            class="absolute bottom-12 right-0 bg-gray-800 shadow-md rounded p-3 space-y-2 w-48"
+            class="absolute bottom-12 right-0 bg-gray-800 shadow-md rounded p-3 space-y-2 w-52"
           >
             <button
               @click="downloadImage"
-              class="block w-full text-left p-2 hover:bg-gray-200"
+              class="block w-full text-left bg-gray-100 p-2 hover:bg-gray-200"
             >
               Download Image
             </button>
             <button
+              @click="openLayoutPopup"
+              class="block w-full text-left bg-gray-100  p-2 hover:bg-gray-200"
+            >
+              <i class="fa-solid fa-th-large"></i> Multiple Layouts
+            </button>
+            <button
               @click="handleGoogleDownload"
-              class="block w-full text-left p-2 hover:bg-gray-200"
+              class="block w-full text-left bg-gray-100  p-2 hover:bg-gray-200"
             >
               <i class="fa-solid fa-cloud-arrow-down"></i> Upload to Google
               Drive
@@ -133,6 +143,102 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Revert Confirmation Modal -->
+  <div v-if="showRevertModal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded shadow-lg w-96">
+      <h3 class="text-xl font-semibold text-gray-900 mb-6">Revert to Original Image?</h3>
+      <p class="text-gray-700 mb-4">This will discard all changes. Are you sure?</p>
+      <div class="flex justify-end space-x-4">
+        <button @click="cancelRevert" class="bg-gray-800 text-white px-4 py-2 rounded">Cancel</button>
+        <button @click="confirmRevert" class="bg-red-800 text-white px-4 py-2 rounded">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Layout Selection Modal -->
+  <div
+    v-if="showLayoutPopup"
+    class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50"
+  >
+    <div class="bg-white p-6 rounded shadow-lg w-96">
+      <h2 class="text-xl font-semibold text-gray-900 mb-6">Select Layout</h2>
+      <button
+        @click="downloadWithLayout(2, 2)"
+        class="block w-full text-left p-2 bg-gray-800  text-white hover:bg-gray-200 rounded mb-2"
+      >
+        2x2 Layout (4 images)
+      </button>
+      <button
+        @click="downloadWithLayout(4, 6)"
+        class="block w-full text-left p-2 bg-gray-800 text-white hover:bg-gray-200 rounded mb-2"
+      >
+        4x6 Layout (24 images)
+      </button>
+
+      <!-- Custom Layout -->
+      <h3 class="text-md font-bold mt-4 text-gray-900">Custom Layout</h3>
+      <div class="flex space-x-4 pt-2">
+        <!-- Columns Input (X) -->
+        <div class="w-1/2">
+          <label
+            for="columns"
+            class="block font-medium mb-2 font-semibold text-left text-gray-900"
+          >
+            Columns:
+          </label>
+          <div class="relative">
+            <input
+              type="number"
+              id="columns"
+              name="columns"
+              class="sm:py-3 ps-3 pe-3 block w-full rounded-lg border border-gray-300 text-gray-900"
+              v-model.number="columns"
+              placeholder="Enter columns"
+              step="1"
+              min="1"
+            />
+          </div>
+        </div>
+
+        <!-- Rows Input (Y) -->
+        <div class="w-1/2">
+          <label
+            for="rows"
+            class="block font-medium mb-2 font-semibold text-left text-gray-900"
+          >
+            Rows:
+          </label>
+          <div class="relative">
+            <input
+              type="number"
+              id="rows"
+              name="rows"
+              class="sm:py-3 ps-3 pe-3 block w-full rounded-lg border border-gray-300 text-gray-900"
+              v-model.number="rows"
+              placeholder="Enter rows"
+              step="1"
+              min="1"
+            />
+          </div>
+        </div>
+      </div>
+
+      <button
+        @click="downloadWithLayout(columns, rows)"
+        class="mt-2 block w-full bg-green-500 text-white p-2 rounded hover:bg-blue-700"
+      >
+        Download Custom Layout
+      </button>
+
+      <button
+        @click="closeLayoutPopup"
+        class="mt-4 block w-full bg-gray-800 text-white p-2 rounded"
+      >
+        Cancel
+      </button>
     </div>
   </div>
 
@@ -172,6 +278,7 @@ import SidebarWrapper from "./SidebarWrapper.vue";
 import BackgroundRemover from "./BackgroundRemover.vue";
 import ImageResizing from "./ImageResizing.vue";
 import ImageEnhancement from "./ImageEnhancement.vue";
+import QuickGenerate from "./QuickGenerate.vue";
 
 export default {
   components: {
@@ -180,10 +287,12 @@ export default {
     BackgroundRemover,
     ImageResizing,
     ImageEnhancement,
+    QuickGenerate,
   },
   data() {
     return {
       imageData: null, // Image data that will be passed to child and updated after crop
+      fileType: null,
       originalImage: null, // Store the original image
       imageHistory: [], // Stack for undo
       redoHistory: [], // Stack for redo
@@ -198,10 +307,17 @@ export default {
       SCOPES: "https://www.googleapis.com/auth/drive.file",
       CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID,
       resetCounter: 0,
+      showLayoutPopup: false,
+      columns: 2,
+      rows: 2,
+      padding: 20,
+      showRevertModal: false,
+
     };
   },
   async mounted() {
     this.imageData = localStorage.getItem("imageData") || null;
+    this.fileType = localStorage.getItem("fileType") || null;
     // Store the first uploaded image only ONCE
     if (!this.originalImage) {
       this.originalImage = this.imageData;
@@ -223,14 +339,20 @@ export default {
     },
   },
   methods: {
+    // Add this new method to handle recropping
+    handleRecrop() {
+      // Reset the cropping state to show the cropper again
+      this.isCropped = false;
+    },
+
     handleAction(action) {
       console.log("Handling action:", action);
       this.currentAction = action;
 
-      if (action === "crop") {
-        // If user clicks "Crop" again, allow re-cropping the already cropped image
-        this.isCropped = false;
-      }
+      // if (action === "crop") {
+      //   // If user clicks "Crop" again, allow re-cropping the already cropped image
+      //   this.isCropped = false;
+      // }
 
       this.$nextTick(() => {
         console.log("✅ currentAction updated to:", this.currentAction);
@@ -239,27 +361,6 @@ export default {
 
     handleUndo() {
       console.log("Undo button clicked! Current Action:", this.currentAction);
-
-      if (this.currentAction === "resize") {
-        this.$nextTick(() => {
-          console.log(
-            "🔄 After nextTick: Checking this.$refs.imageResizing:",
-            this.$refs.imageResizing
-          );
-
-          if (
-            this.$refs.imageResizing &&
-            typeof this.$refs.imageResizing.handleLocalUndo === "function"
-          ) {
-            console.log("Delegating undo to ImageResizing.vue");
-            this.$refs.imageResizing.handleLocalUndo();
-          } else {
-            console.error("ERROR: this.$refs.imageResizing is NULL!");
-          }
-        });
-        return;
-      }
-
       if (this.imageHistory.length > 0) {
         console.log("Undoing in ImageEdit.vue");
 
@@ -269,12 +370,6 @@ export default {
       }
     },
     handleRedo() {
-      if (this.currentAction === "resize" && this.$refs.imageResizing) {
-        console.log("Delegating redo to ImageResizing.vue");
-        this.$refs.imageResizing.handleLocalRedo();
-        return;
-      }
-
       if (this.redoHistory.length > 0) {
         console.log("Redoing in ImageEdit.vue");
 
@@ -284,17 +379,32 @@ export default {
       }
     },
     handleReset() {
-      if (this.currentAction === "resize" && this.$refs.imageResizing) {
-        console.log("Delegating Revert to Original to ImageResizing.vue");
-        this.$refs.imageResizing.handleLocalReset();
-      } else {
+      if (this.imageData !== this.originalImage) {
         console.log("Reverting to original in ImageEdit.vue");
-
+        this.showRevertModal = true;
         this.imageHistory.push(this.imageData); // Save for undo
         this.redoHistory = []; // Clear redo history
         this.imageData = this.originalImage;
         this.isCropped = false; // Reset cropped state
+      } else {
+        console.log("No changes detected, modal will not be shown.");
       }
+      console.log("Reverting to original in ImageEdit.vue");
+    },
+
+    // Revert Modal
+    cancelRevert() {
+      this.showRevertModal = false;
+      this.$nextTick(() => {
+        console.log("Modal should be hidden now");
+      });
+      this.$forceUpdate(); 
+    }, 
+    confirmRevert() {
+      this.imageHistory.push(this.imageData);
+      this.redoHistory = [];
+      this.imageData = this.originalImage;
+      this.showRevertModal = false;
     },
 
     // After crop complete
@@ -321,17 +431,6 @@ export default {
         this.imageHistory.push(this.imageData);
       }
       this.imageData = resizedImage;
-    },
-
-    // update parent's history with history from resize page
-    updateImageHistory(history) {
-      console.log("📜 Updating image history from ImageResizing.vue");
-      this.imageHistory = history;
-    },
-
-    updateRedoHistory(history) {
-      console.log("📜 Updating redo history from ImageResizing.vue");
-      this.redoHistory = history;
     },
 
     // After process complete
@@ -362,12 +461,12 @@ export default {
         }
 
         // Convert base64 to Blob
-        const blob = await this.base64ToBlob(this.imageData, "image/png");
+        const blob = await this.base64ToBlob(this.imageData, this.fileType);
 
         // File handling
         if (window.showSaveFilePicker) {
           const fileHandle = await window.showSaveFilePicker({
-            suggestedName: "edited_image.png",
+            suggestedName: `edited_image.${this.fileType.split("/").pop()}`,
             types: [
               {
                 description: "Images",
@@ -383,7 +482,7 @@ export default {
           // Fallback method
           const link = document.createElement("a");
           link.href = URL.createObjectURL(blob);
-          link.download = "edited_image.png";
+          link.download = `edited_image.${this.fileType.split("/").pop()}`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
@@ -391,6 +490,105 @@ export default {
       } catch (error) {
         console.error("Error downloading the image:", error);
       }
+    },
+
+    // Multiple layout
+    openLayoutPopup() {
+      this.showLayoutPopup = true;
+    },
+    closeLayoutPopup() {
+      this.showLayoutPopup = false;
+    },
+    async downloadWithLayout(cols, rows) {
+      if (!this.imageData) {
+        alert("No image available!");
+        return;
+      }
+
+      // console.log(`Generating layout: ${cols}x${rows}`);
+
+      const blob = await this.generateCompositeImage(cols, rows);
+      if (blob) {
+        this.triggerDownload(
+          blob,
+          `${cols}x${rows}_layout.${this.fileType.split("/").pop()}`
+        );
+      } else {
+        console.error("Failed to generate image.");
+      }
+      this.closeLayoutPopup();
+    },
+    async generateCompositeImage(cols, rows) {
+      return new Promise((resolve) => {
+        if (!this.imageData) {
+          console.error("No image data found!");
+          resolve(null);
+          return;
+        }
+
+        const img = new Image();
+        img.onload = () => {
+          // console.log("Image loaded successfully.");
+
+          const originalWidth = img.width;
+          const originalHeight = img.height;
+          const aspectRatio = originalWidth / originalHeight;
+
+          // Calculate new image size based on original resolution
+          const imgWidth = Math.floor(originalWidth / 2); // Reduce slightly to fit layout
+          const imgHeight = Math.floor(imgWidth / aspectRatio);
+
+          // Canvas size: (cols * image width) + padding
+          const canvasWidth = cols * imgWidth + (cols + 1) * this.padding;
+          const canvasHeight = rows * imgHeight + (rows + 1) * this.padding;
+
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+
+          // Set high resolution for better quality
+          canvas.width = canvasWidth;
+          canvas.height = canvasHeight;
+          ctx.fillStyle = "white";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          // Draw images in the grid
+          for (let i = 0; i < rows; i++) {
+            for (let j = 0; j < cols; j++) {
+              const x = this.padding + j * (imgWidth + this.padding);
+              const y = this.padding + i * (imgHeight + this.padding);
+              ctx.drawImage(img, x, y, imgWidth, imgHeight);
+            }
+          }
+
+          // console.log("Canvas image created successfully.");
+          canvas.toBlob((blob) => {
+            resolve(blob);
+          }, this.fileType);
+        };
+
+        img.onerror = () => {
+          console.error("Error loading image.");
+          alert("Error loading the image. Please try again.");
+          resolve(null);
+        };
+
+        img.src = this.imageData; // Ensure this is set **after** onload
+      });
+    },
+    triggerDownload(blob, filename) {
+      if (!blob) {
+        console.error("No blob data for download.");
+        return;
+      }
+
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // console.log(`Download triggered for: ${filename}`);
     },
 
     // Show the reset modal
@@ -491,12 +689,12 @@ export default {
       }
 
       // Convert base64 image data to a Blob
-      const imageBlob = await this.base64ToBlob(this.imageData, "image/png");
+      const imageBlob = await this.base64ToBlob(this.imageData, this.fileType);
 
       // Define metadata
       const metadata = {
-        name: "uploaded_image.png",
-        mimeType: "image/png",
+        name: `edited_image.${this.fileType.split("/").pop()}`,
+        mimeType: this.fileType,
       };
 
       const metadataBlob = new Blob([JSON.stringify(metadata)], {
@@ -541,5 +739,11 @@ export default {
 }
 .bg-red-800 {
   background-color: #c53030 !important; /* Dark Red */
+}
+.bg-green-500 {
+  background-color: #48bb78 !important; 
+}
+.bg-gray-100 {
+  background-color: #ffff !important;
 }
 </style>

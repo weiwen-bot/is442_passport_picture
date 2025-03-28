@@ -1,5 +1,11 @@
 <template>
-  <div class="upload-container">
+  <div class="upload-container"
+    @dragover.prevent="handleDragOver" 
+    @dragenter.prevent="handleDragOver"
+    @dragleave="handleDragLeave"
+    @drop="handleDrop"
+  >
+  
     <h1>ID Photo Generator</h1>
 
     <p class="instruction">
@@ -33,6 +39,11 @@
       </div>
     </div>
 
+    <!-- Error message for upload failure -->
+    <div v-if="uploadErrorMessage" class="error-message">
+      {{ uploadErrorMessage }}
+    </div>
+
     <!-- Preview the uploaded image -->
     <div v-if="imageData" class="preview-container">
       <h2 class="preview-heading">Image Preview:</h2>
@@ -49,9 +60,11 @@ export default {
   data() {
     return {
       imageData: null, // Stores the image data URL
+      fileType: null, // Stores the image file type
+      isDragging: false,
+      uploadErrorMessage: "", // Store error message
       showCloudOptions: false, // Flag to toggle cloud upload options
-
-      SCOPES: "https://www.googleapis.com/auth/drive.metadata.readonly",
+      SCOPES: "https://www.googleapis.com/auth/drive.readonly",
       CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID,
       API_KEY: import.meta.env.VITE_GOOGLE_API_KEY,
       accessToken: null,
@@ -66,6 +79,16 @@ export default {
       "https://accounts.google.com/gsi/client",
       this.gisLoaded
     );
+  },
+  watch: {
+    isDragging(newValue) {
+      const container = document.querySelector(".upload-container");
+      if (newValue) {
+        container.classList.add("drag-over");
+      } else {
+        container.classList.remove("drag-over");
+      }
+    }
   },
   methods: {
     // handle backend upload
@@ -88,13 +111,17 @@ export default {
         // Update imageData with processed image from backend
         if (result.image) {
           this.imageData = result.image; // Set the processed image
+          this.fileType = file.type;
+          this.uploadErrorMessage = ""; // Clear error message if upload is successful
         } else {
           console.error("No image received from backend");
+          this.uploadErrorMessage = "An error occurred. Please try again.";
         }
 
         return result; // Return response if needed
       } catch (error) {
         console.error("Error uploading image:", error);
+        this.uploadErrorMessage = "An error occurred while uploading the image. Please try again.";
       }
     },
 
@@ -122,6 +149,35 @@ export default {
       } else {
         alert("Please select a valid image file");
       }
+    },
+
+    handleDrop(event) {
+      event.preventDefault();
+      this.isDragging = false; // Reset state
+
+      const files = event.dataTransfer.files;
+      if (files.length > 0) {
+        const file = files[0];
+
+        if (file.size > 10 * 1024 * 1024) {
+          alert("File size exceeds 10MB. Please choose a smaller file.");
+          return;
+        }
+
+        if (file.type.startsWith("image")) {
+          this.uploadToBackend(file);
+        } else {
+          alert("Please select a valid image file");
+        }
+      }
+    },
+
+    handleDragOver() {
+      this.isDragging = true;
+    },
+
+    handleDragLeave() {
+      this.isDragging = false;
     },
 
     // Toggle the visibility of cloud options
@@ -272,6 +328,8 @@ export default {
       if (this.imageData) {
         // Navigate to the image cropping page, passing the image URL as a query parameter
         localStorage.setItem("imageData", this.imageData); // Save to localStorage
+        localStorage.setItem("fileType", this.fileType); // Save to localStorage
+
         this.$router.push({ name: "ImageEdit" });
       } else {
         alert("Please upload an image first.");
@@ -294,6 +352,11 @@ export default {
   max-width: 500px;
   margin: auto;
   text-align: center;
+  transition: background-color 0.3s ease-in-out;
+}
+
+.upload-container.drag-over {
+  background-color: rgba(226, 226, 226, 0.887); /* Highlight when dragging */
 }
 
 h1 {
@@ -332,7 +395,7 @@ h1 {
   align-items: center;
   justify-content: center;
   width: 200px;
-  padding: 12px 24px;
+  padding: 12px 12px;
   background-color: #2d3748;
   color: white;
   font-size: 16px;
@@ -386,4 +449,13 @@ h1 {
 .proceed-btn:hover {
   background-color: #218838;
 }
+
+.error-message {
+  color: red;
+  font-size: 14px;
+  font-weight: bold;
+  margin-top: 10px;
+  text-align: center;
+}
+
 </style>

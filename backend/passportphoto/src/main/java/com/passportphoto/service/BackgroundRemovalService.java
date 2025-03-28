@@ -133,96 +133,25 @@ public class BackgroundRemovalService {
 	}
 
 
-	public BufferedImage postprocessImg(Map<String, String> request, float[] outputArray,BufferedImage image,String category,int rh,int rw){
+	public BufferedImage postprocessImg(String colorString,String backgroundString, float[] outputArray,BufferedImage image,int rh,int rw){
 		// Convert this to 2D matte (0..1)
 		float[][] matte2D = createMatte2D(outputArray, image.getWidth(), image.getHeight());
 		
-		String backgroundString = request.getOrDefault("backgroundString", null);
+		if (colorString == null) {
+			colorString = Constants.DEFAULT_BACKGROUND_COLOR;  // Default value for colorString
+		}
+	
+		// Check if backgroundString is null and assign default value
+
+		// String backgroundString = request.getOrDefault("backgroundString", null);
 		System.out.printf("Here the background %s",backgroundString);
-		String colorString = request.getOrDefault("colorString", Constants.DEFAULT_BACKGROUND_COLOR);
+		// String colorString = request.getOrDefault("colorString", Constants.DEFAULT_BACKGROUND_COLOR);
 
 		BufferedImage foreground = alphaBlend(image, matte2D, backgroundString , colorString);
 
 		return foreground;
 	}
 
-	// private int blendPixels (int originalPixel, int backgroundPixel, float alpha){
-	// 	int oR = (originalPixel >> 16) & 0xFF;
-	// 	int oG = (originalPixel >> 8) & 0xFF;
-	// 	int oB = (originalPixel) & 0xFF;
-
-	// 	int bR = (backgroundPixel >> 16) & 0xFF;
-	// 	int bG = (backgroundPixel >> 8) & 0xFF;
-	// 	int bB = (backgroundPixel) & 0xFF;
-
-	// 	int outR = (int) (oR * alpha + bR * (1 - alpha));
-	// 	int outG = (int) (oG * alpha + bG * (1 - alpha));
-	// 	int outB = (int) (oB * alpha + bB * (1 - alpha));
-
-	// 	return (255 << 24) | (outR << 16) | (outG << 8) | outB;
-	// }
-
-	// private BufferedImage blendWithBackground(BufferedImage original, BufferedImage background, float[][] matte) {
-    //     int width = original.getWidth();
-    //     int height = original.getHeight();
-    
-    //     // Resize background to match the mask size while keeping the aspect ratio
-    //     BufferedImage resizedBackground = resizeImageWithAspectRatio(background, width, height);
-    
-    //     BufferedImage output = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-    
-    //     for (int y = 0; y < height; y++) {
-    //         for (int x = 0; x < width; x++) {
-    //             int originalPixel = original.getRGB(x, y);
-    //             int backgroundPixel = resizedBackground.getRGB(x, y);
-    
-    //             float alpha = matte[y][x]; // Alpha values between 0 (transparent) and 1 (opaque)
-
-	// 			int outPixel = blendPixels(originalPixel, backgroundPixel, alpha);
-    //             output.setRGB(x, y, outPixel);
-    //         }
-    //     }
-    
-    //     return output;
-    // }
-
-	// public static BufferedImage alphaBlendWithColor(BufferedImage original, float[][] matte, String hexColor) {
-    //     int width = original.getWidth();
-    //     int height = original.getHeight();
-
-    //     // Parse the hex color and extract RGB values
-    //     Color bgColor = Color.decode(hexColor);
-    //     int bgR = bgColor.getRed();
-    //     int bgG = bgColor.getGreen();
-    //     int bgB = bgColor.getBlue();
-
-    //     // Output: ARGB
-    //     BufferedImage blended = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-
-    //     for (int y = 0; y < height; y++) {
-    //         for (int x = 0; x < width; x++) {
-    //             int rgb = original.getRGB(x, y);
-
-    //             int r = (rgb >> 16) & 0xFF;
-    //             int g = (rgb >> 8)  & 0xFF;
-    //             int b = (rgb)       & 0xFF;
-
-    //             float alpha = matte[y][x]; // in [0..1]
-    //             float invAlpha = 1.0f - alpha;
-
-    //             // Blend with the background color
-    //             int outR = (int) (r * alpha + bgR *  (1 - alpha));
-    //             int outG = (int) (g * alpha + bgG *  (1 - alpha));
-    //             int outB = (int) (b * alpha + bgB *  (1 - alpha));
-
-    //             // Set alpha to fully opaque (255)
-
-    //             int outPixel = (255 << 24) | (outR << 16) | (outG << 8) | outB;
-    //             blended.setRGB(x, y, outPixel);
-    //         }
-    //     }
-    //     return blended;
-    // }
 
 	public BufferedImage alphaBlend(BufferedImage original, float[][] matte, String background, String hexColor) {
 		int width = original.getWidth();
@@ -372,11 +301,12 @@ public class BackgroundRemovalService {
         return matte;
     }
 
-	public String processImage(Map<String, String> request) throws OrtException {
+	public String processImage(MultipartFile file, String colorString, String backgroundString) throws OrtException, IOException {
 			// Decode Base64 image
-		String base64Image = request.get("image");
-		String category = request.get("category");
-		BufferedImage image = decodeBase64ToImage(base64Image);
+		// String base64Image = request.get("image");
+		// String category = request.get("category");
+		// BufferedImage image = decodeBase64ToImage(base64Image);
+		BufferedImage image = ImageIO.read(file.getInputStream());
 		
 		int rh = image.getHeight();
 		int rw = image.getWidth();
@@ -391,7 +321,7 @@ public class BackgroundRemovalService {
 		// Create OnnxTensor in shape [1,3,H,W]
 		float[] outputArray = runModel(imgData, rh, rw);
 
-		BufferedImage foreground = postprocessImg(request,outputArray,image, category,rw,rh);
+		BufferedImage foreground = postprocessImg(colorString,backgroundString,outputArray,image,rw,rh);
 
 		// Encode to base64 and return
 		String processedBase64 = encodeImageToBase64(foreground);
