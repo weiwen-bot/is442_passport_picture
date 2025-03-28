@@ -147,7 +147,7 @@ export default {
   },
   watch: {
     async imageData(newImage, oldImage) {
-      console.log("🧐 watch: imageData triggered");
+      console.log("watch: imageData triggered");
       if (!newImage || newImage === oldImage) return;
 
       // Extract dimensions from the new image
@@ -161,7 +161,7 @@ export default {
         (this.originalImage && newImage === this.originalImage);
 
       if (isRevertToOriginal) {
-        // 🚀 Case: Reverting to the original uploaded image
+        // Case: Reverting to the original uploaded image
         console.log("Reverting UI state to original.");
 
         this.resizedImage = null;
@@ -176,7 +176,7 @@ export default {
           this.customHeight = this.extractedHeight;
         });
       } else if (this.hasResized) {
-        // 🚀 Case: After resizing, update fields but keep them disabled
+        // Case: After resizing, update fields but keep them disabled
         console.log(
           "Updating fields with resized dimensions:",
           this.extractedWidth,
@@ -187,7 +187,7 @@ export default {
           this.customHeight = this.extractedHeight;
         });
       } else {
-        // 🚀 Case: Undo operation (go back one step)
+        // Case: Undo operation (go back one step)
         this.resizedImage = null;
         this.hasResized = false;
         this.$nextTick(() => {
@@ -316,7 +316,7 @@ export default {
       }
 
       if (this.hasResized) {
-        console.log("⚠️ Image already resized, skipping request.");
+        console.log("Image already resized, skipping request.");
         return;
       }
 
@@ -374,13 +374,13 @@ export default {
 
         if (!response.ok) throw new Error("Image resizing failed");
         const result = await response.json();
-        console.log("✅ Resize API Response:", result);
+        console.log("Resize API Response:", result);
 
         if (result.status === "success") {
           this.resizedImage = result.image;
 
           this.$emit("resize-complete", result.image);
-          console.log("🎉 Image updated successfully!");
+          console.log("Image updated successfully!");
 
           // Restore selections after resizing (instead of resetting them)
           this.selectedCountry = prevSelection.country;
@@ -468,9 +468,9 @@ input:disabled {
   padding: 6px;
   text-align: center;
   box-sizing: border-box; /* Ensures padding doesn't affect width */
-  border: 1px solid #ccc; /* ✅ Explicitly define the border */
-  border-radius: 6px; /* ✅ Keeps the rounded edges consistent */
-  background-color: white; /* ✅ Ensures no transparency issues */
+  border: 1px solid #ccc; /* Explicitly define the border */
+  border-radius: 6px; /* Keeps the rounded edges consistent */
+  background-color: white; /* Ensures no transparency issues */
 }
 
 /* Loading spinner styling */

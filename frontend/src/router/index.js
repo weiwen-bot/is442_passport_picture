@@ -5,6 +5,7 @@ import ImageEdit from "../components/ImageEdit.vue";
 import BackgroundRemover from "../components/BackgroundRemover.vue";
 import ImageResizing from "../components/ImageResizing.vue";
 import ImageEnhancement from "../components/ImageEnhancement.vue";
+import QuickGenerate from "../components/QuickGenerate.vue";
 
 const routes = [
   // {
@@ -45,6 +46,12 @@ const routes = [
     name: "ImageEnhancement",
     component: ImageEnhancement,
   },
+  //add Quick Generate route
+  {
+    path: "/quick-generate",
+    name: "QuickGenerate",
+    component: QuickGenerate,
+  }
 ];
 
 const router = createRouter({

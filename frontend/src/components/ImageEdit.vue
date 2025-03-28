@@ -8,40 +8,54 @@
   />
 
   <div class="p-1 grid grid-cols-12 gap-2 ml-[180px] mr-0">
-    <!-- Show ImageCropping Component when "Crop" is selected -->
-    <ImageCropping
-      v-if="currentAction === 'crop' && imageData && !isCropped"
-      :key="imageData"
-      v-model:imageData="imageData"
-      @crop-complete="handleCropComplete"
+    
+    <!-- Show QuickGenerate Component when quick-generate is selected -->
+    <QuickGenerate
+      v-if="currentAction === 'quick-generate' && imageData"
+      :imageData="imageData"
+      @resize-complete="handleResizeComplete"
+      @request-undo="handleUndo"
+      @request-revert="handleReset"
+      @request-redo="handleRedo"
     />
+    
 
-    <!-- Show Cropped Image when cropping is done -->
-    <!-- <div
-      v-if="currentAction === 'crop' && isCropped"
-      class="col-span-12 flex flex-col items-center justify-center h-screen"
-    >
-      <h2 class="text-lg font-semibold mb-4">Your Cropped Image</h2>
-      <div class="flex justify-center items-center w-full">
-        <img
-          :src="imageData"
-          class="h-auto max-w-full object-contain max-h-[70vh]"
-          alt="Cropped Image"
-        />
-      </div>
-    </div> -->
-    <!-- Show Cropped Image when cropping is done -->
-    <div
-      v-if="currentAction === 'crop' && isCropped"
-      class="col-span-4 shadow-lg"
-    >
-      <h2 class="text-lg font-semibold mb-2">Your Cropped Image</h2>
-      <img
-        :src="imageData"
-        class="h-full w-auto max-w-full object-contain"
-        alt="Cropped Image"
+    <!-- Crop feature: Either show cropping interface or recrop interface based on state -->
+    <template v-if="currentAction === 'crop' && imageData">
+      <!-- Show cropper when not cropped yet -->
+      <ImageCropping
+        v-if="!isCropped"
+        :key="imageData"
+        v-model:imageData="imageData"
+        @crop-complete="handleCropComplete"
       />
-    </div>
+
+      <!-- Show recrop interface when already cropped -->
+      <div v-else class="col-span-12 grid grid-cols-12 gap-4 p-4">
+      <h2 class="col-span-12 font-bold p-4 text-2xl">Image</h2>
+        <!-- Left side: Recrop options -->
+        <div class="col-span-4 bg-white border rounded-lg shadow-lg p-4 space-y-2 text-black">
+          <h2 class="font-bold text-lg">Your Cropped Image</h2>
+          <div class="max-w-sm space-y-4 pt-3">
+            <button
+              class="sm:py-3 ps-3 pe-10 block w-full rounded-lg bg-green-500 text-white"
+              @click="handleRecrop">
+              Crop
+            </button>
+          </div>
+        </div>
+        
+        <!-- Right side: Cropped image display -->
+        <div class="col-span-8 shadow-lg flex justify-center items-center">
+          <img
+            :src="imageData"
+            class="max-h-full w-auto object-contain"
+            style="max-width: 100%; width: auto; height: auto;"
+            alt="Cropped Image"
+          />
+        </div>
+      </div>
+    </template>
 
     <!-- Show BackgroundRemover Component when "Background Remover" is selected -->
     <BackgroundRemover
@@ -73,7 +87,7 @@
         <!-- Reset Button -->
         <button
           class="text-white bg-gray-800 p-2 rounded mr-3 flex items-center"
-          @click="handleReset"
+          @click="handleReset"  
         >
           <i class="fas fa-eraser mr-2"></i> Revert to Original
         </button>
@@ -109,25 +123,37 @@
           >
             <button
               @click="downloadImage"
-              class="block w-full text-left p-2 hover:bg-gray-200"
+              class="block w-full text-left bg-gray-100 p-2 hover:bg-gray-200"
             >
               Download Image
             </button>
             <button
               @click="openLayoutPopup"
-              class="block w-full text-left p-2 hover:bg-gray-200"
+              class="block w-full text-left bg-gray-100  p-2 hover:bg-gray-200"
             >
               <i class="fa-solid fa-th-large"></i> Multiple Layouts
             </button>
             <button
               @click="handleGoogleDownload"
-              class="block w-full text-left p-2 hover:bg-gray-200"
+              class="block w-full text-left bg-gray-100  p-2 hover:bg-gray-200"
             >
               <i class="fa-solid fa-cloud-arrow-down"></i> Upload to Google
               Drive
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Revert Confirmation Modal -->
+  <div v-if="showRevertModal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded shadow-lg w-96">
+      <h3 class="text-xl font-semibold text-gray-900 mb-6">Revert to Original Image?</h3>
+      <p class="text-gray-700 mb-4">This will discard all changes. Are you sure?</p>
+      <div class="flex justify-end space-x-4">
+        <button @click="cancelRevert" class="bg-gray-800 text-white px-4 py-2 rounded">Cancel</button>
+        <button @click="confirmRevert" class="bg-red-800 text-white px-4 py-2 rounded">Confirm</button>
       </div>
     </div>
   </div>
@@ -141,13 +167,13 @@
       <h2 class="text-xl font-semibold text-gray-900 mb-6">Select Layout</h2>
       <button
         @click="downloadWithLayout(2, 2)"
-        class="block w-full text-left p-2 bg-gray-100 hover:bg-gray-200 rounded mb-2"
+        class="block w-full text-left p-2 bg-gray-800  text-white hover:bg-gray-200 rounded mb-2"
       >
         2x2 Layout (4 images)
       </button>
       <button
         @click="downloadWithLayout(4, 6)"
-        class="block w-full text-left p-2 bg-gray-100 hover:bg-gray-200 rounded mb-2"
+        class="block w-full text-left p-2 bg-gray-800 text-white hover:bg-gray-200 rounded mb-2"
       >
         4x6 Layout (24 images)
       </button>
@@ -202,7 +228,7 @@
 
       <button
         @click="downloadWithLayout(columns, rows)"
-        class="mt-2 block w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
+        class="mt-2 block w-full bg-green-500 text-white p-2 rounded hover:bg-blue-700"
       >
         Download Custom Layout
       </button>
@@ -252,6 +278,7 @@ import SidebarWrapper from "./SidebarWrapper.vue";
 import BackgroundRemover from "./BackgroundRemover.vue";
 import ImageResizing from "./ImageResizing.vue";
 import ImageEnhancement from "./ImageEnhancement.vue";
+import QuickGenerate from "./QuickGenerate.vue";
 
 export default {
   components: {
@@ -260,6 +287,7 @@ export default {
     BackgroundRemover,
     ImageResizing,
     ImageEnhancement,
+    QuickGenerate,
   },
   data() {
     return {
@@ -283,6 +311,8 @@ export default {
       columns: 2,
       rows: 2,
       padding: 20,
+      showRevertModal: false,
+
     };
   },
   async mounted() {
@@ -309,14 +339,20 @@ export default {
     },
   },
   methods: {
+    // Add this new method to handle recropping
+    handleRecrop() {
+      // Reset the cropping state to show the cropper again
+      this.isCropped = false;
+    },
+
     handleAction(action) {
       console.log("Handling action:", action);
       this.currentAction = action;
 
-      if (action === "crop") {
-        // If user clicks "Crop" again, allow re-cropping the already cropped image
-        this.isCropped = false;
-      }
+      // if (action === "crop") {
+      //   // If user clicks "Crop" again, allow re-cropping the already cropped image
+      //   this.isCropped = false;
+      // }
 
       this.$nextTick(() => {
         console.log("✅ currentAction updated to:", this.currentAction);
@@ -343,12 +379,32 @@ export default {
       }
     },
     handleReset() {
+      if (this.imageData !== this.originalImage) {
+        console.log("Reverting to original in ImageEdit.vue");
+        this.showRevertModal = true;
+        this.imageHistory.push(this.imageData); // Save for undo
+        this.redoHistory = []; // Clear redo history
+        this.imageData = this.originalImage;
+        this.isCropped = false; // Reset cropped state
+      } else {
+        console.log("No changes detected, modal will not be shown.");
+      }
       console.log("Reverting to original in ImageEdit.vue");
+    },
 
-      this.imageHistory.push(this.imageData); // Save for undo
-      this.redoHistory = []; // Clear redo history
+    // Revert Modal
+    cancelRevert() {
+      this.showRevertModal = false;
+      this.$nextTick(() => {
+        console.log("Modal should be hidden now");
+      });
+      this.$forceUpdate(); 
+    }, 
+    confirmRevert() {
+      this.imageHistory.push(this.imageData);
+      this.redoHistory = [];
       this.imageData = this.originalImage;
-      this.isCropped = false; // Reset cropped state
+      this.showRevertModal = false;
     },
 
     // After crop complete
@@ -683,5 +739,11 @@ export default {
 }
 .bg-red-800 {
   background-color: #c53030 !important; /* Dark Red */
+}
+.bg-green-500 {
+  background-color: #48bb78 !important; 
+}
+.bg-gray-100 {
+  background-color: #ffff !important;
 }
 </style>
