@@ -36,7 +36,7 @@ public class FaceController {
         faceDetector = new CascadeClassifier(faceFile.getAbsolutePath());
 
         // Load eye cascade
-        ClassPathResource eyeCascade = new ClassPathResource("haarcascade_eye.xml");
+        ClassPathResource eyeCascade = new ClassPathResource("haarcascade_eye_tree_eyeglasses.xml");
         File eyeFile = File.createTempFile("eye", ".xml");
         try (InputStream is = eyeCascade.getInputStream()) {
             Files.copy(is, eyeFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
@@ -49,69 +49,56 @@ public class FaceController {
         byte[] imageBytes = file.getBytes();
         Mat image = Imgcodecs.imdecode(new MatOfByte(imageBytes), Imgcodecs.IMREAD_COLOR);
 
+        // Detect faces
         MatOfRect faces = new MatOfRect();
         faceDetector.detectMultiScale(image, faces);
 
-        if (faces.toArray().length != 1) {
-            return ResponseEntity.badRequest().body("Exactly one face must be present.".getBytes());
+        if (faces.empty()) {
+            return ResponseEntity.badRequest().body("No face detected.".getBytes());
         }
 
         Rect faceRect = faces.toArray()[0];
-        Imgproc.rectangle(image, faceRect.tl(), faceRect.br(), new Scalar(0, 255, 0), 2); // draw face box
+        Imgproc.rectangle(image, faceRect.tl(), faceRect.br(), new Scalar(0, 255, 0), 2); // green face box
 
         // Detect eyes within face
         Mat faceROI = new Mat(image, faceRect);
         MatOfRect eyes = new MatOfRect();
         eyeDetector.detectMultiScale(faceROI, eyes);
 
-        Rect[] eyeRects = eyes.toArray();
-        if (eyeRects.length != 2) {
-            return ResponseEntity.badRequest().body("Exactly two eyes must be visible.".getBytes());
+        if (eyes.toArray().length < 2) {
+            return ResponseEntity.badRequest().body("Less than two eyes detected.".getBytes());
         }
 
-        // Compute eye centers
+        // Calculate eye centers
+        Rect[] eyeRects = eyes.toArray();
         Point[] eyeCenters = new Point[2];
+
         for (int i = 0; i < 2; i++) {
             Rect r = eyeRects[i];
             eyeCenters[i] = new Point(
-                faceRect.x + r.x + r.width / 2,
-                faceRect.y + r.y + r.height / 2
+                faceRect.x + r.x + r.width / 2.0,
+                faceRect.y + r.y + r.height / 2.0
             );
-            Imgproc.circle(image, eyeCenters[i], 5, new Scalar(255, 0, 0), -1); // draw blue eye point
+            Imgproc.circle(image, eyeCenters[i], 5, new Scalar(255, 0, 0), -1); // blue dot
         }
 
-        // Sort eye positions (left to right)
+        // Sort left to right
         if (eyeCenters[0].x > eyeCenters[1].x) {
             Point temp = eyeCenters[0];
             eyeCenters[0] = eyeCenters[1];
             eyeCenters[1] = temp;
         }
 
-        // Midpoint between two eyes
+        // Midpoint between eyes
         Point midpoint = new Point(
-            (eyeCenters[0].x + eyeCenters[1].x) / 2,
-            (eyeCenters[0].y + eyeCenters[1].y) / 2
+            (eyeCenters[0].x + eyeCenters[1].x) / 2.0,
+            (eyeCenters[0].y + eyeCenters[1].y) / 2.0
         );
         Imgproc.circle(image, midpoint, 5, new Scalar(0, 0, 255), -1); // red midpoint
 
-        // Crop to center the midpoint
-        int imageCenterX = image.cols() / 2;
-        int eyeOffset = (int) (midpoint.x - imageCenterX);
-
-        // If eyes are off-center, crop the opposite side to center
-        int cropX = Math.max(0, eyeOffset); // crop left if eyeOffset > 0
-        int cropWidth = image.cols() - Math.abs(eyeOffset);
-
-        if (cropWidth <= 0 || cropX + cropWidth > image.cols()) {
-            return ResponseEntity.badRequest().body("Failed to center image — invalid crop.".getBytes());
-        }
-
-        Rect cropRect = new Rect(cropX, 0, cropWidth, image.rows());
-        Mat cropped = new Mat(image, cropRect);
-
         // Encode and return
         MatOfByte output = new MatOfByte();
-        Imgcodecs.imencode(".jpg", cropped, output);
+        Imgcodecs.imencode(".jpg", image, output);
         return ResponseEntity.ok()
                 .contentType(MediaType.IMAGE_JPEG)
                 .body(output.toArray());
