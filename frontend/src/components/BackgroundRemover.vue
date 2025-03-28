@@ -6,21 +6,37 @@
 
     <!-- Tabs -->
     <div class="border-b border-gray-200">
-      <ul class="flex flex-col space-y-2 text-sm font-medium text-center" role="tablist">
+      <ul
+        class="flex flex-col space-y-2 text-sm font-medium text-center"
+        role="tablist"
+      >
         <li>
-          <button @click="activeTab = 'color'" :class="tabClass('color')" role="tab">Replace BG with Color</button>
+          <button
+            @click="activeTab = 'color'"
+            :class="tabClass('color')"
+            role="tab"
+          >
+            Replace BG with Color
+          </button>
         </li>
         <li>
-          <button @click="activeTab = 'image'" :class="tabClass('image')" role="tab">Replace BG with Image</button>
+          <button
+            @click="activeTab = 'image'"
+            :class="tabClass('image')"
+            role="tab"
+          >
+            Replace BG with Image
+          </button>
         </li>
       </ul>
     </div>
 
     <!-- Tab Content -->
     <div v-if="activeTab === 'color'" class="p-4">
-      <label class="block text-gray-700 font-medium mb-2">Select Background Color:</label>
+      <label class="block text-gray-700 font-medium mb-2"
+        >Select Background Color:</label
+      >
       <div class="flex items-center space-x-2">
-
         <!-- Common Colors -->
         <div class="flex space-x-2">
           <div v-for="c in commonColors" :key="c" 
@@ -43,24 +59,33 @@
 
 
       <div class="flex justify-center">
-        <label class="text-gray-700 text-xs mb-2">Click on the color box above to choose a custom color.</label>
+        <label class="text-gray-700 text-xs mb-2"
+          >Click on the color box above to choose a custom color.</label
+        >
       </div>
     </div>
 
     <div v-if="activeTab === 'image'" class="p-4">
-      <label class="block text-gray-700 font-medium mb-2">Select Background Image:</label>
+      <label class="block text-gray-700 font-medium mb-2"
+        >Select Background Image:</label
+      >
       <div class="grid grid-cols-3 gap-2">
         <!-- Upload Button -->
-        <div class="relative w-16 h-16 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer">
+        <div
+          class="relative w-16 h-16 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer"
+        >
           <span class="text-2xl font-bold">+</span>
           <!-- Invisible Upload Button -->
-          <UploadImageButton class="absolute inset-0 opacity-0 cursor-pointer" @image-uploaded="applyBackground" />
+          <UploadImageButton
+            class="absolute inset-0 opacity-0 cursor-pointer"
+            @image-uploaded="applyBackground"
+          />
         </div>
 
         <!-- Sample Backgrounds -->
-        <div 
-          v-for="bg in sampleBackgrounds" 
-          :key="bg.name" 
+        <div
+          v-for="bg in sampleBackgrounds"
+          :key="bg.name"
           class="w-16 h-16 bg-cover bg-center rounded-lg cursor-pointer border border-gray-300"
           :style="{ backgroundImage: `url(${bg.url})` }"
           @click="applyBackground(bg.url)"
@@ -68,21 +93,33 @@
       </div>
 
       <!-- Hidden UploadImageButton -->
-      <UploadImageButton ref="uploadButton" @image-uploaded="applyBackground" class="hidden" />
+      <UploadImageButton
+        ref="uploadButton"
+        @image-uploaded="applyBackground"
+        class="hidden"
+      />
     </div>
 
     <!-- Loading Indicator -->
-    <div v-if="isProcessing" class="text-gray-600 text-sm animate-pulse">Processing image, please wait...</div>
+    <div v-if="isProcessing" class="text-gray-600 text-sm animate-pulse">
+      Processing image, please wait...
+    </div>
 
     <!-- Error Message -->
-    <div v-if="errorMessage" class="text-red-500 text-sm">{{ errorMessage }}</div>
+    <div v-if="errorMessage" class="text-red-500 text-sm">
+      {{ errorMessage }}
+    </div>
   </div>
 
   <!-- Right side: Image Display -->
   <div class="col-span-8 shadow-lg flex justify-center items-center">
-    <img v-if="displayedImage" :src="displayedImage" alt="Displayed Image" class="max-h-full max-w-full object-contain" />
+    <img
+      v-if="displayedImage"
+      :src="displayedImage"
+      alt="Displayed Image"
+      class="max-h-full max-w-full object-contain"
+    />
   </div>
-
 </template>
 
 <script>
@@ -112,7 +149,8 @@ export default {
   },
   watch: {
     imageData(newImage) {
-      if (!this.originalImage) { // Set only if not set before
+      if (!this.originalImage) {
+        // Set only if not set before
         this.originalImage = newImage;
       }
       this.displayedImage = newImage; // Only update display, not original
@@ -125,7 +163,11 @@ export default {
         this.backgroundImage = image;
         try {
           const base64Image = await this.convertImageToBase64(image);
-          this.processImage({ category: "background", backgroundString: base64Image, image: this.originalImage });
+          this.processImage({
+            category: "background",
+            backgroundString: base64Image,
+            image: this.originalImage,
+          });
         } catch (error) {
           console.error("Error converting image:", error);
           this.errorMessage = "Failed to load background image.";
@@ -134,12 +176,15 @@ export default {
         const reader = new FileReader();
         reader.onload = (e) => {
           this.backgroundImage = e.target.result;
-          this.processImage({ category: "background", backgroundString: this.backgroundImage, image: this.originalImage });
+          this.processImage({
+            category: "background",
+            backgroundString: this.backgroundImage,
+            image: this.originalImage,
+          });
         };
         reader.readAsDataURL(image);
       }
     },
-
 
     async convertImageToBase64(imageUrl) {
       return new Promise((resolve, reject) => {
@@ -168,15 +213,32 @@ export default {
     },
 
     applyColor(eventOrColor) {
-      const color = typeof eventOrColor === "string" ? eventOrColor : eventOrColor.target.value;
+      const color =
+        typeof eventOrColor === "string"
+          ? eventOrColor
+          : eventOrColor.target.value;
       this.color = color;
-      this.processImage({ category: "color", colorString: color, image: this.originalImage });
+      this.processImage({
+        category: "color",
+        colorString: color,
+        image: this.originalImage,
+      });
+    },
+    base64ToFile(base64String, fileName) {
+      const arr = base64String.split(",");
+      const mime = arr[0].match(/:(.*?);/)[1];
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      return new File([u8arr], fileName, { type: mime });
     },
 
-
-
     async processImage(payload) {
-      if (!this.originalImage) { // Ensure we always use the original
+      if (!this.originalImage) {
+        // Ensure we always use the original
         this.errorMessage = "No image available for processing.";
         return;
       }
@@ -186,13 +248,29 @@ export default {
 
       try {
         // Always resize originalImage, not the modified one
-        const finalBase64 = await this.resizeToClosestMultipleOf32(this.originalImage); 
-        payload.image = finalBase64;
 
+        const formData = new FormData();
+
+        for (const [key, value] of Object.entries(payload)) {
+          if (key === "image") {
+            const finalBase64 = await this.resizeToClosestMultipleOf32(
+              payload.image
+            );
+            formData.append(
+              key,
+              this.base64ToFile(finalBase64, "uploaded-image.jpg")
+            );
+          } else {
+            formData.append(key, value);
+          }
+        }
+
+        for (let pair of formData.entries()) {
+          console.log(pair[0] + ": " + pair[1]);
+        }
         const response = await fetch("http://localhost:8080/bg/removebg", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: formData,
         });
 
         if (!response.ok) throw new Error("Processing failed");
@@ -213,8 +291,6 @@ export default {
         this.isProcessing = false;
       }
     },
-
-
 
     async resizeToClosestMultipleOf32(base64) {
       return new Promise((resolve, reject) => {
