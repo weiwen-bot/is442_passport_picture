@@ -70,8 +70,8 @@ public class AutomatePassportPhotoService {
     }
 
     public String automatePassportPhoto(MultipartFile file, String country, String template) throws IOException, OrtException{
-        ImageResizeResponse imageResponse = imageResizingService.resizeImage(file, country, template, null, null);
-        String base64Image = imageResponse.getImage();
+        String base64Image = imageResizingService.resizeImage(file, country, template, null, null);
+        // String base64Image = imageResponse.getImage();
         System.out.println("Where are Here");
         String resizeBase64Image = resizeToClosestMultipleOf32(base64Image);
         System.out.println("Why you no work");
