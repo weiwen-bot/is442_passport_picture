@@ -31,7 +31,7 @@
       />
 
       <!-- Show recrop interface when already cropped -->
-      <div v-else class="col-span-12 grid grid-cols-12 gap-4 p-4">
+      <div v-else class="col-span-12 grid space-y-2 grid-cols-12">
       <h2 class="col-span-12 font-bold p-4 text-2xl">Image</h2>
         <!-- Left side: Recrop options -->
         <div class="col-span-4 bg-white border rounded-lg shadow-lg p-4 space-y-2 text-black">
