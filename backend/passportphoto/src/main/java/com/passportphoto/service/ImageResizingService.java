@@ -10,7 +10,6 @@ import com.passportphoto.service.strategy.StandardResizeStrategy;
 import com.passportphoto.util.DimensionHelper;
 import com.passportphoto.util.ImageConverter;
 
-import lombok.extern.slf4j.Slf4j;
 import org.opencv.core.*;
 import org.opencv.imgproc.Imgproc;
 import org.springframework.stereotype.Service;
@@ -21,17 +20,7 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 
 @Service
-@Slf4j
 public class ImageResizingService {
-
-    static {
-        try {
-            System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-            System.out.println("OpenCV loaded successfully.");
-        } catch (UnsatisfiedLinkError e) {
-            System.err.println("Failed to load OpenCV: " + e.getMessage());
-        }
-    }
 
     public String resizeImage(MultipartFile file, String country, String template, Integer customWidth, Integer customHeight) {
         validateInput(file, country, template, customWidth, customHeight);
