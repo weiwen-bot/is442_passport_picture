@@ -97,7 +97,7 @@ public class ImageResizingController {
 
     @PostMapping("/resize")
     public ResponseEntity<ImageResizeResponse> resizeImage(
-        @RequestParam("image") MultipartFile file,  
+        @RequestParam(value = "image", required = false) MultipartFile file,
         @RequestParam(value = "country", required = false) String country,
         @RequestParam(value = "template", required = false) String template,
         @RequestParam(value = "customWidth", required = false) Integer customWidth, 
