@@ -310,6 +310,10 @@ public class BackgroundRemovalService {
 		
 		int rh = image.getHeight();
 		int rw = image.getWidth();
+		System.out.println();
+		System.out.println("BG REMOVAL");
+		System.out.println(rh);
+		System.out.println(rw);
 
 		boolean validateImg = validateImg(image, rh, rw);
 		if (!(validateImg)) {

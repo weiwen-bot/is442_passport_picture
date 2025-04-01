@@ -20,17 +20,17 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 
 @Service
-@Slf4j
+// @Slf4j
 public class ImageResizingService {
 
-    static {
-        try {
-            System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-            System.out.println("OpenCV loaded successfully.");
-        } catch (UnsatisfiedLinkError e) {
-            System.err.println("Failed to load OpenCV: " + e.getMessage());
-        }
-    }
+    // static {
+    //     try {
+    //         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+    //         System.out.println("OpenCV loaded successfully.");
+    //     } catch (UnsatisfiedLinkError e) {
+    //         System.err.println("Failed to load OpenCV: " + e.getMessage());
+    //     }
+    // }
 
     public String resizeImage(MultipartFile file, String country, String template, Integer customWidth, Integer customHeight) {
         validateInput(file, country, template, customWidth, customHeight);
@@ -66,6 +66,8 @@ public class ImageResizingService {
         BackgroundProcessor bgProcessor = hasAlpha ? new TransparentBackgroundProcessor() : new UniformBackgroundProcessor();
 
         Mat finalMat = bgProcessor.process(resizedMat, targetWidth, targetHeight);
+        System.out.println(finalMat.width());
+        System.out.println(finalMat.height());
 
         String dataUrl = ImageConverter.convertMatToDataUrl(finalMat);
 

@@ -1,60 +1,21 @@
 package com.passportphoto.service;
 
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
+
+import javax.imageio.ImageIO;
+
 import org.opencv.core.*;
-import org.opencv.imgproc.Imgproc;
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.FloatBuffer;
-import java.util.Base64;
-import java.util.Collections;
-import java.util.Map;
-
-import javax.imageio.ImageIO;
-
-import org.opencv.imgcodecs.Imgcodecs;
-import org.opencv.imgproc.Imgproc;
-import org.opencv.imgcodecs.Imgcodecs;
-import org.opencv.imgproc.Imgproc;
-import com.passportphoto.dto.ImgDTO;
-
-import com.passportphoto.service.ModelSessionManager;
-import com.passportphoto.util.Constants;
-import ai.onnxruntime.*;
-
-import javax.imageio.ImageIO;
-import java.awt.*;
-import java.awt.image.BufferedImage;
-import java.io.*;
-import java.nio.FloatBuffer;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.Collections;
-import java.util.Map;
-
-import com.passportphoto.exceptions.*;
-
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.Map;
 import org.springframework.mock.web.MockMultipartFile;
-import java.util.Base64;
-import java.io.ByteArrayInputStream;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
-import com.passportphoto.dto.ImageResizeResponse;
-import com.passportphoto.service.BackgroundRemovalService;
-import com.passportphoto.service.ImageResizingService;
+import ai.onnxruntime.*;
 
 @Service
 public class AutomatePassportPhotoService {
@@ -69,14 +30,21 @@ public class AutomatePassportPhotoService {
         
     }
 
+    public String[] batchProcessing(List<MultipartFile> fileList, String country, String template) throws IOException, OrtException{
+        String[] base64List = new String[fileList.size()];
+        for (int i = 0; i < fileList.size(); i++){
+            String processedImage = automatePassportPhoto(fileList.get(i), country, template);
+            base64List[i] = processedImage;
+        }
+        return base64List;
+
+    }
+
     public String automatePassportPhoto(MultipartFile file, String country, String template) throws IOException, OrtException{
-        ImageResizeResponse imageResponse = imageResizingService.resizeImage(file, country, template, null, null);
-        String base64Image = imageResponse.getImage();
-        System.out.println("Where are Here");
-        String resizeBase64Image = resizeToClosestMultipleOf32(base64Image);
-        System.out.println("Why you no work");
+        String base64String = imageResizingService.resizeImage(file, country, template, null, null);
+        String resizeBase64Image = resizeToClosestMultipleOf32(base64String);
         MultipartFile resizeFile = convertBase64ToMultipartFile(resizeBase64Image,"uploaded-img.jpg");
-        String processedBase64 = backgroundRemovalService.processImage(file, null, null);
+        String processedBase64 = backgroundRemovalService.processImage(resizeFile, null, null);
         return processedBase64;
         
     }
@@ -102,6 +70,10 @@ public class AutomatePassportPhotoService {
             byte[] imageBytes = java.util.Base64.getDecoder().decode(base64Image.split(",")[1]);
             ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(imageBytes);
             BufferedImage img = ImageIO.read(byteArrayInputStream);
+            System.out.println("Before");
+            System.out.println(img.getWidth());
+            System.out.println(img.getHeight());
+            System.out.println();
 
             // Calculate new dimensions rounded to the closest multiple of 32
             int newWidth = roundToNearestMultiple(img.getWidth(), 32);
@@ -115,9 +87,14 @@ public class AutomatePassportPhotoService {
             Graphics2D g2d = outputImage.createGraphics();
             g2d.drawImage(img, 0, 0,newWidth,newHeight, null);
             g2d.dispose();
+            System.out.println("After");
+            System.out.println(outputImage.getWidth());
+            System.out.println(outputImage.getHeight());
+            System.out.println();
 
             // Convert the resulting image to base64 string (PNG format)
-            return encodeToBase64(outputImage);
+            String finalBase64 = encodeToBase64(outputImage);
+            return finalBase64;
         } catch (IOException e) {
             throw new RuntimeException("Error processing image", e);
         }

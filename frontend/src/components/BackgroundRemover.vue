@@ -265,9 +265,7 @@ export default {
           }
         }
 
-        for (let pair of formData.entries()) {
-          console.log(pair[0] + ": " + pair[1]);
-        }
+        console.log();
         const response = await fetch("http://localhost:8080/bg/removebg", {
           method: "POST",
           body: formData,
@@ -305,6 +303,7 @@ export default {
           canvas.height = newHeight;
           const ctx = canvas.getContext("2d");
           ctx.drawImage(img, 0, 0, newWidth, newHeight);
+          console.log("resize to new new width and height",newWidth,newHeight);
 
           resolve(canvas.toDataURL("image/png"));
         };

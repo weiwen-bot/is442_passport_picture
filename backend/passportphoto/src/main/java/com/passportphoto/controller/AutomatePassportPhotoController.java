@@ -11,7 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import com.passportphoto.dto.ImgDTO;
+import com.passportphoto.dto.BatchedImageResponse;
 import com.passportphoto.service.AutomatePassportPhotoService;
 import com.passportphoto.service.BackgroundRemovalService;
 import org.springframework.web.multipart.MultipartFile;
@@ -44,6 +44,24 @@ public class AutomatePassportPhotoController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Collections.singletonMap("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Collections.singletonMap("error", "Image processing failed"));
+        }
+    }
+
+    @PostMapping("/batch/passportphoto")
+    public ResponseEntity<Map<String, String[]>> automatePassportPhoto(
+        @RequestParam(value = "image", required = false) List<MultipartFile> fileList,
+        @RequestParam(value = "country", required = false) String country,
+        @RequestParam(value = "template", required = false) String template
+    ) {
+        try {
+            String[] processedBase64 = automatePassportPhotoService.batchProcessing(fileList,country,template);
+            Map<String, String[]> response = Collections.singletonMap("processedImage", (processedBase64));
+
+            return ResponseEntity.ok(response);
+        } catch (ImageInvalidFormatException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Collections.singletonMap("error", new String[]{e.getMessage()}));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Collections.singletonMap("error", new String[]{"Image processing failed"}));
         }
     }
 
