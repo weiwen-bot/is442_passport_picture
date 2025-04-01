@@ -1,3 +1,10 @@
+/*
+ * ImageCroppingController.java
+ *
+ * This controller handles the image cropping endpoint for the Passport Picture Project.
+ *
+ */
+
 package com.passportphoto.controller;
 
 import com.passportphoto.dto.ImageCropRequest;
@@ -12,17 +19,34 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * The {@code ImageCroppingController} provides an endpoint to crop
+ * a user-uploaded image based on the dimensions provided in the request.
+ */
 @RestController
 @RequestMapping("/image")
 @CrossOrigin(origins = "http://localhost:5173") 
 public class ImageCroppingController {
 
+    /** Service that handles image conversion and cropping logic */
     private final ImageCroppingService imageProcessingService;
 
+    /**
+     * Constructs the controller with the given image processing service.
+     *
+     * @param imageProcessingService the service used for cropping and encoding images
+     */
     public ImageCroppingController(ImageCroppingService imageProcessingService) {
         this.imageProcessingService = imageProcessingService;
     }
 
+    /**
+     * Crops the uploaded image based on provided crop parameters.
+     *
+     * @param imageFile   the uploaded image
+     * @param cropRequest the crop dimensions
+     * @return a base64-encoded cropped image or an error message
+     */
     @PostMapping("/crop")
     public ResponseEntity<?> cropImage(@RequestParam("image") MultipartFile imageFile,
                                        @ModelAttribute ImageCropRequest cropRequest) {
@@ -37,7 +61,7 @@ public class ImageCroppingController {
             int cropWidth = (int) cropRequest.getCropWidth();
             int cropHeight = (int) cropRequest.getCropHeight();
 
-            // Ensure crop dimensions are valid
+            // Validate crop dimensions
             if (cropX < 0 || cropY < 0 || cropWidth <= 0 || cropHeight <= 0 ||
                 cropX + cropWidth > inputImage.getWidth() ||
                 cropY + cropHeight > inputImage.getHeight()) {
