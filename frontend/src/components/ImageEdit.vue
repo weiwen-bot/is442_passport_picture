@@ -119,13 +119,13 @@
           </button>
           <div
             v-if="showDropdown"
-            class="absolute bottom-12 right-0 bg-gray-800 shadow-md rounded p-3 space-y-2 w-52"
+            class="absolute bottom-12 right-0 bg-gray-800 shadow-md rounded p-3 space-y-2 w-65"
           >
             <button
               @click="downloadImage"
               class="block w-full text-left bg-gray-100 p-2 hover:bg-gray-200"
             >
-              Download Image
+              <i class="fa fa-download" aria-hidden="true"></i> Download Image
             </button>
             <button
               @click="openLayoutPopup"
@@ -743,7 +743,7 @@ export default {
 .bg-green-500 {
   background-color: #48bb78 !important; 
 }
-.bg-gray-100 {
+/* .bg-gray-100 {
   background-color: #ffff !important;
-}
+} */
 </style>
