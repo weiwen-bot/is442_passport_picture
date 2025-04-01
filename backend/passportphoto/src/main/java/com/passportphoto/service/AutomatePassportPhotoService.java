@@ -69,17 +69,25 @@ public class AutomatePassportPhotoService {
         
     }
 
-    public String automatePassportPhoto(MultipartFile file, String country, String template) throws IOException, OrtException{
-        ImageResizeResponse imageResponse = imageResizingService.resizeImage(file, country, template, null, null);
-        String base64Image = imageResponse.getImage();
+    public String automatePassportPhoto(MultipartFile file, String country, String template) throws IOException, OrtException {
+        // Resize the image and receive base64 directly
+        String base64Image = imageResizingService.resizeImage(file, country, template, null, null);
         System.out.println("Where are Here");
+    
+        // Resize to a MODNet-compatible size
         String resizeBase64Image = resizeToClosestMultipleOf32(base64Image);
         System.out.println("Why you no work");
-        MultipartFile resizeFile = convertBase64ToMultipartFile(resizeBase64Image,"uploaded-img.jpg");
-        String processedBase64 = backgroundRemovalService.processImage(file, null, null);
+    
+        // Convert base64 to MultipartFile
+        MultipartFile resizeFile = convertBase64ToMultipartFile(resizeBase64Image, "uploaded-img.jpg");
+    
+        // Process background removal
+        String processedBase64 = backgroundRemovalService.processImage(resizeFile, null, null);
+    
         return processedBase64;
-        
     }
+    
+    
     public MultipartFile convertBase64ToMultipartFile(String base64String, String fileName) throws IOException {
         // Split the Base64 string to extract the MIME type and the actual Base64 data
         String[] parts = base64String.split(",");

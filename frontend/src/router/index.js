@@ -6,6 +6,7 @@ import BackgroundRemover from "../components/BackgroundRemover.vue";
 import ImageResizing from "../components/ImageResizing.vue";
 import ImageEnhancement from "../components/ImageEnhancement.vue";
 import QuickGenerate from "../components/QuickGenerate.vue";
+import test from "../components/test2.vue";
 
 const routes = [
   // {
@@ -51,6 +52,11 @@ const routes = [
     path: "/quick-generate",
     name: "QuickGenerate",
     component: QuickGenerate,
+  },
+  {
+    path: "/test",
+    name: "test",
+    component: test,
   }
 ];
 

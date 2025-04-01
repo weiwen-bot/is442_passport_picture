@@ -291,7 +291,6 @@ export default {
         this.isProcessing = false;
       }
     },
-
     async resizeToClosestMultipleOf32(base64) {
       return new Promise((resolve, reject) => {
         const img = new Image();
