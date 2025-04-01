@@ -59,7 +59,6 @@ public class ImageResizingController {
     private String getCountryNameFromCode(String code) {
         return switch (code.toLowerCase()) {
             case "jpn" -> "Japan";
-            case "usa" -> "United States";
             case "sgp" -> "Singapore";
             case "chn" -> "China";
             case "mas" -> "Malaysia";
