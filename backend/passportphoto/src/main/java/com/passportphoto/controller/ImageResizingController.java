@@ -1,9 +1,18 @@
+/*
+ * ImageResizingController.java
+ *
+ * This controller handles endpoints for resizing images and retrieving
+ * country/template dimension metadata for the Passport Picture Project.
+ *
+ */
+
 package com.passportphoto.controller;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.passportphoto.dto.ImageResizeResponse;
 import com.passportphoto.service.ImageResizingService;
+
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.core.io.ClassPathResource;
@@ -16,18 +25,33 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * The {@code ImageResizingController} provides endpoints for resizing passport photos
+ * based on country or template dimensions, and retrieving available options.
+ */
 @RestController
 @RequestMapping("/image")
 @CrossOrigin(origins = "http://localhost:5173")
 
 public class ImageResizingController {
 
+    /** Service that performs the actual image resizing logic */
     private final ImageResizingService imageResizingService;
 
+    /**
+     * Constructs the controller with the required resizing service.
+     *
+     * @param imageResizingService the service that handles image resizing
+     */
     public ImageResizingController(ImageResizingService imageResizingService) {
         this.imageResizingService = imageResizingService;
     }
 
+    /**
+     * Returns a list of countries and their corresponding passport photo dimensions.
+     *
+     * @return list of countries with display names and dimension strings
+     */
     @GetMapping("/countries")
     public ResponseEntity<List<Map<String, String>>> getCountryList() {
         try {
@@ -51,21 +75,17 @@ public class ImageResizingController {
             }
 
             return ResponseEntity.ok(countryList);
+
         } catch (IOException e) {
             return ResponseEntity.status(500).body(Collections.emptyList());
         }
     }
 
-    private String getCountryNameFromCode(String code) {
-        return switch (code.toLowerCase()) {
-            case "jpn" -> "Japan";
-            case "sgp" -> "Singapore";
-            case "chn" -> "China";
-            case "mas" -> "Malaysia";
-            default -> code.toUpperCase();
-        };
-    }
-
+    /**
+     * Returns a list of template labels and their dimension sizes.
+     *
+     * @return list of templates with size labels
+     */
     @GetMapping("/templates")
     public ResponseEntity<List<Map<String, String>>> getTemplateList() {
         try {
@@ -94,6 +114,16 @@ public class ImageResizingController {
         }
     }
 
+    /**
+     * Resizes an uploaded image based on selected country, template, or custom dimensions.
+     *
+     * @param file          the uploaded image file
+     * @param country       the selected country code (optional)
+     * @param template      the selected template label (optional)
+     * @param customWidth   the custom width (optional)
+     * @param customHeight  the custom height (optional)
+     * @return the resized image in base64 format
+     */
     @PostMapping("/resize")
     public ResponseEntity<ImageResizeResponse> resizeImage(
         @RequestParam(value = "image", required = false) MultipartFile file,
@@ -107,5 +137,21 @@ public class ImageResizingController {
         } catch (Exception e) {
             return ResponseEntity.status(500).body(new ImageResizeResponse("error", "Image resize failed: " + e.getMessage(), null));
         }
+    }
+
+    /**
+     * Maps a country code to a human-readable name.
+     *
+     * @param code the 3-letter country code
+     * @return the full country name
+     */
+    private String getCountryNameFromCode(String code) {
+        return switch (code.toLowerCase()) {
+            case "jpn" -> "Japan";
+            case "sgp" -> "Singapore";
+            case "chn" -> "China";
+            case "mas" -> "Malaysia";
+            default -> code.toUpperCase();
+        };
     }
 }
