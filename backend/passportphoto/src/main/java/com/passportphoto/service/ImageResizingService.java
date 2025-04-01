@@ -1,6 +1,14 @@
 package com.passportphoto.service;
 
-import com.passportphoto.dto.ImageResizeResponse;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+
+import javax.imageio.ImageIO;
+
+import org.opencv.core.Mat;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
 import com.passportphoto.service.processor.BackgroundProcessor;
 import com.passportphoto.service.processor.TransparentBackgroundProcessor;
 import com.passportphoto.service.processor.UniformBackgroundProcessor;
@@ -9,14 +17,6 @@ import com.passportphoto.service.strategy.ResizeStrategy;
 import com.passportphoto.service.strategy.StandardResizeStrategy;
 import com.passportphoto.util.DimensionHelper;
 import com.passportphoto.util.ImageConverter;
-
-import org.opencv.core.*;
-import org.opencv.imgproc.Imgproc;
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.io.IOException;
 
 @Service
 public class ImageResizingService {
