@@ -1,3 +1,11 @@
+/*
+ * ModelSessionManager.java
+ *
+ * This service handles loading the MODNet ONNX model and provides access
+ * to the initialized OrtSession for inference use throughout the application.
+ *
+ */
+
 package com.passportphoto.service;
 
 import java.io.File;
@@ -5,30 +13,46 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
-import com.passportphoto.util.Constants;
-import ai.onnxruntime.*;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
+import com.passportphoto.util.Constants;
+
+import ai.onnxruntime.OrtEnvironment;
+import ai.onnxruntime.OrtSession;
+
+/**
+ * The {@code ModelSessionManager} class is responsible for loading the MODNet
+ * ONNX model from the resources directory and initializing a shared OrtSession
+ * for background removal inference.
+ */
 @Service
 public class ModelSessionManager {
 
     private final OrtSession session;
 
+    /**
+     * Constructor that initializes the ONNX session.
+     *
+     * @throws Exception if the model file is not found or cannot be read
+     */
     public ModelSessionManager() throws Exception {
         this.session = initializeSession();
     }
-     /**
-     * Load the ONNX model from resources.
+     
+    /**
+     * Loads the ONNX model from the classpath and creates a temporary file
+     * for ONNX Runtime to consume.
+     *
+     * @return an {@link OrtSession} ready for inference
+     * @throws Exception if the model cannot be read or loaded
      */
     private OrtSession initializeSession() throws Exception {
         InputStream modelStream = getClass().getClassLoader().getResourceAsStream(Constants.MODEL_NAME);
         if (modelStream == null) {
             throw new FileNotFoundException("MODNet model not found in resources: " + Constants.MODEL_NAME);
         }
-        // Create a Temp file as input stream is being used
+        
         File tempModelFile = File.createTempFile("modnet", ".onnx");
         tempModelFile.deleteOnExit();
 
@@ -44,10 +68,12 @@ public class ModelSessionManager {
         return env.createSession(tempModelFile.getAbsolutePath(), new OrtSession.SessionOptions());
     }
 
+    /**
+     * Returns the loaded ONNX {@link OrtSession} instance.
+     *
+     * @return the session for inference
+     */
     public OrtSession getSession() {
         return session;
     }
-
-
-    
 }
