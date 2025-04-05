@@ -55,8 +55,7 @@ public class AutomatePassportPhotoService {
 
     }
 
-        this.imageResizingService = imageResizingService;    
-    }
+        
 
     /**
      * Orchestrates the full passport photo processing pipeline:
@@ -110,10 +109,7 @@ public class AutomatePassportPhotoService {
             byte[] imageBytes = java.util.Base64.getDecoder().decode(base64Image.split(",")[1]);
             ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(imageBytes);
             BufferedImage img = ImageIO.read(byteArrayInputStream);
-            System.out.println("Before");
-            System.out.println(img.getWidth());
-            System.out.println(img.getHeight());
-            System.out.println();
+
 
             int newWidth = roundToNearestMultiple(img.getWidth(), 32);
             int newHeight = roundToNearestMultiple(img.getHeight(), 32);
@@ -123,10 +119,7 @@ public class AutomatePassportPhotoService {
             Graphics2D g2d = outputImage.createGraphics();
             g2d.drawImage(img, 0, 0,newWidth,newHeight, null);
             g2d.dispose();
-            System.out.println("After");
-            System.out.println(outputImage.getWidth());
-            System.out.println(outputImage.getHeight());
-            System.out.println();
+
 
             // Convert the resulting image to base64 string (PNG format)
             String finalBase64 = encodeToBase64(outputImage);

@@ -20,6 +20,7 @@ import java.nio.FloatBuffer;
 import java.util.Base64;
 import java.util.Collections;
 
+
 import javax.imageio.ImageIO;
 
 import org.springframework.stereotype.Service;
@@ -41,9 +42,13 @@ import ai.onnxruntime.OrtSession;
 public class BackgroundRemovalService {
 
 	private final ModelSessionManager modelSessionManager;
+	private final ImageProcessingService imageProcessingService;
 
-	public BackgroundRemovalService(ModelSessionManager modelSessionManager) {
+	public BackgroundRemovalService(ModelSessionManager modelSessionManager, ImageProcessingService imageProcessingService) {
 		this.modelSessionManager = modelSessionManager;
+		this.imageProcessingService = imageProcessingService;
+
+		// this.automatePassportPhotoService = automatePassportPhotoService;
 	}
 
 	/**
@@ -70,7 +75,11 @@ public class BackgroundRemovalService {
      */
 	public String processImage(MultipartFile file, String colorString, String backgroundString) throws OrtException, IOException {
 		BufferedImage image = ImageIO.read(file.getInputStream());
-		
+		System.out.printf("%d %d Before",image.getHeight(),image.getWidth());
+		String base64Str = imageProcessingService.encodeToBase64(image);
+		String resizedImg = imageProcessingService.resizeToClosestMultipleOf32(base64Str);
+		image = imageProcessingService.base64ToBufferedImage(resizedImg);
+		System.out.println("HELLO");
 		int rh = image.getHeight();
 		int rw = image.getWidth();
 
@@ -82,7 +91,8 @@ public class BackgroundRemovalService {
 		float[] imgData = preprocessImg(image);
 		float[] outputArray = runModel(imgData, rh, rw);
 		BufferedImage foreground = postprocessImg(colorString,backgroundString,outputArray,image,rw,rh);
-
+		foreground = resizeImage(foreground, rw, rh);
+		System.out.printf("%d %d Before",foreground.getHeight(),foreground.getWidth());
 		String processedBase64 = encodeImageToBase64(foreground);
 		return processedBase64;
 	}
@@ -176,6 +186,16 @@ public class BackgroundRemovalService {
 
 		return foreground;
 	}
+
+	private BufferedImage resizeImage(BufferedImage src, int targetWidth, int targetHeight) {
+        BufferedImage resized = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2d = resized.createGraphics();
+        g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g2d.drawImage(src, 0, 0, targetWidth, targetHeight, null);
+        g2d.dispose();
+        return resized;
+    }
+
 
 	/**
      * Performs alpha blending of the foreground image with a background (solid or custom).

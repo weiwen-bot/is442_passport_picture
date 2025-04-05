@@ -12,6 +12,7 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Base64;
 
@@ -26,6 +27,77 @@ import org.springframework.stereotype.Service;
 @Service
 public class ImageProcessingService {
 
+
+    /**
+     * Resizes an image (in base64) to the nearest dimensions divisible by 32,
+     * which is often required by neural network input layers.
+     *
+     * @param base64Image the original image in base64 format
+     * @return the resized image as a base64 PNG string
+     */
+    public String resizeToClosestMultipleOf32(String base64Image) {
+        try {
+            byte[] imageBytes = Base64.getDecoder().decode(base64Image.split(",")[1]);
+            ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(imageBytes);
+            BufferedImage img = ImageIO.read(byteArrayInputStream);
+            return resizeAndEncode(img);
+        } catch (IOException e) {
+            throw new RuntimeException("Error processing base64 image", e);
+        }
+    }
+
+    public String resizeToClosestMultipleOf32(BufferedImage img) {
+        return resizeAndEncode(img);
+    }
+
+    public String resizeAndEncode(BufferedImage img) {
+        int newWidth = roundToNearestMultiple(img.getWidth(), 32);
+        int newHeight = roundToNearestMultiple(img.getHeight(), 32);
+
+        BufferedImage outputImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_ARGB);
+        System.out.printf("%d %d%n", newHeight, newWidth);
+        Graphics2D g2d = outputImage.createGraphics();
+        g2d.drawImage(img, 0, 0, newWidth, newHeight, null);
+        g2d.dispose();
+
+        // Convert the resulting image to base64 string (PNG format)
+        return encodeToBase64(outputImage);
+    }
+
+    public String encodeToBase64(BufferedImage image) {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            ImageIO.write(image, "png", baos);
+            return "data:image/png;base64," + Base64.getEncoder().encodeToString(baos.toByteArray());
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public int roundToNearestMultiple(int value, int multiple) {
+        return Math.round((float) value / multiple) * multiple;
+    }
+
+    public static BufferedImage base64ToBufferedImage(String base64Image) throws IOException {
+        BufferedImage image = null;
+        try {
+            // Remove the Data URI prefix if present
+            String base64Data = base64Image.substring(base64Image.indexOf(",") + 1);
+
+            // Decode the Base64 string
+            byte[] imageBytes = Base64.getDecoder().decode(base64Data);
+
+            // Create a ByteArrayInputStream from the decoded bytes
+            ByteArrayInputStream bis = new ByteArrayInputStream(imageBytes);
+
+            // Read the image from the InputStream
+            image = ImageIO.read(bis);
+        } catch (IllegalArgumentException e) {
+            throw new IOException("Invalid Base64 string: " + e.getMessage(), e);
+        }
+        return image;
+    }
+
     /**
      * Decodes a base64-encoded image string into a {@link BufferedImage}.
      * Expects the string to follow the "data:image/...;base64,..." format.
@@ -33,7 +105,7 @@ public class ImageProcessingService {
      * @param base64String the base64 image string
      * @return the decoded image as a BufferedImage, or {@code null} on error
      */
-    private BufferedImage decodeBase64ToImage(String base64String) {
+    public BufferedImage decodeBase64ToImage(String base64String) {
         try {
             // Usually the format is "data:image/png;base64,iVBORw0KGgo..."
             String[] parts = base64String.split(",");
@@ -57,7 +129,7 @@ public class ImageProcessingService {
      * @param targetHeight the target height of the canvas
      * @return a resized and centered image of size targetWidth x targetHeight
      */
-    private BufferedImage resizeImageWithAspectRatio(BufferedImage image, int targetWidth, int targetHeight) {
+    public BufferedImage resizeImageWithAspectRatio(BufferedImage image, int targetWidth, int targetHeight) {
         int originalWidth = image.getWidth();
         int originalHeight = image.getHeight();
     

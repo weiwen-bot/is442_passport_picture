@@ -276,7 +276,7 @@ export default {
         for (let pair of formData.entries()) {
           console.log(pair[0] + ": " + pair[1]);
         }
-        const response = await fetch("http://localhost:8080/bg/removebg", {
+        const response = await fetch("http://localhost:8080/image/removebg", {
           method: "POST",
           body: formData,
         });

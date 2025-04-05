@@ -29,7 +29,7 @@ import com.passportphoto.service.BackgroundRemovalService;
  */
 @RestController
 @RequestMapping("/image")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "http://localhost:5173/")
 public class BackgroundRemovalController {
 
     /** Service that handles background processing and replacement */
