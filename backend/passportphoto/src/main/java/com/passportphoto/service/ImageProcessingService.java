@@ -1,66 +1,38 @@
+/*
+ * ImageProcessingService.java
+ *
+ * This service provides utility methods for decoding base64 images
+ * and resizing images with preserved aspect ratio using Java AWT.
+ *
+ */
+
 package com.passportphoto.service;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.util.Base64;
-
-import javax.imageio.ImageIO;
-import com.passportphoto.repository.ImageRepository;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.FloatBuffer;
-import java.util.Base64;
-import java.util.Collections;
-import java.util.Map;
-
-import javax.imageio.ImageIO;
-
-import org.opencv.core.Core;
-import org.opencv.core.CvException;
-import org.opencv.core.CvType;
-import org.opencv.core.Mat;
-import org.opencv.core.MatOfByte;
-import org.opencv.core.Scalar;
-import org.opencv.imgcodecs.Imgcodecs;
-import org.opencv.imgproc.Imgproc;
-
-import org.opencv.core.CvType;
-import org.opencv.core.Mat;
-import org.opencv.core.Rect;
-import org.opencv.core.MatOfFloat;
-import org.opencv.core.MatOfInt;
-import org.opencv.core.Point;
-import org.opencv.core.Scalar;
-import org.opencv.core.Size;
-import org.opencv.imgcodecs.Imgcodecs;
-import org.opencv.imgproc.Imgproc;
-import com.passportphoto.dto.ImgDTO;
-
-import com.passportphoto.service.ModelSessionManager;
-import com.passportphoto.util.Constants;
-import ai.onnxruntime.*;
-
-import javax.imageio.ImageIO;
-import java.awt.*;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
-import java.io.*;
-import java.nio.FloatBuffer;
-import java.util.Arrays;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.util.Base64;
-import java.util.Collections;
-import java.util.Map;
 
-import com.passportphoto.exceptions.*;
+import javax.imageio.ImageIO;
 
+import org.springframework.stereotype.Service;
+
+/**
+ * The {@code ImageProcessingService} provides methods for decoding
+ * base64 image strings and resizing images while maintaining aspect ratio.
+ */
 @Service
 public class ImageProcessingService {
 
+    /**
+     * Decodes a base64-encoded image string into a {@link BufferedImage}.
+     * Expects the string to follow the "data:image/...;base64,..." format.
+     *
+     * @param base64String the base64 image string
+     * @return the decoded image as a BufferedImage, or {@code null} on error
+     */
     private BufferedImage decodeBase64ToImage(String base64String) {
         try {
             // Usually the format is "data:image/png;base64,iVBORw0KGgo..."
@@ -76,11 +48,19 @@ public class ImageProcessingService {
         }
     }
 
+    /**
+     * Resizes a given image to fit within the specified target width and height
+     * while preserving its aspect ratio. The resized image is centered within the target canvas.
+     *
+     * @param image        the original BufferedImage
+     * @param targetWidth  the target width of the canvas
+     * @param targetHeight the target height of the canvas
+     * @return a resized and centered image of size targetWidth x targetHeight
+     */
     private BufferedImage resizeImageWithAspectRatio(BufferedImage image, int targetWidth, int targetHeight) {
         int originalWidth = image.getWidth();
         int originalHeight = image.getHeight();
     
-        // Calculate the new dimensions while maintaining the aspect ratio
         double aspectRatio = (double) originalWidth / originalHeight;
         int newWidth = targetWidth;
         int newHeight = (int) (targetWidth / aspectRatio);
@@ -90,16 +70,13 @@ public class ImageProcessingService {
             newWidth = (int) (targetHeight * aspectRatio);
         } 
 
-        // Create a transparent image with the target dimensions
         BufferedImage resizedImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2d = resizedImage.createGraphics();
     
-        // Enable high-quality rendering
         g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
     
-        // Center the resized image within the target dimensions
         int x = (targetWidth - newWidth) / 2;
         int y = (targetHeight - newHeight) / 2;
 
@@ -108,6 +85,4 @@ public class ImageProcessingService {
     
         return resizedImage;
     }
-
-    
 }

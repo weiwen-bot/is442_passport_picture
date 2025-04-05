@@ -49,7 +49,7 @@
   </div>
 
   <!-- Right side: Image Display -->
-  <div class="col-span-8 shadow-lg flex justify-center items-center">
+  <div class="col-span-8 shadow-lg justify-center items-center">
     <vue-cropper
       v-if="imageData"
       ref="cropper"
