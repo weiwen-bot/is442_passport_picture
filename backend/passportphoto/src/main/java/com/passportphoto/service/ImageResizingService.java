@@ -20,19 +20,10 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 
 @Service
-// @Slf4j
 public class ImageResizingService {
 
-    // static {
-    //     try {
-    //         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-    //         System.out.println("OpenCV loaded successfully.");
-    //     } catch (UnsatisfiedLinkError e) {
-    //         System.err.println("Failed to load OpenCV: " + e.getMessage());
-    //     }
-    // }
-
-    public String resizeImage(MultipartFile file, String country, String template, Integer customWidth, Integer customHeight) {
+    public String resizeImage(MultipartFile file, String country, String template, Integer customWidth,
+            Integer customHeight) {
         validateInput(file, country, template, customWidth, customHeight);
         try {
             return processImagePipeline(file, country, template, customWidth, customHeight);
@@ -42,7 +33,8 @@ public class ImageResizingService {
     }
 
     // Pipeline methods
-    private String processImagePipeline(MultipartFile file, String country, String template, Integer customWidth, Integer customHeight) throws IOException {
+    private String processImagePipeline(MultipartFile file, String country, String template, Integer customWidth,
+            Integer customHeight) throws IOException {
         // 1. Convert uploaded image to BufferedImage
         BufferedImage originalImage = ImageIO.read(file.getInputStream());
 
@@ -63,7 +55,8 @@ public class ImageResizingService {
         Mat resizedMat = resizeStrategy.resize(imageMat, targetWidth, targetHeight);
 
         // 6. Process background
-        BackgroundProcessor bgProcessor = hasAlpha ? new TransparentBackgroundProcessor() : new UniformBackgroundProcessor();
+        BackgroundProcessor bgProcessor = hasAlpha ? new TransparentBackgroundProcessor()
+                : new UniformBackgroundProcessor();
 
         Mat finalMat = bgProcessor.process(resizedMat, targetWidth, targetHeight);
         System.out.println(finalMat.width());
@@ -79,21 +72,22 @@ public class ImageResizingService {
         return dataUrl;
     }
 
-    private void validateInput(MultipartFile file, String country, String template, Integer customWidth, Integer customHeight) {
+    private void validateInput(MultipartFile file, String country, String template, Integer customWidth,
+            Integer customHeight) {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("Image file cannot be empty");
         }
 
         boolean noSizeSpecified = (country == null || country.trim().isEmpty()) &&
-                                  (template == null || template.trim().isEmpty()) &&
-                                  (customWidth == null || customHeight == null);
+                (template == null || template.trim().isEmpty()) &&
+                (customWidth == null || customHeight == null);
 
         if (noSizeSpecified) {
             throw new IllegalArgumentException("Must specify country, template, or custom dimensions");
         }
 
         if ((customWidth != null && customWidth <= 0) ||
-            (customHeight != null && customHeight <= 0)) {
+                (customHeight != null && customHeight <= 0)) {
             throw new IllegalArgumentException("Custom dimensions must be positive integers");
         }
     }

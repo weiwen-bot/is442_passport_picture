@@ -7,7 +7,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import com.passportphoto.config.ConfigEnv;
 
 import jakarta.annotation.PostConstruct;
-
 @SpringBootApplication
 public class PhotoprocessorApplication {
 
@@ -21,6 +20,7 @@ public class PhotoprocessorApplication {
     public void init() {
         System.out.println("Trying to load OpenCV DLL from: ");
         System.load(configEnv.getDdlpath());
+        // System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
         System.out.println("OpenCV DLL loaded successfully!");
     }
 
