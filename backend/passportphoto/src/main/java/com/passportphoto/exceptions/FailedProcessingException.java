@@ -1,7 +1,5 @@
 package com.passportphoto.exceptions;
 
-import com.passportphoto.exceptions.ImageException;
-
 /**
  * Exception thrown when image processing fails.
  * Extends ImageException to provide a specific error type.

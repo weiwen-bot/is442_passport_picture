@@ -1,11 +1,11 @@
-package com.passportphoto.repository;
+// package com.passportphoto.repository;
 
-// import org.springframework.data.repository.CrudRepository;
-import org.springframework.stereotype.Repository;
+// // import org.springframework.data.repository.CrudRepository;
+// import org.springframework.stereotype.Repository;
 
-import com.passportphoto.dto.ImgDTO;
+// import com.passportphoto.dto.ImgDTO;
 
-@Repository
-public interface ImageRepository {
+// @Repository
+// public interface ImageRepository {
     
-}
+// }
