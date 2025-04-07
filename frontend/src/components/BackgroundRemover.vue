@@ -284,11 +284,11 @@ export default {
         if (!response.ok) throw new Error("Processing failed");
 
         const result = await response.json();
-        if (result.processedImage) {
-          this.displayedImage = result.processedImage; // Update only the display
-          localStorage.setItem("imageData", result.processedImage);
+        if (result.image) {
+          this.displayedImage = result.image; // Update only the display
+          localStorage.setItem("imageData", result.image);
 
-          this.$emit("update:imageData", result.processedImage);
+          this.$emit("update:imageData", result.image);
         } else {
           throw new Error("No processed image received from backend.");
         }

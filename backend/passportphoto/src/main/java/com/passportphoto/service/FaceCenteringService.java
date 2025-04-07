@@ -1,4 +1,4 @@
-package com.passportphoto.controller;
+package com.passportphoto.service;
 
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -11,60 +11,35 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import com.passportphoto.exceptions.InvalidEyeException;
+import com.passportphoto.exceptions.InvalidFaceException;
 import com.passportphoto.service.FaceModelLoader;
+
+import com.passportphoto.exceptions.*;
 
 import jakarta.annotation.PostConstruct;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 
-@RestController
-@RequestMapping("/api/face")
-@CrossOrigin(origins = "http://localhost:5173")
-public class FaceController {
+@Service
+public class FaceCenteringService {
 
     private final CascadeClassifier faceDetector;
     private final CascadeClassifier eyeDetector;
 
-    // private final FaceModelLoader faceModelLoader;
-
-    public FaceController( @Qualifier("faceModel") FaceModelLoader faceModel,
-    @Qualifier("eyeModel") FaceModelLoader eyeModel) {
-        // this.faceModelLoader = faceModelLoader;
+    public FaceCenteringService(@Qualifier("faceModel") FaceModelLoader faceModel,
+            @Qualifier("eyeModel") FaceModelLoader eyeModel) {
         this.faceDetector = faceModel.getFaceModel();
         this.eyeDetector = eyeModel.getFaceModel();
 
     }
 
-    // @PostConstruct
-    // public void init() throws IOException {
-    // System.load(System.getenv("OPENCVDLLPATH"));
-
-    // // Load face cascade
-    // ClassPathResource faceCascade = new
-    // ClassPathResource("haarcascade_frontalface_default.xml");
-    // File faceFile = File.createTempFile("face", ".xml");
-    // try (InputStream is = faceCascade.getInputStream()) {
-    // Files.copy(is, faceFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-    // }
-    // faceDetector = new CascadeClassifier(faceFile.getAbsolutePath());
-
-    // // Load eye cascade
-    // ClassPathResource eyeCascade = new
-    // ClassPathResource("haarcascade_eye_tree_eyeglasses.xml");
-    // File eyeFile = File.createTempFile("eye", ".xml");
-    // try (InputStream is = eyeCascade.getInputStream()) {
-    // Files.copy(is, eyeFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-    // }
-    // eyeDetector = new CascadeClassifier(eyeFile.getAbsolutePath());
-    // }
-    @PostMapping(value = "/center", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<byte[]> process(@RequestParam("image") MultipartFile file
-            ) throws IOException {
-
-        // CascadeClassifier faceDetector = faceModelLoader.getFaceModel();
-
+    public MultipartFile centerImage(MultipartFile file) throws IOException{
         byte[] imageBytes = file.getBytes();
         Mat image = Imgcodecs.imdecode(new MatOfByte(imageBytes), Imgcodecs.IMREAD_COLOR);
 
@@ -73,12 +48,12 @@ public class FaceController {
         faceDetector.detectMultiScale(image, faces);
 
         if (faces.empty()) {
-            return ResponseEntity.badRequest().body("No face detected.".getBytes());
+            throw new InvalidFaceException("No Face Found");
         }
 
         Rect faceRect = faces.toArray()[0];
-        // Imgproc.rectangle(image, faceRect.tl(), faceRect.br(), new Scalar(0, 255, 0), 2); // green face box
-
+        // Imgproc.rectangle(image, faceRect.tl(), faceRect.br(), new Scalar(0, 255, 0),
+        // 2); // green face box
 
         // Detect eyes within face
         Mat faceROI = new Mat(image, faceRect);
@@ -86,7 +61,7 @@ public class FaceController {
         eyeDetector.detectMultiScale(faceROI, eyes);
 
         if (eyes.toArray().length < 2) {
-            return ResponseEntity.badRequest().body("Less than two eyes detected.".getBytes());
+            throw new InvalidEyeException("No eyes Found");
         }
 
         // Calculate eye centers
@@ -98,7 +73,8 @@ public class FaceController {
             eyeCenters[i] = new Point(
                     faceRect.x + r.x + r.width / 2.0,
                     faceRect.y + r.y + r.height / 2.0);
-            // Imgproc.circle(image, eyeCenters[i], 5, new Scalar(255, 0, 0), -1); // blue dot
+            // Imgproc.circle(image, eyeCenters[i], 5, new Scalar(255, 0, 0), -1); // blue
+            // dot
         }
 
         // Sort left to right
@@ -112,7 +88,8 @@ public class FaceController {
         Point midpoint = new Point(
                 (eyeCenters[0].x + eyeCenters[1].x) / 2.0,
                 (eyeCenters[0].y + eyeCenters[1].y) / 2.0);
-        // Imgproc.circle(image, midpoint, 5, new Scalar(0, 0, 255), -1); // red midpoint
+        // Imgproc.circle(image, midpoint, 5, new Scalar(0, 0, 255), -1); // red
+        // midpoint
 
         // Get center of the image
         Point imageCenter = new Point(image.cols() / 2.0, image.rows() / 2.0);
@@ -134,8 +111,17 @@ public class FaceController {
         // Encode and return the translated image
         MatOfByte output = new MatOfByte();
         Imgcodecs.imencode(".jpg", translatedImage, output);
-        return ResponseEntity.ok()
-                .contentType(MediaType.IMAGE_JPEG)
-                .body(output.toArray());
+        byte[] postimageBytes = output.toArray();
+
+        // Create MultipartFile
+        MultipartFile multipartFile = new MockMultipartFile(
+                "file", // name
+                "processed.jpg", // original filename
+                "image/jpeg", // content type
+                postimageBytes // file content
+        );
+
+        return multipartFile;
     }
+
 }

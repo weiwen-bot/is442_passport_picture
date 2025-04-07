@@ -304,7 +304,7 @@
             if (value !== null) formData.append(key, value);
           }
   
-          const response = await fetch("http://localhost:8080/image/resize", {
+          const response = await fetch("http://localhost:8080/automate/passportphoto", {
             method: "POST",
             body: formData,
           });

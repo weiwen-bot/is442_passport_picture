@@ -27,6 +27,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.passportphoto.exceptions.ImageInvalidFormatException;
 import com.passportphoto.service.AutomatePassportPhotoService;
+import com.passportphoto.dto.AutomatedImageResponse;
+
 
 /**
  * The {@code AutomatePassportPhotoController} provides an endpoint to
@@ -58,19 +60,18 @@ public class AutomatePassportPhotoController {
      * @return a map containing the processed base64 image or an error message
      */
     @PostMapping("/passportphoto")
-    public ResponseEntity<Map<String, String>> automatePassportPhoto(
+    public ResponseEntity<AutomatedImageResponse> automatePassportPhoto(
         @RequestParam(value = "image", required = false) MultipartFile file,
         @RequestParam(value = "country", required = false) String country,
         @RequestParam(value = "template", required = false) String template
-    ) {
-        try {
+    ) { try {
             String processedBase64 = automatePassportPhotoService.automatePassportPhoto(file,country,template);
-            return ResponseEntity.ok(Collections.singletonMap("processedImage", processedBase64));
-        } catch (ImageInvalidFormatException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Collections.singletonMap("error", e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Collections.singletonMap("error", "Image processing failed"));
+            return ResponseEntity.ok(new AutomatedImageResponse("success","Automated Generated Image",processedBase64));
+
+        }catch (Exception e){
+            return ResponseEntity.ok(new AutomatedImageResponse("failed","Automated Generated Image",null));
         }
+            
     }
 
     @PostMapping("/batch/passportphoto")

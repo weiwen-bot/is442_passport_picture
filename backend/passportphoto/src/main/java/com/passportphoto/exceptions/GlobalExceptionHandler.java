@@ -1,5 +1,6 @@
 package com.passportphoto.exceptions;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 
@@ -59,6 +60,12 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<String> handleGeneralException(Exception e) {
+        // Return a custom error message with HTTP 500 status
+        return new ResponseEntity<>("An unexpected error occurred: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @ExceptionHandler(IOException.class)
+    public ResponseEntity<String> handleIOException(Exception e) {
         // Return a custom error message with HTTP 500 status
         return new ResponseEntity<>("An unexpected error occurred: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
     }
