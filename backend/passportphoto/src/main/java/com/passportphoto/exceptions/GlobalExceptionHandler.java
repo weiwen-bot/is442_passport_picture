@@ -3,17 +3,10 @@ package com.passportphoto.exceptions;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
-
-import javax.security.auth.login.FailedLoginException;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-
-import com.passportphoto.exceptions.FailedProcessingException;
-import com.passportphoto.exceptions.ImageInvalidFormatException;
-import com.passportphoto.exceptions.ImageTooLargeException;
 import ai.onnxruntime.*;
 
 

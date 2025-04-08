@@ -1,7 +1,5 @@
 package com.passportphoto.exceptions;
 
-import com.passportphoto.exceptions.ImageException;
-
 /**
  * Exception thrown when an image exceeds the maximum allowed size.
  * Extends ImageException to indicate size-related errors.
