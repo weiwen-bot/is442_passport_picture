@@ -31,8 +31,8 @@ export default {
   data() {
     return {
       menu: [
-        { header: "Instant Passport Photo", hiddenOnCollapse: true },
-        { title: "Quick Generate", icon: "fa-solid fa-bolt", action: "quick-generate" },
+        // { header: "Instant Passport Photo", hiddenOnCollapse: true },
+        // { title: "Quick Generate", icon: "fa-solid fa-bolt", action: "quick-generate" },
         { header: "Edit Photo", hiddenOnCollapse: true },
         { title: "Crop", icon: "fa-solid fa-crop", action: "crop" },
         { title: "Resize", icon: "fa-solid fa-expand", action: "resize" },

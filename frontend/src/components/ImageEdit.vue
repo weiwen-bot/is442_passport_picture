@@ -10,14 +10,14 @@
   <div class="p-1 grid grid-cols-12 gap-2 ml-[180px] mr-0">
     
     <!-- Show QuickGenerate Component when quick-generate is selected -->
-    <QuickGenerate
+    <!-- <QuickGenerate
       v-if="currentAction === 'quick-generate' && imageData"
       :imageData="imageData"
       @resize-complete="handleResizeComplete"
       @request-undo="handleUndo"
       @request-revert="handleReset"
       @request-redo="handleRedo"
-    />
+    /> -->
     
 
     <!-- Crop feature: Either show cropping interface or recrop interface based on state -->
@@ -278,7 +278,7 @@ import SidebarWrapper from "./SidebarWrapper.vue";
 import BackgroundRemover from "./BackgroundRemover.vue";
 import ImageResizing from "./ImageResizing.vue";
 import ImageEnhancement from "./ImageEnhancement.vue";
-import QuickGenerate from "./QuickGenerate.vue";
+// import QuickGenerate from "./QuickGenerate.vue";
 
 export default {
   components: {
@@ -287,7 +287,7 @@ export default {
     BackgroundRemover,
     ImageResizing,
     ImageEnhancement,
-    QuickGenerate,
+    // QuickGenerate,
   },
   data() {
     return {
