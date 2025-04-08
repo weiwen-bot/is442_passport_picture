@@ -37,6 +37,14 @@
           Google Drive
         </button>
       </div>
+      
+      
+    </div>
+
+    <div class="button-container">
+      <div class="button-wrapper">
+        <button @click="navigateToBatch"  class="upload-btn">Batch Upload</button>
+      </div>
     </div>
 
     <!-- Error message for upload failure -->
@@ -91,6 +99,9 @@ export default {
     }
   },
   methods: {
+    navigateToBatch() {
+      this.$router.push("/batch");
+    },
     // handle backend upload
     async uploadToBackend(file) {
       const formData = new FormData();
