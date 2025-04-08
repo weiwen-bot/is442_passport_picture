@@ -12,7 +12,7 @@ public class FailedProcessingException extends ImageException {
      * @param Message The error message describing the failure.
      */
 
-    public FailedProcessingException(String Message){
+    public FailedProcessingException(String Message, Exception e){
         super(Message);
     }
     

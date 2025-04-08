@@ -6,6 +6,7 @@ import BackgroundRemover from "../components/BackgroundRemover.vue";
 import ImageResizing from "../components/ImageResizing.vue";
 import ImageEnhancement from "../components/ImageEnhancement.vue";
 import QuickGenerate from "../components/QuickGenerate.vue";
+import BatchImageUploader from "../components/BatchProcess.vue"
 
 const routes = [
   // {
@@ -13,11 +14,11 @@ const routes = [
   //   name: "Home",
   //   component: Home,
   // },
-  // {
-  //   path: "/image-upload",
-  //   name: "ImageUpload",
-  //   component: ImageUpload,
-  // },
+  {
+    path: "/batch",
+    name: "BatchImageUploader",
+    component: BatchImageUploader,
+  },
   {
     path: "/",
     name: "ImageUpload",

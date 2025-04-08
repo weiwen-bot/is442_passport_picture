@@ -1,7 +1,7 @@
 /*
- * ImageResizeResponse.java
+ * ImageBackgroundRemoval.java
  * 
- * This class represents the response DTO for the image resizing operation
+ * This class represents the response DTO for the image Background removal operation
  * in the Passport Picture Project.
  * 
  */
@@ -16,8 +16,10 @@ import com.passportphoto.dto.ImageResponse;
  * a status string, a descriptive message, and the base64-encoded image data.
  */
 
- public class ImageResizeResponse extends ImageResponse {
-    public ImageResizeResponse(String status, String message, String image) {
+ public class ImageBackgroundRemovalResponse extends ImageResponse {
+
+
+    public ImageBackgroundRemovalResponse(String status, String message, String image) {
         super(status, message, image);
     }
 }

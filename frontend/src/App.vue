@@ -1,5 +1,4 @@
 <script>
-import HelloWorld from './components/HelloWorld.vue'
 import { RouterLink, RouterView } from 'vue-router'
 import BackgroundRemover from "./components/BackgroundRemover.vue"
 

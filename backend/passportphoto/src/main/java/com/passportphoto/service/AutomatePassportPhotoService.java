@@ -12,15 +12,20 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 
 import javax.imageio.ImageIO;
 
+import com.passportphoto.service.FaceCenteringService;
+
+import org.opencv.core.*;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import ai.onnxruntime.OrtException;
+import ai.onnxruntime.*;
 
 /**
  * The {@code AutomatePassportPhotoService} class handles the end-to-end
@@ -32,14 +37,29 @@ public class AutomatePassportPhotoService {
 
     private final BackgroundRemovalService backgroundRemovalService;
     private final ImageResizingService imageResizingService;
+    private final FaceCenteringService faceCenteringService;
 
     /**
      * Constructs the service with required dependencies.
      */
-    public AutomatePassportPhotoService(BackgroundRemovalService backgroundRemovalService,ImageResizingService imageResizingService ){
+    public AutomatePassportPhotoService(BackgroundRemovalService backgroundRemovalService,ImageResizingService imageResizingService, FaceCenteringService faceCenteringService ){
         this.backgroundRemovalService = backgroundRemovalService;
-        this.imageResizingService = imageResizingService;    
+        this.imageResizingService = imageResizingService;
+        this.faceCenteringService = faceCenteringService;
+        
     }
+
+    public String[] batchProcessing(List<MultipartFile> fileList, String country, String template) throws IOException, OrtException{
+        String[] base64List = new String[fileList.size()];
+        for (int i = 0; i < fileList.size(); i++){
+            String processedImage = automatePassportPhoto(fileList.get(i), country, template);
+            base64List[i] = processedImage;
+        }
+        return base64List;
+
+    }
+
+        
 
     /**
      * Orchestrates the full passport photo processing pipeline:
@@ -56,9 +76,9 @@ public class AutomatePassportPhotoService {
      */
     public String automatePassportPhoto(MultipartFile file, String country, String template) throws IOException, OrtException{
         String base64Image = imageResizingService.resizeImage(file, country, template, null, null);
-        String resizeBase64Image = resizeToClosestMultipleOf32(base64Image);
-        MultipartFile resizeFile = convertBase64ToMultipartFile(resizeBase64Image,"uploaded-img.jpg");
-        String processedBase64 = backgroundRemovalService.processImage(resizeFile, null, null);
+        MultipartFile resizeFile = convertBase64ToMultipartFile(base64Image,"uploaded-img.jpg");
+        MultipartFile centeredImage = faceCenteringService.centerImage(resizeFile);
+        String processedBase64 = backgroundRemovalService.processImage(centeredImage, null, null);
         
         return processedBase64;
     }
@@ -88,11 +108,12 @@ public class AutomatePassportPhotoService {
      * @param base64Image the original image in base64 format
      * @return the resized image as a base64 PNG string
      */
-    public String resizeToClosestMultipleOf32(String base64Image) {
+    public String resizeToClosestMultipleOf32(String base64Image)  {
         try {
             byte[] imageBytes = java.util.Base64.getDecoder().decode(base64Image.split(",")[1]);
             ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(imageBytes);
             BufferedImage img = ImageIO.read(byteArrayInputStream);
+
 
             int newWidth = roundToNearestMultiple(img.getWidth(), 32);
             int newHeight = roundToNearestMultiple(img.getHeight(), 32);
@@ -103,7 +124,10 @@ public class AutomatePassportPhotoService {
             g2d.drawImage(img, 0, 0,newWidth,newHeight, null);
             g2d.dispose();
 
-            return encodeToBase64(outputImage);
+
+            // Convert the resulting image to base64 string (PNG format)
+            String finalBase64 = encodeToBase64(outputImage);
+            return finalBase64;
         } catch (IOException e) {
             throw new RuntimeException("Error processing image", e);
         }

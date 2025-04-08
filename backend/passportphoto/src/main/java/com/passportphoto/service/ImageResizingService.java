@@ -102,7 +102,7 @@ public class ImageResizingService {
         }
 
         if ((customWidth != null && customWidth <= 0) ||
-            (customHeight != null && customHeight <= 0)) {
+                (customHeight != null && customHeight <= 0)) {
             throw new IllegalArgumentException("Custom dimensions must be positive integers");
         }
     }

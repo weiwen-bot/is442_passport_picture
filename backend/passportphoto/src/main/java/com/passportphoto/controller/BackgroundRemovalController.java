@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.passportphoto.dto.ImageBackgroundRemovalResponse;
+import com.passportphoto.dto.ImageResizeResponse;
 import com.passportphoto.exceptions.ImageInvalidFormatException;
 import com.passportphoto.service.BackgroundRemovalService;
 
@@ -29,7 +31,7 @@ import com.passportphoto.service.BackgroundRemovalService;
  */
 @RestController
 @RequestMapping("/image")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "http://localhost:5173/")
 public class BackgroundRemovalController {
 
     /** Service that handles background processing and replacement */
@@ -47,25 +49,18 @@ public class BackgroundRemovalController {
     /**
      * Removes or replaces the background of the uploaded image.
      *
-     * @param file              the image file to process
-     * @param colorString       optional hex color for solid background
-     * @param backgroundString  optional code for preset background
+     * @param file             the image file to process
+     * @param colorString      optional hex color for solid background
+     * @param backgroundString optional code for preset background
      * @return a base64-encoded processed image or an error message
      */
     @PostMapping("/removebg")
-    public ResponseEntity<Map<String, String>> removalbg(
+    public ResponseEntity<ImageBackgroundRemovalResponse> removalbg(
             @RequestParam(value = "image", required = false) MultipartFile file,
             @RequestParam(value = "colorString", required = false) String colorString,
             @RequestParam(value = "backgroundString", required = false) String backgroundString) {
-        try {
-            String processedBase64 = backgroundRemovalService.processImage(file, colorString, backgroundString);
-            return ResponseEntity.ok(Collections.singletonMap("processedImage", processedBase64));
-        } catch (ImageInvalidFormatException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Collections.singletonMap("error", e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Collections.singletonMap("error", "Image processing failed"));
-        }
+        String processedBase64 = backgroundRemovalService.processImage(file, colorString, backgroundString);
+        return ResponseEntity
+                .ok(new ImageBackgroundRemovalResponse("success", "Image Removed Background", processedBase64));
     }
 }
