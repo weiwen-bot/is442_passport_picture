@@ -9,15 +9,11 @@
 package com.passportphoto.controller;
 
 import java.util.Collections;
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import com.passportphoto.dto.BatchedImageResponse;
-import com.passportphoto.service.AutomatePassportPhotoService;
-import com.passportphoto.service.BackgroundRemovalService;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,13 +21,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.passportphoto.dto.AutomatedImageResponse;
 import com.passportphoto.exceptions.ImageInvalidFormatException;
 import com.passportphoto.service.AutomatePassportPhotoService;
-import com.passportphoto.dto.AutomatedImageResponse;
 
 
 /**
- * The {@code AutomatePassportPhotoController} provides an endpoint to
+ * The {@code AutomatePassportPhotoController} provides endpoints to
  * automate passport photo generation using uploaded images and template rules.
  */
 @RestController
@@ -57,7 +53,7 @@ public class AutomatePassportPhotoController {
      * @param file     the image file to be processed
      * @param country  the selected country code (optional)
      * @param template the template name (optional)
-     * @return a map containing the processed base64 image or an error message
+     * @return a ResponseEntity containing the result of the image processing
      */
     @PostMapping("/passportphoto")
     public ResponseEntity<AutomatedImageResponse> automatePassportPhoto(
@@ -74,6 +70,14 @@ public class AutomatePassportPhotoController {
             
     }
 
+    /**
+     * Automates passport photo generation in batch mode.
+     *
+     * @param fileList list of image files to be processed
+     * @param country  the selected country code (optional)
+     * @param template the template name (optional)
+     * @return a ResponseEntity with base64-encoded images or error message
+     */
     @PostMapping("/batch/passportphoto")
     public ResponseEntity<Map<String, String[]>> automatePassportPhoto(
         @RequestParam(value = "image", required = false) List<MultipartFile> fileList,
