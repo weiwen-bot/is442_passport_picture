@@ -27,7 +27,7 @@ import com.passportphoto.service.ImageUploadService;
  */
 @RestController
 @RequestMapping("/image")
-@CrossOrigin(origins = "http://localhost:5173") // Allow frontend origin
+@CrossOrigin(origins = "http://localhost:5173")
 public class ImageUploadController {
 
     /** Service class that handles image upload logic */

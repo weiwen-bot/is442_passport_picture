@@ -48,8 +48,7 @@ public class ImageCroppingController {
      * @return a base64-encoded cropped image or an error message
      */
     @PostMapping("/crop")
-    public ResponseEntity<?> cropImage(@RequestParam("image") MultipartFile imageFile,
-                                       @ModelAttribute ImageCropRequest cropRequest) {
+    public ResponseEntity<?> cropImage(@RequestParam("image") MultipartFile imageFile, @ModelAttribute ImageCropRequest cropRequest) {
         try {
             if (imageFile.isEmpty()) {
                 return ResponseEntity.badRequest().body("Image file is empty!");
