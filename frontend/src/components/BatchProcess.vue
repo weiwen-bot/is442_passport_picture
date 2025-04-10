@@ -304,6 +304,7 @@ export default {
         if (!response.ok) throw new Error(`Upload failed: ${response.statusText}`);
 
         const result = await response.json();
+        console.log(result);
         this.resultImages = result.processedImage || [];
         this.errorModal = false; // Hide error modal on success
       } catch (err) {

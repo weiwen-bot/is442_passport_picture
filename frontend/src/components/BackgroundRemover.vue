@@ -280,10 +280,11 @@ export default {
           method: "POST",
           body: formData,
         });
-
+        console.log(response,"RES");
         if (!response.ok) throw new Error("Processing failed");
 
         const result = await response.json();
+        console.log(result,"_++++++++++++++++++++++++++")
         if (result.image) {
           this.displayedImage = result.image; // Update only the display
           localStorage.setItem("imageData", result.image);

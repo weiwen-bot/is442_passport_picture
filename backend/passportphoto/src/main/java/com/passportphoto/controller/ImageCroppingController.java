@@ -8,6 +8,7 @@
 package com.passportphoto.controller;
 
 import com.passportphoto.dto.ImageCropRequest;
+import com.passportphoto.dto.ImageCropResponse;
 import com.passportphoto.service.ImageCroppingService;
 
 import org.springframework.http.ResponseEntity;
@@ -25,19 +26,19 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/image")
-@CrossOrigin(origins = "http://localhost:5173") 
+@CrossOrigin(origins = "http://localhost:5173")
 public class ImageCroppingController {
 
     /** Service that handles image conversion and cropping logic */
-    private final ImageCroppingService imageProcessingService;
+    private final ImageCroppingService imageCroppingService;
 
     /**
      * Constructs the controller with the given image processing service.
      *
-     * @param imageProcessingService the service used for cropping and encoding images
+     * @param imageCroppingService the service used for cropping and encoding images
      */
-    public ImageCroppingController(ImageCroppingService imageProcessingService) {
-        this.imageProcessingService = imageProcessingService;
+    public ImageCroppingController(ImageCroppingService imageCroppingService) {
+        this.imageCroppingService = imageCroppingService;
     }
 
     /**
@@ -45,38 +46,13 @@ public class ImageCroppingController {
      *
      * @param imageFile   the uploaded image
      * @param cropRequest the crop dimensions
-     * @return a base64-encoded cropped image or an error message
+     * @return a base64-encoded cropped image
      */
     @PostMapping("/crop")
-    public ResponseEntity<?> cropImage(@RequestParam("image") MultipartFile imageFile, @ModelAttribute ImageCropRequest cropRequest) {
-        try {
-            if (imageFile.isEmpty()) {
-                return ResponseEntity.badRequest().body("Image file is empty!");
-            }
+    public ResponseEntity<ImageCropResponse> cropImage(@RequestParam("image") MultipartFile imageFile,
+            @ModelAttribute ImageCropRequest cropRequest) throws Exception {
 
-            BufferedImage inputImage = imageProcessingService.convertToBufferedImage(imageFile);
-            int cropX = (int) cropRequest.getCropX();
-            int cropY = (int) cropRequest.getCropY();
-            int cropWidth = (int) cropRequest.getCropWidth();
-            int cropHeight = (int) cropRequest.getCropHeight();
-
-            // Validate crop dimensions
-            if (cropX < 0 || cropY < 0 || cropWidth <= 0 || cropHeight <= 0 ||
-                cropX + cropWidth > inputImage.getWidth() ||
-                cropY + cropHeight > inputImage.getHeight()) {
-                return ResponseEntity.badRequest().body("Invalid crop dimensions!");
-            }
-
-            BufferedImage croppedImage = imageProcessingService.cropImage(inputImage, cropX, cropY, cropWidth, cropHeight);
-            String base64Image = imageProcessingService.convertToBase64(croppedImage);
-
-            Map<String, String> response = new HashMap<>();
-            response.put("image", "data:image/jpeg;base64," + base64Image);
-
-            return ResponseEntity.ok(response);
-
-        } catch (IOException e) {
-            return ResponseEntity.internalServerError().body("Error processing image: " + e.getMessage());
-        }
+        String base64ImageStr = imageCroppingService.cropFileToImage(imageFile, cropRequest);
+        return ResponseEntity.ok(new ImageCropResponse("success", "Image cropped successfully", base64ImageStr));
     }
 }

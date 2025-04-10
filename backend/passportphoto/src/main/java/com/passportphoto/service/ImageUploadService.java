@@ -16,6 +16,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.Base64;
 
+import com.passportphoto.util.ImageConverterUtil;
+import com.passportphoto.util.ValidationUtil;
+
 /**
  * The {@code ImageUploadService} handles image uploads by converting
  * multipart files into OpenCV {@link Mat} objects and encoding them
@@ -27,21 +30,21 @@ public class ImageUploadService {
     /**
      * Uploads and encodes an image file into a Base64 JPEG data URL.
      *
-     * @param file the uploaded image file
+     * @param imageFile the uploaded image file
      * @return a base64-encoded image string with data URI prefix
-     * @throws IOException if image decoding fails
+     * @throws IOException              if image decoding fails
+     * @throws IllegalArgumentException if file is null or empty
      */
-    public String uploadImage(MultipartFile file) throws IOException {
-        Mat image = Imgcodecs.imdecode(new MatOfByte(file.getBytes()), Imgcodecs.IMREAD_COLOR);
+    public String uploadImage(MultipartFile imageFile) throws Exception {
 
-        if (image.empty()) {
-            throw new IOException("Failed to load image!");
-        }
+        ValidationUtil.validateMultipartFile(imageFile);
 
-        MatOfByte matOfByte = new MatOfByte();
-        Imgcodecs.imencode(".jpg", image, matOfByte);
-        byte[] imageBytes = matOfByte.toArray();
+        Mat image = ImageConverterUtil.convertFileToMat(imageFile);
 
-        return "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(imageBytes);
+        ValidationUtil.validateMatImage(image);
+
+        String base64String = ImageConverterUtil.convertMatToDataUrl(image);
+
+        return base64String;
     }
 }

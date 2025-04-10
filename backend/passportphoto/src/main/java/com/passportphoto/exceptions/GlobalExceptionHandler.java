@@ -5,7 +5,11 @@ import java.util.Collections;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import com.passportphoto.exceptions.ImageInvalidFormatException;
+import com.passportphoto.exceptions.ImageTooLargeException;
+
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import ai.onnxruntime.*;
 
@@ -14,7 +18,7 @@ import ai.onnxruntime.*;
  * Global exception handler for the application.
  * Provides centralized exception handling for image-related errors and AI processing failures.
  */
-@ControllerAdvice
+@RestControllerAdvice
 public class GlobalExceptionHandler {
 
     /**
@@ -26,6 +30,26 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Object> handleImageInvalidFormatException(ImageInvalidFormatException e) {
         return new ResponseEntity<>(e.getMessage(), HttpStatus.UNSUPPORTED_MEDIA_TYPE);
     }
+
+    /**
+     * Handles all invalid Argument Types.
+     * Returns HTTP 415 (Unsupported Media Type).
+     */
+
+     @ExceptionHandler(IllegalArgumentException.class)
+     public ResponseEntity<Object> handleIllegalArgumentException(IllegalArgumentException e) {
+         return new ResponseEntity<>(e.getMessage(), HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+     }
+
+    /**
+     * Handles all Crop Dimension out of bound.
+     * Returns HTTP 400 (BAD Request).
+     */
+
+     @ExceptionHandler(IndexOutOfBoundsException.class)
+     public ResponseEntity<Object> handleIndexOutOfBoundsException(IndexOutOfBoundsException e) {
+         return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+     }
 
 
     /**
@@ -57,6 +81,10 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>("An unexpected error occurred: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
+     /**
+     * Handles File I/O Errors.
+     * Returns HTTP 500 (Internal Server Error) with a error message.
+     */
     @ExceptionHandler(IOException.class)
     public ResponseEntity<String> handleIOException(Exception e) {
         // Return a custom error message with HTTP 500 status

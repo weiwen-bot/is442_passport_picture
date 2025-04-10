@@ -52,7 +52,7 @@ public class BackgroundRemovalController {
     public ResponseEntity<ImageBackgroundRemovalResponse> removalbg(
             @RequestParam(value = "image", required = false) MultipartFile file,
             @RequestParam(value = "colorString", required = false) String colorString,
-            @RequestParam(value = "backgroundString", required = false) String backgroundString) {
+            @RequestParam(value = "backgroundString", required = false) String backgroundString) throws Exception {
         String processedBase64 = backgroundRemovalService.processImage(file, colorString, backgroundString);
         return ResponseEntity
                 .ok(new ImageBackgroundRemovalResponse("success", "Image Removed Background", processedBase64));
