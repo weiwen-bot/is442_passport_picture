@@ -107,6 +107,10 @@ Refer to this [Spring Boot Folder Structure Guide](https://malshani-wijekoon.med
       `chmod +x mvnw`
       
       `source run.sh`
+    
+    Running with External Properties
+    
+    `.\mvnw spring-boot:run -Dspring.config.location=file:application.properties`
 
 2. **Frontend**
 
@@ -121,3 +125,4 @@ Refer to this [Spring Boot Folder Structure Guide](https://malshani-wijekoon.med
     Start the development server (default: [http://localhost:5173](http://localhost:5173)):
     
     `npm run dev`
+

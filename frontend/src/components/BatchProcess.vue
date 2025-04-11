@@ -36,12 +36,12 @@
           >
             <option disabled value="">-- Select a Country --</option>
             <option
-              v-for="country in countries"
-              :key="country.value"
-              :value="country.value"
-            >
-              {{ country.name }}
-            </option>
+          v-for="country in countryList"
+          :key="country.code"
+          :value="country.code"
+        >
+          {{ country.name }} ({{ country.dimensions }})
+        </option>
           </select>
         </div>
 
@@ -229,13 +229,7 @@ export default {
       currentPage: 1,
       selectedCountry: "",
       template: "",
-      countries: [
-        { name: "Japan", value: "jpn" },
-        { name: "United Kingdom", value: "UK" },
-        { name: "Canada", value: "CA" },
-        { name: "Germany", value: "DE" },
-        { name: "India", value: "IN" },
-      ],
+      countryList : [],
       resultImages: [],
       showDownloadPopup: false, 
       customCols: 1, // Default custom columns
@@ -253,7 +247,23 @@ export default {
       return this.images.slice(start, start + this.imagesPerPage);
     },
   },
+  mounted() {
+    this.fetchCountryList();
+  },
   methods: {
+    async fetchCountryList() {
+      try {
+        const response = await fetch("http://localhost:8080/image/countries");
+        if (!response.ok) throw new Error("Failed to fetch country list");
+
+        this.countryList = await response.json();
+        return this.countryList;
+      } catch (error) {
+        console.error("Error fetching country list:", error);
+        this.countryList = [];
+        return [];
+      }
+    },
     navigateToMainPage() {
       this.$router.push('/');
       this.errorModal = false; // Optionally close the modal upon navigation
