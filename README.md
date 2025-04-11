@@ -20,9 +20,34 @@ Other Tools
 - Batch processing
 - Face centering
 
+## List of Functions
+Pre-Processing
+- Upload from local device or Google Drive
+- Image cropping & resizing
+
+Image Processing
+- Background removal
+- Background colour/photo replacement
+- Photo enhancement
+
+Post-Processing
+- Download to local device or Google Drive
+- Export multiple layout options
+
+Other Tools
+- Country-specific size & colour presets
+- Undo / Redo
+- Batch processing
+- Face centering
+
 ## Setup
 
+
 ### Prerequisites:
+
+- Clone the repository: 
+    `git clone https://github.com/weiwen-bot/is442_passport_picture.git`
+    _Or use Github Desktop_
 
 - Clone the repository: 
     `git clone https://github.com/weiwen-bot/is442_passport_picture.git`
@@ -48,16 +73,6 @@ Other Tools
     # macOS
     OPENCVDLLPATH=<absolute-path>/libopencv_java480.dylib
     ```
-
----
-
-### Background Removal Testing
-
-A Postman collection is included for testing background removal.  
-To test:
-- Use a POST request.
-- Upload any image file.
-- Wait for the processed image to return (may take a few seconds).
 
 ---
 
@@ -100,13 +115,6 @@ Refer to this [Spring Boot Folder Structure Guide](https://malshani-wijekoon.med
 
 ---
 
-### GitHub Workflow
-
-- Create a branch from `main` for your changes.
-- Make your edits and push to your branch.
-- Open a pull request and resolve any merge conflicts.
-
----
 
 ### Running the app:
 
@@ -124,6 +132,10 @@ Refer to this [Spring Boot Folder Structure Guide](https://malshani-wijekoon.med
       `chmod +x mvnw`
       
       `source run.sh`
+    
+    Running with External Properties
+    
+    `.\mvnw spring-boot:run -Dspring.config.location=file:application.properties`
 
 2. **Frontend**
 
@@ -138,3 +150,4 @@ Refer to this [Spring Boot Folder Structure Guide](https://malshani-wijekoon.med
     Start the development server (default: [http://localhost:5173](http://localhost:5173)):
     
     `npm run dev`
+

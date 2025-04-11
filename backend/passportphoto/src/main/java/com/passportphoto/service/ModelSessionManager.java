@@ -31,13 +31,17 @@ public class ModelSessionManager {
 
     private final OrtSession session;
 
+    private final Constants constants;
+
     /**
      * Constructor that initializes the ONNX session.
      *
      * @throws Exception if the model file is not found or cannot be read
      */
-    public ModelSessionManager() throws Exception {
+    public ModelSessionManager(Constants constants) throws Exception {
+        this.constants = constants;
         this.session = initializeSession();
+        
     }
      
     /**
@@ -48,9 +52,9 @@ public class ModelSessionManager {
      * @throws Exception if the model cannot be read or loaded
      */
     private OrtSession initializeSession() throws Exception {
-        InputStream modelStream = getClass().getClassLoader().getResourceAsStream(Constants.MODEL_NAME);
+        InputStream modelStream = getClass().getClassLoader().getResourceAsStream(constants.getModelName());
         if (modelStream == null) {
-            throw new FileNotFoundException("MODNet model not found in resources: " + Constants.MODEL_NAME);
+            throw new FileNotFoundException("MODNet model not found in resources: " + constants.getModelName());
         }
         
         File tempModelFile = File.createTempFile("modnet", ".onnx");

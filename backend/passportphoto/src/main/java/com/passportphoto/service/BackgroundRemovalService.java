@@ -47,10 +47,13 @@ import ai.onnxruntime.OrtSession;
 public class BackgroundRemovalService {
 
 	private final ModelSessionManager modelSessionManager;
+	private final Constants constants;
 
 
-	public BackgroundRemovalService(ModelSessionManager modelSessionManager) {
+	public BackgroundRemovalService(ModelSessionManager modelSessionManager, Constants constants) {
+		this.constants = constants;
 		this.modelSessionManager = modelSessionManager;
+		
 
 
 	}
@@ -74,9 +77,9 @@ public class BackgroundRemovalService {
 		try {
 			BufferedImage image = ImageIO.read(file.getInputStream());
 			int oh = image.getHeight();
-			int ow = image.getWidth();
+			int ow = image.getWidth(); 
 
-			image = ResizeUtil.resizeToNearestMultiple(image, Constants.MODEL_SIZE_MULTIPLIER);
+			image = ResizeUtil.resizeToNearestMultiple(image, constants.getModelSizeMultiplier());
 
 			int rh = image.getHeight();
 			int rw = image.getWidth();
@@ -93,8 +96,6 @@ public class BackgroundRemovalService {
 			String format = file.getContentType().split("/")[1];
 			int width = foreground.getWidth();
 			int height = foreground.getHeight();
-			System.out.println("Width: " + width + ", Height: " + height);
-			// System.out.println(ImageConverterUtil.convertBufferedImgToBase64(foreground,format));
 			String processedBase64 = ImageConverterUtil.convertBufferedImgToBase64(foreground,"jpg");
 			return processedBase64;
 
@@ -191,7 +192,7 @@ public class BackgroundRemovalService {
 		float[][] matte2D = createMatte2D(outputArray, image.getWidth(), image.getHeight());
 
 		if (colorString == null) {
-			colorString = Constants.DEFAULT_BACKGROUND_COLOR; // Default value for colorString
+			colorString = constants.getBackgroundColor(); // Default value for colorString
 		}
 
 		BufferedImage foreground = alphaBlend(image, matte2D, backgroundString, colorString);
