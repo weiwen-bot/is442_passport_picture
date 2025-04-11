@@ -1,3 +1,9 @@
+/*
+ * FaceCenteringService.java
+ *
+ * This service does the Image Centering and Face Detection
+ *
+ */
 package com.passportphoto.service;
 
 import org.opencv.core.*;
@@ -9,15 +15,18 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.w3c.dom.css.Rect;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 import com.passportphoto.exceptions.InvalidEyeException;
 import com.passportphoto.exceptions.InvalidFaceException;
 import com.passportphoto.service.FaceModelLoader;
+import com.passportphoto.util.ImageConverterUtil;
+import com.passportphoto.util.ValidationUtil;
+import com.passportphoto.util.ResizeUtil;
 
 import com.passportphoto.exceptions.*;
 
@@ -26,43 +35,51 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 
+/**
+ * The {@code FaceCenteringService} class handles Face and Eye
+ * Detection of the Image and proceeds to center it via Opencv functions
+ */
 @Service
 public class FaceCenteringService {
 
     private final CascadeClassifier faceDetector;
     private final CascadeClassifier eyeDetector;
 
+    /**
+     * Constructs the service with required dependencies.
+     */
     public FaceCenteringService(@Qualifier("faceModel") FaceModelLoader faceModel,
             @Qualifier("eyeModel") FaceModelLoader eyeModel) {
         this.faceDetector = faceModel.getFaceModel();
         this.eyeDetector = eyeModel.getFaceModel();
 
     }
+    /**
+     * Performs Centering of the Image by Face and Eyes if detected
+     *
+     *
+     * @param file Takes in a MultipartFile Image
+     * @return a processed image as base64 string
+     * @throws Exception  if face or eye detection fails
+     */
+    public MultipartFile centerImage(MultipartFile file) throws Exception {
 
-    public MultipartFile centerImage(MultipartFile file) throws IOException{
-        byte[] imageBytes = file.getBytes();
-        Mat image = Imgcodecs.imdecode(new MatOfByte(imageBytes), Imgcodecs.IMREAD_COLOR);
+        Mat image = ImageConverterUtil.convertFileToMat(file);
 
         // Detect faces
         MatOfRect faces = new MatOfRect();
         faceDetector.detectMultiScale(image, faces);
 
-        if (faces.empty()) {
-            throw new InvalidFaceException("No Face Found");
-        }
+        ValidationUtil.validateFace(faces);
 
         Rect faceRect = faces.toArray()[0];
-        // Imgproc.rectangle(image, faceRect.tl(), faceRect.br(), new Scalar(0, 255, 0),
-        // 2); // green face box
 
         // Detect eyes within face
         Mat faceROI = new Mat(image, faceRect);
         MatOfRect eyes = new MatOfRect();
         eyeDetector.detectMultiScale(faceROI, eyes);
 
-        if (eyes.toArray().length < 2) {
-            throw new InvalidEyeException("No eyes Found");
-        }
+        ValidationUtil.validateEye(eyes);
 
         // Calculate eye centers
         Rect[] eyeRects = eyes.toArray();
@@ -73,8 +90,7 @@ public class FaceCenteringService {
             eyeCenters[i] = new Point(
                     faceRect.x + r.x + r.width / 2.0,
                     faceRect.y + r.y + r.height / 2.0);
-            // Imgproc.circle(image, eyeCenters[i], 5, new Scalar(255, 0, 0), -1); // blue
-            // dot
+
         }
 
         // Sort left to right
@@ -88,8 +104,6 @@ public class FaceCenteringService {
         Point midpoint = new Point(
                 (eyeCenters[0].x + eyeCenters[1].x) / 2.0,
                 (eyeCenters[0].y + eyeCenters[1].y) / 2.0);
-        // Imgproc.circle(image, midpoint, 5, new Scalar(0, 0, 255), -1); // red
-        // midpoint
 
         // Get center of the image
         Point imageCenter = new Point(image.cols() / 2.0, image.rows() / 2.0);
@@ -108,18 +122,7 @@ public class FaceCenteringService {
         Imgproc.warpAffine(image, translatedImage, translationMatrix, image.size(), Imgproc.INTER_LINEAR,
                 Core.BORDER_CONSTANT, new Scalar(255, 255, 255));
 
-        // Encode and return the translated image
-        MatOfByte output = new MatOfByte();
-        Imgcodecs.imencode(".jpg", translatedImage, output);
-        byte[] postimageBytes = output.toArray();
-
-        // Create MultipartFile
-        MultipartFile multipartFile = new MockMultipartFile(
-                "file", // name
-                "processed.jpg", // original filename
-                "image/jpeg", // content type
-                postimageBytes // file content
-        );
+        MultipartFile multipartFile = ImageConverterUtil.convertMatToMultipartFile(translatedImage);
 
         return multipartFile;
     }

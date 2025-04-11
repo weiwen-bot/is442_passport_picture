@@ -161,13 +161,13 @@ public class ImageConverterUtil {
      */
     public static String convertBufferedImgToBase64(BufferedImage imageFile, String format) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        System.out.println(format);
-        if (imageFile == null){
-            System.out.println("EMPTy");
+
+        if (imageFile == null) {
+
         }
         boolean success = ImageIO.write(imageFile, format, baos);
         if (!success) {
-            System.out.println("ERROR");
+
             throw new IOException("ImageIO failed to write image with format: " + format);
         }
         byte[] imageBytes = baos.toByteArray();
@@ -211,7 +211,7 @@ public class ImageConverterUtil {
      * @return a MultipartFile wrapping the decoded image
      * @throws IOException if decoding fails
      */
-    public static MultipartFile convertBase64ToMultipartFile(String base64String, String fileName) throws IOException {
+    public static MultipartFile convertBase64ToMultipartFile(String base64String, String fileName) throws Exception {
 
         String[] parts = base64String.split(",");
         String mimeType = parts[0].split(":")[1].split(";")[0];
@@ -220,6 +220,31 @@ public class ImageConverterUtil {
         ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(decodedBytes);
 
         return new MockMultipartFile(fileName, fileName, mimeType, byteArrayInputStream);
+    }
+
+    /**
+     * Converts a Mat image to a {@link MultipartFile}.
+     *
+     * @param base64String the data URL of the image
+     * @param fileName     the filename to assign
+     * @return a MultipartFile wrapping the decoded image
+     * @throws IOException if decoding fails
+     */
+    public static MultipartFile convertMatToMultipartFile(Mat matImage) throws Exception {
+
+        MatOfByte output = new MatOfByte();
+        Imgcodecs.imencode(".jpg", matImage, output);
+        byte[] postimageBytes = output.toArray();
+
+        // Create MultipartFile
+        MultipartFile multipartFile = new MockMultipartFile(
+                "file", // name
+                "processed.jpg", // original filename
+                "image/jpeg", // content type
+                postimageBytes // file content
+        );
+
+        return multipartFile;
     }
 
 }

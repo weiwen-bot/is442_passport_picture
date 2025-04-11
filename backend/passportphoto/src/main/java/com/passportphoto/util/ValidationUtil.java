@@ -7,6 +7,8 @@ import org.opencv.core.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.passportphoto.exceptions.ImageInvalidFormatException;
+import com.passportphoto.exceptions.InvalidEyeException;
+import com.passportphoto.exceptions.InvalidFaceException;
 
 public class ValidationUtil {
 
@@ -19,13 +21,14 @@ public class ValidationUtil {
 
     // Image Validation
     public static void validateMatImage(Mat image) throws Exception {
-       if (image.empty()) {
+        if (image.empty()) {
             throw new IllegalArgumentException("Failed to load image!");
         }
     }
 
     // Crop Dimension Validation
-    public static void validateCropDimension(BufferedImage inputImage, int cropX, int cropY, int cropWidth, int cropHeight) throws Exception{
+    public static void validateCropDimension(BufferedImage inputImage, int cropX, int cropY, int cropWidth,
+            int cropHeight) throws Exception {
         if (cropX < 0 || cropY < 0 || cropWidth <= 0 || cropHeight <= 0 ||
                 cropX + cropWidth > inputImage.getWidth() ||
                 cropY + cropHeight > inputImage.getHeight()) {
@@ -35,13 +38,29 @@ public class ValidationUtil {
     }
 
     // BufferedImage Validation
-    public static void validateBufferedImage(BufferedImage image, int width, int height){
-        if (image == null || width < 0 || height < 0){
+    public static void validateBufferedImage(BufferedImage image, int width, int height) {
+        if (image == null || width < 0 || height < 0) {
             throw new ImageInvalidFormatException("Invalid image format");
         }
 
     }
 
+    // Validate Facial Feature
+    public static void validateFace(MatOfRect feature) {
+        if (feature.empty()) {
 
-    
+            throw new InvalidFaceException("No Face Found");
+
+        }
+    }
+
+    // Validate Eye Feature
+    public static void validateEye(MatOfRect feature) {
+        if (feature.toArray().length < 2) {
+
+            throw new InvalidEyeException("No eyes Found");
+
+        }
+    }
+
 }
