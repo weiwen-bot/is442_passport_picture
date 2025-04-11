@@ -19,27 +19,6 @@ Other Tools
 - Undo / Redo
 - Batch processing
 - Face centering
-
-## List of Functions
-Pre-Processing
-- Upload from local device or Google Drive
-- Image cropping & resizing
-
-Image Processing
-- Background removal
-- Background colour/photo replacement
-- Photo enhancement
-
-Post-Processing
-- Download to local device or Google Drive
-- Export multiple layout options
-
-Other Tools
-- Country-specific size & colour presets
-- Undo / Redo
-- Batch processing
-- Face centering
-
 ## Setup
 
 
