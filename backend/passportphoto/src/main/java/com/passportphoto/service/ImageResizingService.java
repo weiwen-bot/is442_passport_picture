@@ -24,7 +24,7 @@ import com.passportphoto.service.strategy.AlphaResizeStrategy;
 import com.passportphoto.service.strategy.ResizeStrategy;
 import com.passportphoto.service.strategy.StandardResizeStrategy;
 import com.passportphoto.util.DimensionHelper;
-import com.passportphoto.util.ImageConverter;
+import com.passportphoto.util.ImageConverterUtil;
 
 /**
  * The {@code ImageResizingService} provides an end-to-end pipeline for
@@ -67,7 +67,7 @@ public class ImageResizingService {
         int targetWidth = dimensions[0];
         int targetHeight = dimensions[1];
 
-        Mat imageMat = ImageConverter.convertBufferedImageToMat(originalImage, hasAlpha);
+        Mat imageMat = ImageConverterUtil.convertBufferedImageToMat(originalImage, hasAlpha);
 
         ResizeStrategy resizeStrategy = hasAlpha ? new AlphaResizeStrategy() : new StandardResizeStrategy();
 
@@ -76,7 +76,7 @@ public class ImageResizingService {
         BackgroundProcessor bgProcessor = hasAlpha ? new TransparentBackgroundProcessor() : new UniformBackgroundProcessor();
 
         Mat finalMat = bgProcessor.process(resizedMat, targetWidth, targetHeight);
-        String dataUrl = ImageConverter.convertMatToDataUrl(finalMat);
+        String dataUrl = ImageConverterUtil.convertMatToDataUrl(finalMat);
 
         imageMat.release();
         resizedMat.release();

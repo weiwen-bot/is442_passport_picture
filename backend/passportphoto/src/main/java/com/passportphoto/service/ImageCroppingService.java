@@ -17,23 +17,19 @@ import java.io.IOException;
 import java.util.Base64;
 import javax.imageio.ImageIO;
 
+import com.passportphoto.dto.ImageCropRequest;
+
+
+import com.passportphoto.util.ImageConverterUtil;
+import com.passportphoto.util.ValidationUtil;
+
 /**
- * The {@code ImageCroppingService} provides methods for converting uploaded images
+ * The {@code ImageCroppingService} provides methods for converting uploaded
+ * images
  * to {@link BufferedImage}, cropping them, and converting the result to Base64.
  */
 @Service
 public class ImageCroppingService {
-
-    /**
-     * Converts a multipart image file into a {@link BufferedImage}.
-     *
-     * @param imageFile the uploaded multipart file
-     * @return the image as a BufferedImage
-     * @throws IOException if reading the input stream fails
-     */
-    public BufferedImage convertToBufferedImage(MultipartFile imageFile) throws IOException {
-        return ImageIO.read(imageFile.getInputStream());
-    }
 
     /**
      * Crops the input image to the specified rectangle.
@@ -52,15 +48,29 @@ public class ImageCroppingService {
     }
 
     /**
-     * Converts a {@link BufferedImage} to a Base64-encoded JPEG string.
+     * Crops the uploaded image based on provided crop parameters.
      *
-     * @param image the image to encode
-     * @return a Base64-encoded string representing the image
-     * @throws IOException if encoding fails
+     * @param imageFile   the uploaded image
+     * @param cropRequest the crop dimensions
+     * @return a base64-encoded cropped image
      */
-    public String convertToBase64(BufferedImage image) throws IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ImageIO.write(image, "jpg", baos);
-        return Base64.getEncoder().encodeToString(baos.toByteArray());
+    public String cropFileToImage(MultipartFile imageFile, ImageCropRequest cropRequest) throws Exception {
+        ValidationUtil.validateMultipartFile(imageFile);
+        BufferedImage inputImage = ImageConverterUtil.convertMultiPartToBufferedImage(imageFile);
+
+        int cropX = (int) cropRequest.getCropX();
+        int cropY = (int) cropRequest.getCropY();
+        int cropWidth = (int) cropRequest.getCropWidth();
+        int cropHeight = (int) cropRequest.getCropHeight();
+
+        // Validate crop dimensions
+        ValidationUtil.validateCropDimension(inputImage, cropX, cropY, cropWidth, cropHeight);
+
+        BufferedImage croppedImage = cropImage(inputImage, cropX, cropY, cropWidth, cropHeight);
+        String format = imageFile.getContentType().split("/")[1];
+        String base64Image = ImageConverterUtil.convertBufferedImgToBase64(croppedImage, format);
+
+        return base64Image;
+
     }
 }

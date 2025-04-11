@@ -19,4 +19,7 @@ public class Constants {
 
     /** The default background color to use (in hex) */
     public static final String DEFAULT_BACKGROUND_COLOR = "#FFFFFF";
+
+    /** The Model Multipler for the images to be resized for */
+    public static final int MODEL_SIZE_MULTIPLIER = 32;
 }

@@ -24,11 +24,15 @@ import javax.imageio.ImageIO;
 
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.opencv.core.Size;
 
 import com.passportphoto.exceptions.FailedProcessingException;
 import com.passportphoto.exceptions.ImageInvalidFormatException;
 import com.passportphoto.exceptions.ImageInputException;
 import com.passportphoto.util.Constants;
+import com.passportphoto.util.ValidationUtil;
+import com.passportphoto.util.ImageConverterUtil;
+import com.passportphoto.util.ResizeUtil;
 
 import ai.onnxruntime.OnnxTensor;
 import ai.onnxruntime.OrtEnvironment;
@@ -43,14 +47,12 @@ import ai.onnxruntime.OrtSession;
 public class BackgroundRemovalService {
 
 	private final ModelSessionManager modelSessionManager;
-	private final ImageProcessingService imageProcessingService;
 
-	public BackgroundRemovalService(ModelSessionManager modelSessionManager,
-			ImageProcessingService imageProcessingService) {
+
+	public BackgroundRemovalService(ModelSessionManager modelSessionManager) {
 		this.modelSessionManager = modelSessionManager;
-		this.imageProcessingService = imageProcessingService;
 
-		// this.automatePassportPhotoService = automatePassportPhotoService;
+
 	}
 
 	/**
@@ -59,14 +61,6 @@ public class BackgroundRemovalService {
 	public OrtSession getSession() {
 		return modelSessionManager.getSession();
 	}
-
-	/**
-	 * Validates if an image has non-zero dimensions and is not null.
-	 */
-	public boolean validateImg(BufferedImage image, int width, int height) {
-		return image != null && width > 0 && height > 0;
-	}
-
 	/**
 	 * Full image processing pipeline:
 	 * 1. Validate
@@ -75,42 +69,41 @@ public class BackgroundRemovalService {
 	 * 4. Postprocess with blending
 	 * 5. Encode to base64
 	 */
-	public String processImage(MultipartFile file, String colorString, String backgroundString) {
+	public String processImage(MultipartFile file, String colorString, String backgroundString) throws Exception {
 
 		try {
 			BufferedImage image = ImageIO.read(file.getInputStream());
 			int oh = image.getHeight();
 			int ow = image.getWidth();
-			System.out.printf("%d %d Before", image.getHeight(), image.getWidth());
-			String base64Str = imageProcessingService.encodeToBase64(image);
-			String resizedImg = imageProcessingService.resizeToClosestMultipleOf32(base64Str);
-			image = imageProcessingService.base64ToBufferedImage(resizedImg);
-			System.out.println("HELLO");
+
+			image = ResizeUtil.resizeToNearestMultiple(image, Constants.MODEL_SIZE_MULTIPLIER);
+
 			int rh = image.getHeight();
 			int rw = image.getWidth();
-
-			boolean validateImg = validateImg(image, rh, rw);
-			if (!(validateImg)) {
-				throw new ImageInvalidFormatException("Invalid image format");
-			}
+			ValidationUtil.validateBufferedImage(image, rw, rh);
 
 			float[] imgData = preprocessImg(image);
+
 			float[] outputArray = runModel(imgData, rh, rw);
+
 			BufferedImage foreground = postprocessImg(colorString, backgroundString, outputArray, image, rw, rh);
-			foreground = resizeImage(foreground, ow, oh);
-			System.out.println(rw);
-			System.out.println(rh);
-			System.out.printf("%d %d Before", foreground.getHeight(), foreground.getWidth());
-			String processedBase64 = encodeImageToBase64(foreground);
+
+			foreground = ResizeUtil.resizeImage(foreground, ow, oh);
+			
+			String format = file.getContentType().split("/")[1];
+			int width = foreground.getWidth();
+			int height = foreground.getHeight();
+			System.out.println("Width: " + width + ", Height: " + height);
+			// System.out.println(ImageConverterUtil.convertBufferedImgToBase64(foreground,format));
+			String processedBase64 = ImageConverterUtil.convertBufferedImgToBase64(foreground,"jpg");
 			return processedBase64;
+
 		} catch (OrtException e) {
 			throw new FailedProcessingException("Image background removal failed", e);
-		}catch (IOException e) {
+		} catch (IOException e) {
 			throw new ImageInputException("Failed to read input image", e);
 		}
-		
 
-		
 	}
 
 	/**
@@ -193,7 +186,7 @@ public class BackgroundRemovalService {
 	 * background.
 	 */
 	public BufferedImage postprocessImg(String colorString, String backgroundString, float[] outputArray,
-			BufferedImage image, int rh, int rw) {
+			BufferedImage image, int rh, int rw) throws Exception {
 
 		float[][] matte2D = createMatte2D(outputArray, image.getWidth(), image.getHeight());
 
@@ -201,26 +194,18 @@ public class BackgroundRemovalService {
 			colorString = Constants.DEFAULT_BACKGROUND_COLOR; // Default value for colorString
 		}
 
-		System.out.printf("Here the background %s", backgroundString);
 		BufferedImage foreground = alphaBlend(image, matte2D, backgroundString, colorString);
 
 		return foreground;
 	}
 
-	private BufferedImage resizeImage(BufferedImage src, int targetWidth, int targetHeight) {
-		BufferedImage resized = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
-		Graphics2D g2d = resized.createGraphics();
-		g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-		g2d.drawImage(src, 0, 0, targetWidth, targetHeight, null);
-		g2d.dispose();
-		return resized;
-	}
 
 	/**
 	 * Performs alpha blending of the foreground image with a background (solid or
 	 * custom).
 	 */
-	public BufferedImage alphaBlend(BufferedImage original, float[][] matte, String background, String hexColor) {
+	public BufferedImage alphaBlend(BufferedImage original, float[][] matte, String background, String hexColor)
+			throws Exception {
 
 		int width = original.getWidth();
 		int height = original.getHeight();
@@ -230,8 +215,9 @@ public class BackgroundRemovalService {
 		BufferedImage resizedBackground;
 
 		if (background != null) {
-			BufferedImage customImage = decodeBase64ToImage(background);
-			resizedBackground = resizeImageWithAspectRatio(customImage, width, height);
+			BufferedImage customImage = ImageConverterUtil.base64ToBufferedImage(background);
+
+			resizedBackground = ResizeUtil.resizeImageWithAspectRatio(customImage, width, height);
 		} else {
 			resizedBackground = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
 			Graphics2D g2d = resizedBackground.createGraphics();
@@ -289,72 +275,7 @@ public class BackgroundRemovalService {
 		return newImage;
 	}
 
-	/**
-	 * Encodes a BufferedImage into a base64-encoded PNG data URI.
-	 * 
-	 * @param image the image to encode
-	 * @return a data URL string, or null if encoding fails
-	 */
-	private String encodeImageToBase64(BufferedImage image) {
-		try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-			ImageIO.write(image, "png", baos);
-			return "data:image/png;base64," + Base64.getEncoder().encodeToString(baos.toByteArray());
-		} catch (IOException e) {
-			e.printStackTrace();
-			return null;
-		}
-	}
 
-	/**
-	 * Resizes the image while maintaining its aspect ratio, and centers it on a
-	 * transparent canvas.
-	 */
-	private BufferedImage resizeImageWithAspectRatio(BufferedImage image, int targetWidth, int targetHeight) {
-		int originalWidth = image.getWidth();
-		int originalHeight = image.getHeight();
 
-		double aspectRatio = (double) originalWidth / originalHeight;
-		int newWidth = targetWidth;
-		int newHeight = (int) (targetWidth / aspectRatio);
 
-		if (targetHeight > targetWidth) {
-			newHeight = targetHeight;
-			newWidth = (int) (targetHeight * aspectRatio);
-		}
-
-		BufferedImage resizedImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_ARGB);
-		Graphics2D g2d = resizedImage.createGraphics();
-
-		g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-		g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-		g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-
-		int x = (targetWidth - newWidth) / 2;
-		int y = (targetHeight - newHeight) / 2;
-
-		g2d.drawImage(image, x, y, newWidth, newHeight, null);
-		g2d.dispose();
-
-		return resizedImage;
-	}
-
-	/**
-	 * Decodes a base64-encoded image (data URI format) into a BufferedImage.
-	 * 
-	 * @param base64String a base64 string with data URI prefix
-	 * @return the decoded BufferedImage, or null if decoding fails
-	 */
-	private BufferedImage decodeBase64ToImage(String base64String) {
-		try {
-			String[] parts = base64String.split(",");
-			if (parts.length != 2) {
-				return null;
-			}
-			byte[] imageBytes = Base64.getDecoder().decode(parts[1]);
-			return ImageIO.read(new ByteArrayInputStream(imageBytes));
-		} catch (IOException e) {
-			e.printStackTrace();
-			return null;
-		}
-	}
 }

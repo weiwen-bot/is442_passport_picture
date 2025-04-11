@@ -45,21 +45,14 @@ public class ImageUploadController {
     /**
      * Uploads an image file and returns a response with the base64-encoded image.
      *
-     * @param file the image file to upload
+     * @param imageFile the image file to upload
      * @return a response entity containing the upload status and image
      */
     @PostMapping("/upload")
-    public ResponseEntity<ImageUploadResponse> uploadImage(@RequestParam("image") MultipartFile file) {
-        try {
-            if (file.isEmpty()) {
-                return ResponseEntity.badRequest().body(new ImageUploadResponse("error", "Image file is empty!", null));
-            }
+    public ResponseEntity<ImageUploadResponse> uploadImage(@RequestParam("image") MultipartFile imageFile) throws Exception {
+        
+        String base64Image = imageUploadService.uploadImage(imageFile);
+        return ResponseEntity.ok(new ImageUploadResponse("success", "Image uploaded successfully", base64Image));
 
-            String base64Image = imageUploadService.uploadImage(file);
-            return ResponseEntity.ok(new ImageUploadResponse("success", "Image uploaded successfully", base64Image));
-
-        } catch (IOException e) {
-            return ResponseEntity.internalServerError().body(new ImageUploadResponse("error", "Image processing failed: " + e.getMessage(), null));
-        }
     }
 }
